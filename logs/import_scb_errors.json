@@ -1,0 +1,82 @@
+[
+  {
+    "row": 210,
+    "data": {
+      "source_sheet": "TPBVSK",
+      "source_row": 72,
+      "loai_ho_so_ma": "TPBVSK_CONG_BO",
+      "ten_san_pham": "Dung dịch nhuận tràng Clis-soda",
+      "cong_ty_so_huu_ten": "CÔNG TY CỔ PHẦN DƯỢC PHẨM ĐẠI ĐỨC TÍN",
+      "tinh_trang_ma": "CON_HIEU_LUC",
+      "tinh_trang_goc": "Còn hiệu lực",
+      "thong_tin_rieng_json": "{\"chu_so_huu\": \"CÔNG TY CỔ PHẦN DƯỢC PHẨM ĐẠI ĐỨC TÍN\"}",
+      "tai_lieu_json": "{}",
+      "lich_su_json": "[]",
+      "can_kiem_tra": "Thiếu mã hồ sơ/số công bố"
+    },
+    "error": "Thiếu mã hồ sơ hoặc tên sản phẩm"
+  },
+  {
+    "row": 211,
+    "data": {
+      "source_sheet": "TPBVSK",
+      "source_row": 73,
+      "loai_ho_so_ma": "TPBVSK_CONG_BO",
+      "ten_san_pham": "HALUCAN KID GOLD",
+      "cong_ty_so_huu_ten": "CÔNG TY CỔ PHẦN DƯỢC HADICO",
+      "tinh_trang_ma": "CON_HIEU_LUC",
+      "tinh_trang_goc": "Còn hiệu lực",
+      "thong_tin_rieng_json": "{\"chu_so_huu\": \"CÔNG TY CỔ PHẦN DƯỢC HADICO\"}",
+      "tai_lieu_json": "{}",
+      "lich_su_json": "[]",
+      "can_kiem_tra": "Thiếu mã hồ sơ/số công bố"
+    },
+    "error": "Thiếu mã hồ sơ hoặc tên sản phẩm"
+  },
+  {
+    "row": 212,
+    "data": {
+      "source_sheet": "TPBVSK",
+      "source_row": 74,
+      "loai_ho_so_ma": "TPBVSK_CONG_BO",
+      "ten_san_pham": "TABO KIDS GOLD",
+      "cong_ty_so_huu_ten": "CÔNG TY CỔ PHẦN DƯỢC HADICO",
+      "tinh_trang_ma": "CON_HIEU_LUC",
+      "tinh_trang_goc": "Còn hiệu lực",
+      "thong_tin_rieng_json": "{\"chu_so_huu\": \"CÔNG TY CỔ PHẦN DƯỢC HADICO\"}",
+      "tai_lieu_json": "{}",
+      "lich_su_json": "[]",
+      "can_kiem_tra": "Thiếu mã hồ sơ/số công bố"
+    },
+    "error": "Thiếu mã hồ sơ hoặc tên sản phẩm"
+  },
+  {
+    "row": 427,
+    "data": {
+      "source_sheet": "TBYT",
+      "source_row": 31,
+      "loai_ho_so_ma": "TBYT",
+      "tinh_trang_ma": "DANG_XU_LY",
+      "thong_tin_rieng_json": "{\"so_ban_ket_qua_phan_loai\": \"https://dmec.moh.gov.vn/documents/10182/16181163/PTN_DCTTHSCB136748_1596444937868.pdf?version=1.0&fileId=16181343\"}",
+      "tai_lieu_json": "{\"nhan\": \"https://imda.moh.gov.vn/documents/10182/69060311/upload_00011772_1749468089737.pdf?version=1.0&fileId=69105793\"}",
+      "lich_su_json": "[{\"noi_dung_thay_doi\": \"https://imda.moh.gov.vn/documents/10182/69060731/PTN_HOSO_429005_1749468119723.pdf?version=1.0&fileId=69105933\", \"nhan\": \"https://imda.moh.gov.vn/documents/10182/69060311/upload_00011772_1749468089737.pdf?version=1.0&fileId=69105793\"}]",
+      "can_kiem_tra": "Thiếu mã hồ sơ/số công bố; Thiếu tên sản phẩm"
+    },
+    "error": "Thiếu mã hồ sơ hoặc tên sản phẩm"
+  },
+  {
+    "row": 574,
+    "data": {
+      "source_sheet": "CB TPBS",
+      "source_row": 20,
+      "loai_ho_so_ma": "TPBVSK_TU_CONG_BO",
+      "ten_san_pham": "Xịt muỗi elemis",
+      "tinh_trang_ma": "DANG_XU_LY",
+      "thong_tin_rieng_json": "{}",
+      "tai_lieu_json": "{}",
+      "lich_su_json": "[]",
+      "can_kiem_tra": "Thiếu mã hồ sơ/số công bố"
+    },
+    "error": "Thiếu mã hồ sơ hoặc tên sản phẩm"
+  }
+]

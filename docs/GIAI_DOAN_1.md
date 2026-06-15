@@ -1,0 +1,412 @@
+# 🔵 GIAI ĐOẠN 1 — NỀN TẢNG & SETUP (Bản Tối Ưu Cuối)
+
+> **Thuộc kế hoạch tổng thể:** [KE_HOACH_TONG_THE.md](./KE_HOACH_TONG_THE.md)
+> **Mục tiêu:** Xây dựng web app quản lý hồ sơ công bố sản phẩm, tối ưu hóa toàn diện cơ sở dữ liệu từ AppSheet cũ, chuẩn hóa dữ liệu, và ưu tiên import dữ liệu cũ.
+
+---
+
+## 1. MỤC TIÊU GIAI ĐOẠN 1
+
+- Thiết lập nền tảng chuẩn với **NestJS**, **Prisma**, **MySQL**, **React/Vite**, và **Ant Design**.
+- Không chỉ là chuyển đổi, mà phải tối ưu lại cấu trúc dữ liệu để sử dụng lâu dài và mở rộng trong tương lai.
+- Tập trung vào chức năng lõi: Database Schema chuẩn (18 bảng), CRUD hồ sơ (chung và riêng), quản lý tài liệu, lịch sử thay đổi, và **nhập liệu từ Excel (Import) ngay từ Giai đoạn 1**.
+- Tên bảng, tên trường dùng **tiếng Việt không dấu (snake_case)**, dễ hiểu với nghiệp vụ dược.
+- Không tập trung vào tính năng phức tạp như Dashboard nâng cao, Báo cáo động, hay Ký số.
+
+---
+
+## 2. DANH SÁCH BẢNG DỮ LIỆU CUỐI CÙNG (18 BẢNG)
+
+**A. Nhóm danh mục:**
+1. `dm_loai_ho_so`
+2. `dm_tinh_trang`
+3. `dm_cong_ty`
+4. `dm_loai_tai_lieu` *(Mới)*
+5. `dm_loai_thay_doi` *(Mới)*
+
+**B. Nhóm người dùng:**
+6. `vai_tro`
+7. `nguoi_dung`
+
+**C. Nhóm hồ sơ:**
+8. `ho_so_chung`
+9. `ho_so_thuoc`
+10. `ho_so_my_pham`
+11. `ho_so_tbyt`
+12. `ho_so_tpbvsk_tu_cong_bo`
+13. `ho_so_tpbvsk_cong_bo`
+14. `ho_so_cfs_cpp`
+
+**D. Nhóm bảng con nghiệp vụ:**
+15. `tai_lieu_ho_so`
+16. `lich_su_thay_doi_ho_so`
+17. `nhac_han_ho_so`
+18. `nhat_ky_ho_so`
+
+---
+
+## 3. ERD
+
+```mermaid
+erDiagram
+    %% DANH MỤC & NGƯỜI DÙNG
+    dm_loai_ho_so ||--o{ ho_so_chung : "loại hồ sơ"
+    dm_tinh_trang ||--o{ ho_so_chung : "tình trạng"
+    dm_cong_ty ||--o{ ho_so_chung : "sở hữu / đứng tên / phân phối"
+    dm_loai_tai_lieu ||--o{ tai_lieu_ho_so : "loại tài liệu"
+    dm_loai_thay_doi ||--o{ lich_su_thay_doi_ho_so : "loại thay đổi"
+    vai_tro ||--o{ nguoi_dung : "phân quyền"
+
+    %% HỒ SƠ CHUNG & RIÊNG
+    ho_so_chung ||--o| ho_so_thuoc : "1:1"
+    ho_so_chung ||--o| ho_so_my_pham : "1:1"
+    ho_so_chung ||--o| ho_so_tbyt : "1:1"
+    ho_so_chung ||--o| ho_so_tpbvsk_tu_cong_bo : "1:1"
+    ho_so_chung ||--o| ho_so_tpbvsk_cong_bo : "1:1"
+    ho_so_chung ||--o| ho_so_cfs_cpp : "1:1"
+
+    %% BẢNG CON NGHIỆP VỤ
+    ho_so_chung ||--o{ tai_lieu_ho_so : "nhiều tài liệu"
+    ho_so_chung ||--o{ lich_su_thay_doi_ho_so : "nhiều lịch sử"
+    ho_so_chung ||--o{ nhac_han_ho_so : "nhiều nhắc hạn"
+    ho_so_chung ||--o{ nhat_ky_ho_so : "nhiều nhật ký"
+
+    %% NGƯỜI DÙNG LIÊN KẾT BẢNG NGHIỆP VỤ
+    nguoi_dung ||--o{ tai_lieu_ho_so : "tải lên bởi"
+    nguoi_dung ||--o{ lich_su_thay_doi_ho_so : "thực hiện bởi"
+    nguoi_dung ||--o{ nhat_ky_ho_so : "ghi nhận bởi"
+```
+
+---
+
+## 4. PRISMA SCHEMA ĐẦY ĐỦ
+
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// A. NHÓM DANH MỤC
+// ==========================================
+
+model dm_loai_ho_so {
+  id          Int           @id @default(autoincrement())
+  ma_loai     String        @unique @db.VarChar(50)
+  ten_loai    String        @db.VarChar(200)
+  mo_ta       String?       @db.VarChar(500)
+  thu_tu      Int           @default(0)
+  trang_thai  Boolean       @default(true)
+  
+  ho_so_chung ho_so_chung[]
+}
+
+model dm_tinh_trang {
+  id              Int           @id @default(autoincrement())
+  ma_tinh_trang   String        @unique @db.VarChar(50)
+  ten_tinh_trang  String        @db.VarChar(200)
+  mau_sac         String?       @db.VarChar(20)
+  thu_tu          Int           @default(0)
+
+  ho_so_chung     ho_so_chung[]
+}
+
+model dm_cong_ty {
+  id              Int           @id @default(autoincrement())
+  ma_cong_ty      String        @unique @db.VarChar(100)
+  ten_cong_ty     String        @db.VarChar(500)
+  ten_viet_tat    String?       @db.VarChar(200)
+  dia_chi         String?       @db.VarChar(1000)
+  ma_so_thue      String?       @db.VarChar(50)
+  nguoi_dai_dien  String?       @db.VarChar(200)
+  trang_thai      Boolean       @default(true)
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+
+  ho_so_so_huu    ho_so_chung[] @relation("CongTySoHuu")
+  ho_so_dung_ten  ho_so_chung[] @relation("CongTyDungTen")
+  ho_so_phan_phoi ho_so_chung[] @relation("CongTyPhanPhoi")
+}
+
+model dm_loai_tai_lieu {
+  id                Int           @id @default(autoincrement())
+  ma_loai_tai_lieu  String        @unique @db.VarChar(50)
+  ten_loai_tai_lieu String        @db.VarChar(200)
+  thu_tu            Int           @default(0)
+  trang_thai        Boolean       @default(true)
+
+  tai_lieu_ho_so    tai_lieu_ho_so[]
+}
+
+model dm_loai_thay_doi {
+  id                Int           @id @default(autoincrement())
+  ma_loai_thay_doi  String        @unique @db.VarChar(50)
+  ten_loai_thay_doi String        @db.VarChar(200)
+
+  lich_su_thay_doi  lich_su_thay_doi_ho_so[]
+}
+
+// ==========================================
+// B. NHÓM NGƯỜI DÙNG
+// ==========================================
+
+model vai_tro {
+  id          Int           @id @default(autoincrement())
+  ma_vai_tro  String        @unique @db.VarChar(50)
+  ten_vai_tro String        @db.VarChar(200)
+  mo_ta       String?       @db.Text
+
+  nguoi_dung  nguoi_dung[]
+}
+
+model nguoi_dung {
+  id              Int           @id @default(autoincrement())
+  ma_nguoi_dung   String        @unique @db.VarChar(50)
+  ho_ten          String        @db.VarChar(200)
+  email           String        @unique @db.VarChar(200)
+  mat_khau_hash   String        @db.VarChar(255)
+  vai_tro_id      Int
+  phong_ban       String?       @db.VarChar(200)
+  trang_thai      Boolean       @default(true)
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+
+  vai_tro         vai_tro       @relation(fields: [vai_tro_id], references: [id])
+  
+  tai_lieu_tai_len  tai_lieu_ho_so[]
+  lich_su_thuc_hien lich_su_thay_doi_ho_so[]
+  nhat_ky_thuc_hien nhat_ky_ho_so[]
+}
+
+// ==========================================
+// C. NHÓM HỒ SƠ
+// ==========================================
+
+model ho_so_chung {
+  id                        Int       @id @default(autoincrement())
+  ma_ho_so                  String    @unique @db.VarChar(100)
+  so_chinh                  String?   @db.VarChar(100)
+  ma_san_pham_noi_bo        String?   @db.VarChar(100)
+  loai_ho_so_id             Int
+  ten_san_pham              String    @db.VarChar(500)
+  ten_san_pham_khong_dau    String?   @db.VarChar(500)
+  
+  cong_ty_so_huu_id         Int?
+  cong_ty_dung_ten_id       Int?
+  cong_ty_phan_phoi_id      Int?
+
+  ngay_cong_bo              DateTime? @db.Date
+  ngay_het_han              DateTime? @db.Date
+  tinh_trang_id             Int?
+  ho_so_luu_url             String?   @db.VarChar(2000)
+  ghi_chu                   String?   @db.Text
+  created_at                DateTime  @default(now())
+  updated_at                DateTime  @updatedAt
+
+  // Relations
+  loai_ho_so                dm_loai_ho_so  @relation(fields: [loai_ho_so_id], references: [id])
+  tinh_trang                dm_tinh_trang? @relation(fields: [tinh_trang_id], references: [id])
+  
+  cong_ty_so_huu            dm_cong_ty?    @relation("CongTySoHuu", fields: [cong_ty_so_huu_id], references: [id])
+  cong_ty_dung_ten          dm_cong_ty?    @relation("CongTyDungTen", fields: [cong_ty_dung_ten_id], references: [id])
+  cong_ty_phan_phoi         dm_cong_ty?    @relation("CongTyPhanPhoi", fields: [cong_ty_phan_phoi_id], references: [id])
+
+  ho_so_thuoc               ho_so_thuoc?
+  ho_so_my_pham             ho_so_my_pham?
+  ho_so_tbyt                ho_so_tbyt?
+  ho_so_tpbvsk_tu_cong_bo   ho_so_tpbvsk_tu_cong_bo?
+  ho_so_tpbvsk_cong_bo      ho_so_tpbvsk_cong_bo?
+  ho_so_cfs_cpp             ho_so_cfs_cpp?
+
+  tai_lieu                  tai_lieu_ho_so[]
+  lich_su_thay_doi          lich_su_thay_doi_ho_so[]
+  nhac_han                  nhac_han_ho_so[]
+  nhat_ky                   nhat_ky_ho_so[]
+
+  // Indexes
+  @@index([loai_ho_so_id])
+  @@index([tinh_trang_id])
+  @@index([cong_ty_so_huu_id])
+  @@index([cong_ty_dung_ten_id])
+  @@index([cong_ty_phan_phoi_id])
+  @@index([ngay_het_han])
+  @@index([so_chinh])
+  @@index([ten_san_pham])
+  @@index([ten_san_pham_khong_dau])
+  @@index([ma_san_pham_noi_bo])
+}
+
+model ho_so_thuoc {
+  id                       Int      @id @default(autoincrement())
+  ho_so_chung_id           Int      @unique
+  hoat_chat_ham_luong      String?  @db.VarChar(1000)
+  bao_che                  String?  @db.VarChar(500)
+  quy_cach_dong_goi        String?  @db.VarChar(500)
+  dot_cap_so               String?  @db.VarChar(200)
+  gia_han                  String?  @db.VarChar(500)
+  quyet_dinh_cap_sdk_url   String?  @db.VarChar(2000)
+  ke_khai_gia_url          String?  @db.VarChar(2000)
+  quang_cao_url            String?  @db.VarChar(2000)
+
+  ho_so_chung              ho_so_chung @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+}
+
+model ho_so_my_pham {
+  id                    Int      @id @default(autoincrement())
+  ho_so_chung_id        Int      @unique
+  nhan_hang             String?  @db.VarChar(500)
+  dang_my_pham          String?  @db.Text
+  phieu_cong_bo_url     String?  @db.VarChar(2000)
+  hs_thay_the_ghi_chu   String?  @db.VarChar(1000)
+  xn_quang_cao_url      String?  @db.VarChar(2000)
+
+  ho_so_chung           ho_so_chung @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+}
+
+model ho_so_tbyt {
+  id                       Int      @id @default(autoincrement())
+  ho_so_chung_id           Int      @unique
+  ten_thuong_mai           String?  @db.VarChar(500)
+  ten_tbyt_chung_loai      String?  @db.VarChar(500)
+  phan_loai                String?  @db.VarChar(50)
+  chu_so_huu               String?  @db.VarChar(500)
+  phieu_tiep_nhan_url      String?  @db.VarChar(2000)
+  tai_lieu_mo_ta_kt_url    String?  @db.VarChar(2000)
+  tieu_chuan_co_so_url     String?  @db.VarChar(2000)
+  nhan_url                 String?  @db.VarChar(2000)
+  hdsd_url                 String?  @db.VarChar(2000)
+  quang_cao_url            String?  @db.VarChar(2000)
+
+  ho_so_chung              ho_so_chung @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+}
+
+model ho_so_tpbvsk_tu_cong_bo {
+  id                Int      @id @default(autoincrement())
+  ho_so_chung_id    Int      @unique
+  co_so_dung_ten    String?  @db.VarChar(500)
+  dang_san_pham     String?  @db.VarChar(500)
+
+  ho_so_chung       ho_so_chung @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+}
+
+model ho_so_tpbvsk_cong_bo {
+  id                    Int      @id @default(autoincrement())
+  ho_so_chung_id        Int      @unique
+  thanh_phan            String?  @db.Text
+  chu_so_huu            String?  @db.VarChar(500)
+  phieu_cong_bo_url     String?  @db.VarChar(2000)
+  xn_quang_cao_url      String?  @db.VarChar(2000)
+
+  ho_so_chung           ho_so_chung @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+}
+
+model ho_so_cfs_cpp {
+  id                 Int      @id @default(autoincrement())
+  ho_so_chung_id     Int      @unique
+  loai_hinh          String?  @db.VarChar(50)
+  nuoc_xuat_khau     String?  @db.VarChar(200)
+  cong_van_cap_url   String?  @db.VarChar(2000)
+
+  ho_so_chung        ho_so_chung @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// D. NHÓM BẢNG CON NGHIỆP VỤ
+// ==========================================
+
+model tai_lieu_ho_so {
+  id                    Int       @id @default(autoincrement())
+  ho_so_chung_id        Int
+  loai_tai_lieu_id      Int
+  ten_tai_lieu          String    @db.VarChar(500)
+  duong_dan_url         String    @db.VarChar(2000)
+  so_phien_ban          Int       @default(1)
+  tai_lieu_hien_hanh    Boolean   @default(true)
+  ngay_hieu_luc         DateTime? @db.Date
+  ngay_het_hieu_luc     DateTime? @db.Date
+  ghi_chu               String?   @db.Text
+  ngay_tai_len          DateTime  @default(now())
+  nguoi_tai_len_id      Int?
+
+  ho_so_chung           ho_so_chung      @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+  loai_tai_lieu         dm_loai_tai_lieu @relation(fields: [loai_tai_lieu_id], references: [id])
+  nguoi_tai_len         nguoi_dung?      @relation(fields: [nguoi_tai_len_id], references: [id])
+
+  @@index([ho_so_chung_id])
+  @@index([loai_tai_lieu_id])
+}
+
+model lich_su_thay_doi_ho_so {
+  id                    Int       @id @default(autoincrement())
+  ho_so_chung_id        Int
+  lan_thu               Int
+  loai_thay_doi_id      Int
+  noi_dung_thay_doi     String?   @db.Text
+  ma_so_tham_chieu      String?   @db.VarChar(500)
+  ngay_thay_doi         DateTime? @db.Date
+  ngay_phe_duyet        DateTime? @db.Date
+  tinh_trang            String?   @db.VarChar(200)
+  cong_van_url          String?   @db.VarChar(2000)
+  nguoi_thuc_hien_id    Int?
+  ghi_chu               String?   @db.Text
+  created_at            DateTime  @default(now())
+
+  ho_so_chung           ho_so_chung       @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+  loai_thay_doi         dm_loai_thay_doi  @relation(fields: [loai_thay_doi_id], references: [id])
+  nguoi_thuc_hien       nguoi_dung?       @relation(fields: [nguoi_thuc_hien_id], references: [id])
+
+  @@index([ho_so_chung_id])
+  @@index([loai_thay_doi_id])
+}
+
+model nhac_han_ho_so {
+  id               Int       @id @default(autoincrement())
+  ho_so_chung_id   Int
+  loai_nhac        String    @db.VarChar(50)
+  ngay_nhac        DateTime  @db.Date
+  noi_dung         String?   @db.Text
+  da_xu_ly         Boolean   @default(false)
+  created_at       DateTime  @default(now())
+
+  ho_so_chung      ho_so_chung @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+
+  @@index([ho_so_chung_id])
+  @@index([ngay_nhac])
+  @@index([da_xu_ly])
+}
+
+model nhat_ky_ho_so {
+  id                Int       @id @default(autoincrement())
+  ho_so_chung_id    Int
+  hanh_dong         String    @db.VarChar(50)
+  nguoi_thuc_hien_id Int?
+  noi_dung          String?   @db.Text
+  du_lieu_cu        String?   @db.Text
+  du_lieu_moi       String?   @db.Text
+  created_at        DateTime  @default(now())
+
+  ho_so_chung       ho_so_chung @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
+  nguoi_thuc_hien   nguoi_dung? @relation(fields: [nguoi_thuc_hien_id], references: [id])
+
+  @@index([ho_so_chung_id])
+}
+```
+
+---
+
+## 5. IMPORT EXCEL & TÀI LIỆU DATA DICTIONARY
+
+Toàn bộ quy chuẩn về cấu trúc dữ liệu và chuẩn File Excel Import đã được tách ra file riêng để phục vụ trực tiếp cho quá trình Import:
+
+🔗 **Xem chi tiết tại:** [IMPORT_DATA_STANDARD.md](./IMPORT_DATA_STANDARD.md)
+
+---
+
+## 6. CÁC API & GIAO DIỆN
+
+Giữ nguyên các API và thiết kế UI như yêu cầu ban đầu (Mô hình React Antd, 5 Tabs chi tiết, URL Google Drive, v.v). Không thay đổi các thành phần này.

@@ -1,0 +1,39 @@
+import { Form, Input, Row, Col, Divider } from 'antd';
+
+export default function FormMyPham() {
+  return (
+    <>
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item name={['thong_tin_rieng', 'nhan_hang']} label="Nhãn hàng">
+            <Input placeholder="Nhập nhãn hàng" />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item name={['thong_tin_rieng', 'dang_my_pham']} label="Dạng mỹ phẩm">
+            <Input placeholder="Nhập dạng mỹ phẩm" />
+          </Form.Item>
+        </Col>
+        <Col span={24}>
+          <Form.Item name={['thong_tin_rieng', 'hs_thay_the_ghi_chu']} label="Hồ sơ bị thay thế / Ghi chú">
+            <Input.TextArea rows={2} placeholder="Nhập thông tin hồ sơ bị thay thế hoặc ghi chú" />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Divider orientation="left" plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
+      <Row gutter={16}>
+        <Col span={24}>
+          <Form.Item name={['thong_tin_rieng', 'phieu_cong_bo_url']} label="Phiếu công bố" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+            <Input placeholder="Dán link Google Drive hoặc URL file" />
+          </Form.Item>
+        </Col>
+        <Col span={24}>
+          <Form.Item name={['thong_tin_rieng', 'xn_quang_cao_url']} label="Xác nhận Quảng cáo" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+            <Input placeholder="Dán link Google Drive hoặc URL file" />
+          </Form.Item>
+        </Col>
+      </Row>
+    </>
+  );
+}
