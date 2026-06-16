@@ -10,4 +10,5 @@ export const hoSoService = {
   capSo: async (id: number, data: any) => axiosInstance.patch(`${ENDPOINTS.HO_SO}/${id}/cap-so`, data),
   giaHan: async (id: number, data: any) => axiosInstance.post(`${ENDPOINTS.HO_SO}/${id}/gia-han`, data),
   thayThe: async (id: number, data: any) => axiosInstance.post(`${ENDPOINTS.HO_SO}/${id}/thay-the`, data),
+  thayDoi: async (id: number, data: any) => axiosInstance.post(`${ENDPOINTS.HO_SO}/${id}/thay-doi`, data),
 };

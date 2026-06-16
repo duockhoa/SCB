@@ -9,6 +9,7 @@ const { Sider } = Layout;
 
 export default function AppSidebar() {
   const { sidebarCollapsed } = useUiStore();
+  const { setGlobalSearch } = useUiStore();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -18,6 +19,11 @@ export default function AppSidebar() {
     { key: '/cong-ty', icon: <AppstoreOutlined />, label: 'Quản lý Công ty' },
     { key: '/danh-muc', icon: <AppstoreOutlined />, label: 'Danh Mục' },
   ];
+
+  const handleMenuClick = ({ key }: { key: string }) => {
+    setGlobalSearch('');
+    router.push(key);
+  };
 
   return (
     <Sider 
@@ -33,7 +39,7 @@ export default function AppSidebar() {
         mode="inline"
         selectedKeys={[pathname === '/' ? '/' : pathname.startsWith('/ho-so') ? '/ho-so' : '']}
         items={menuItems}
-        onClick={({ key }) => router.push(key)}
+        onClick={handleMenuClick}
         className="mt-4 border-r-0 font-medium"
       />
     </Sider>

@@ -16,18 +16,21 @@ import HoSoFormModal from '@/components/ho-so/HoSoFormModal';
 import CapSoModal from '@/components/ho-so/CapSoModal';
 import GiaHanModal from '@/components/ho-so/GiaHanModal';
 import ThayTheModal from '@/components/ho-so/ThayTheModal';
+import ThayDoiModal from '@/components/ho-so/ThayDoiModal';
 
 export default function HoSoDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = Number(params.id);
 
-  const { data: hoSoData, isLoading, isError, refetch } = useHoSoDetail(id);
+  const { data: responseData, isLoading, isError, refetch } = useHoSoDetail(id);
+  const hoSoData = responseData?.data;
 
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openCapSoModal, setOpenCapSoModal] = useState(false);
   const [openGiaHanModal, setOpenGiaHanModal] = useState(false);
   const [openThayTheModal, setOpenThayTheModal] = useState(false);
+  const [openThayDoiModal, setOpenThayDoiModal] = useState(false);
 
   if (isLoading) {
     return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" /></div>;
@@ -187,6 +190,8 @@ export default function HoSoDetailPage() {
               <Button type="primary" style={{ background: '#fa8c16' }} icon={<SwapOutlined />} onClick={() => setOpenThayTheModal(true)}>Thay thế</Button>
             </>
           )}
+          
+          <Button icon={<FileAddOutlined />} onClick={() => setOpenThayDoiModal(true)}>Thêm thay đổi</Button>
         </Space>
       </div>
 
@@ -227,6 +232,14 @@ export default function HoSoDetailPage() {
         hoSo={hoSoData}
         onCancel={() => {
           setOpenThayTheModal(false);
+          refetch();
+        }}
+      />
+      <ThayDoiModal
+        open={openThayDoiModal}
+        hoSo={hoSoData}
+        onCancel={() => {
+          setOpenThayDoiModal(false);
           refetch();
         }}
       />

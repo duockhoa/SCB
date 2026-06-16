@@ -4,22 +4,24 @@ import { useState } from 'react';
 import { Table, Button, Input, Space, Card, Modal, Form, message } from 'antd';
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useCongTyList, useCreateCongTy, useUpdateCongTy, useDeleteCongTy } from '@/hooks/queries/useCongTy';
+import { useUiStore } from '@/store/uiStore';
 import dayjs from 'dayjs';
 
 export default function CongTyPage() {
   const [form] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [searchText, setSearchText] = useState('');
+  const { globalSearch } = useUiStore();
 
   const { data: result, isLoading } = useCongTyList();
   const allCongTy = Array.isArray(result) ? result : (result?.data || []);
-  const dsCongTy = searchText
+  const searchLower = (globalSearch || '').toLowerCase();
+  const dsCongTy = searchLower
     ? allCongTy.filter((ct: any) =>
-        ct.ten_cong_ty?.toLowerCase().includes(searchText.toLowerCase()) ||
-        ct.ma_cong_ty?.toLowerCase().includes(searchText.toLowerCase()) ||
-        ct.dia_chi?.toLowerCase().includes(searchText.toLowerCase()) ||
-        ct.ma_so_thue?.toLowerCase().includes(searchText.toLowerCase())
+        ct.ten_cong_ty?.toLowerCase().includes(searchLower) ||
+        ct.ma_cong_ty?.toLowerCase().includes(searchLower) ||
+        ct.dia_chi?.toLowerCase().includes(searchLower) ||
+        ct.ma_so_thue?.toLowerCase().includes(searchLower)
       )
     : allCongTy;
 
@@ -100,15 +102,6 @@ export default function CongTyPage() {
           </Button>
         }
       >
-        <div className="p-4 border-b border-gray-100 flex justify-between bg-white shrink-0">
-          <Input
-            placeholder="Tìm kiếm công ty..."
-            prefix={<SearchOutlined className="text-gray-400" />}
-            className="max-w-md rounded-lg"
-            allowClear
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-        </div>
         <div className="flex-1 overflow-auto bg-white min-h-0">
           <Table
             columns={columns}

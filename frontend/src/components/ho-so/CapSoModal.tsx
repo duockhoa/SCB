@@ -1,6 +1,7 @@
 import { Modal, Form, Input, DatePicker, message } from 'antd';
 import { useCapSo } from '@/hooks/queries/useHoSo';
 import type { HoSoChung } from '@/types/ho-so.type';
+import LichSuThayDoiFields from './LichSuThayDoiFields';
 
 interface Props {
   open: boolean;
@@ -14,9 +15,12 @@ export default function CapSoModal({ open, onCancel, hoSo }: Props) {
 
   const handleFinish = (values: any) => {
     const payload = {
+      ...values,
       so_chinh: values.so_chinh,
       ngay_cong_bo: values.ngay_cong_bo.format('YYYY-MM-DD'),
-      ngay_het_han: values.ngay_het_han.format('YYYY-MM-DD'),
+      ngay_het_han: values.ngay_het_han ? values.ngay_het_han.format('YYYY-MM-DD') : undefined,
+      ngay_thay_doi: values.ngay_thay_doi ? values.ngay_thay_doi.format('YYYY-MM-DD') : undefined,
+      ngay_phe_duyet: values.ngay_phe_duyet ? values.ngay_phe_duyet.format('YYYY-MM-DD') : undefined,
     };
     
     capSo({ id: hoSo.id, data: payload }, {
@@ -51,6 +55,7 @@ export default function CapSoModal({ open, onCancel, hoSo }: Props) {
         <Form.Item name="ngay_het_han" label="Ngày hết hạn" rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}>
           <DatePicker className="w-full" format="DD/MM/YYYY" />
         </Form.Item>
+        <LichSuThayDoiFields />
       </Form>
     </Modal>
   );

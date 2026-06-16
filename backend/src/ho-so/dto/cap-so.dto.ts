@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional, IsDateString } from 'class-validator';
+import { ThayDoiDto } from './thay-doi.dto';
 
-export class CapSoDto {
+export class CapSoDto extends ThayDoiDto {
   @ApiProperty({ description: 'Số đăng ký / Số công bố' })
   @IsString()
   @IsNotEmpty()

@@ -63,3 +63,14 @@ export const useThayThe = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] }),
   });
 };
+
+export const useThayDoi = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => hoSoService.thayDoi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};

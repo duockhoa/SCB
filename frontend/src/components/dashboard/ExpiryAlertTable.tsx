@@ -69,7 +69,7 @@ export default function ExpiryAlertTable({ data }: Props) {
           <Button 
             type="text" 
             icon={<EyeOutlined />} 
-            onClick={() => router.push(`/ho-so/${record.id}`)}
+            onClick={() => router.push(`/ho-so?id=${record.id}`)}
           >
             Xem
           </Button>
@@ -92,6 +92,7 @@ export default function ExpiryAlertTable({ data }: Props) {
       ),
     },
   ];
+  const selectedHoSo = data.find((hs) => hs.id === selectedId);
 
   return (
     <>
@@ -101,14 +102,13 @@ export default function ExpiryAlertTable({ data }: Props) {
         rowKey="id"
         pagination={false}
       />
-      {selectedId && (
+      {selectedHoSo && (
         <GiaHanModal
           open={openGiaHan}
-          hoSoId={selectedId}
+          hoSo={selectedHoSo}
           onCancel={() => {
             setOpenGiaHan(false);
             setSelectedId(null);
-            // Table is driven by props `data` so when we close, parent might refetch
           }}
         />
       )}
