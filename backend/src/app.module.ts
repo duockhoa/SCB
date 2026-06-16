@@ -9,8 +9,11 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CronjobModule } from './cronjob/cronjob.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 
+import { AuthModule } from './auth/auth.module';
+
 @Module({
   imports: [
+    AuthModule,
     PrismaModule, 
     DanhMucModule, 
     CongTyModule, 
