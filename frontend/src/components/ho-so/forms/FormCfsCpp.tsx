@@ -19,7 +19,7 @@ export default function FormCfsCpp() {
         </Col>
       </Row>
 
-      <Divider orientation="left" plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
+      <Divider  plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
       <Row gutter={16}>
         <Col span={24}>
           <Form.Item name={['thong_tin_rieng', 'cong_van_cap_url']} label="Công văn cấp" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>

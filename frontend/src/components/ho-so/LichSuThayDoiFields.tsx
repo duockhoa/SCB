@@ -8,7 +8,7 @@ interface Props {
 export default function LichSuThayDoiFields({ title = "Thông tin Lịch sử / Thay đổi" }: Props) {
   return (
     <>
-      <Divider orientation="left">{title}</Divider>
+      <Divider >{title}</Divider>
       
       <div className="grid grid-cols-2 gap-x-4">
         <Form.Item name="lan_thu" label="Lần thay đổi thứ">

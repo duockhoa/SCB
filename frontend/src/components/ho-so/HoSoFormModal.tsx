@@ -192,7 +192,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
 
         {currentLoaiHoSo && (
           <>
-            <Divider orientation="left" plain>Thông tin đặc thù</Divider>
+            <Divider  plain>Thông tin đặc thù</Divider>
             {renderDynamicFields()}
           </>
         )}

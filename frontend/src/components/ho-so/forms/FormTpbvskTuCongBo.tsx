@@ -19,7 +19,7 @@ export default function FormTpbvskTuCongBo() {
       {/* Tạm thời Form tự công bố không có URL đặc thù ở Database, nhưng để tương thích có thể mở rộng sau. Hiện tại dùng Hồ sơ lưu trữ chung */}
       {/* Nếu DB có ban_tu_cong_bo_url thì sẽ mở comment đoạn này */}
       {/*
-      <Divider orientation="left" plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
+      <Divider  plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
       <Row gutter={16}>
         <Col span={24}>
           <Form.Item name={['thong_tin_rieng', 'ban_tu_cong_bo_url']} label="Bản tự công bố" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>

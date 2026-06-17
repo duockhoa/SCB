@@ -26,7 +26,7 @@ export default function FormTbyt() {
         </Col>
       </Row>
 
-      <Divider orientation="left" plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
+      <Divider  plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
       <Row gutter={16}>
         <Col span={24}>
           <Form.Item name={['thong_tin_rieng', 'phieu_tiep_nhan_url']} label="Phiếu tiếp nhận" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
