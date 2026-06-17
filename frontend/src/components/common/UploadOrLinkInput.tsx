@@ -63,8 +63,8 @@ const UploadOrLinkInput: React.FC<UploadOrLinkInputProps> = ({ value, onChange, 
         placeholder={placeholder || 'Dán đường dẫn (link) hoặc tải file lên...'}
         allowClear
       />
-      <Upload {...uploadProps}>
-        <Tooltip title="Tải file lên từ máy tính">
+      <Tooltip title="Tải file lên từ máy tính">
+        <Upload {...uploadProps}>
           <Button 
             icon={<UploadOutlined />} 
             loading={uploading}
@@ -73,8 +73,8 @@ const UploadOrLinkInput: React.FC<UploadOrLinkInputProps> = ({ value, onChange, 
           >
             Upload
           </Button>
-        </Tooltip>
-      </Upload>
+        </Upload>
+      </Tooltip>
       {value && value.startsWith('/') && (
         <Tooltip title="Mở file đính kèm">
           <Button 
