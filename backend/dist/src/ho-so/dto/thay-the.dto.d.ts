@@ -1,4 +1,5 @@
-export declare class ThayTheDto {
+import { ThayDoiDto } from './thay-doi.dto';
+export declare class ThayTheDto extends ThayDoiDto {
     ma_ho_so_moi: string;
     so_chinh_moi: string;
     ngay_cong_bo: Date;

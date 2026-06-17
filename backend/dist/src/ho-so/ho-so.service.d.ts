@@ -4,9 +4,11 @@ import { UpdateHoSoDto } from './dto/update-ho-so.dto';
 import { CapSoDto } from './dto/cap-so.dto';
 import { GiaHanDto } from './dto/gia-han.dto';
 import { ThayTheDto } from './dto/thay-the.dto';
+import { ThayDoiDto } from './dto/thay-doi.dto';
 export declare class HoSoService {
     private prisma;
     constructor(prisma: PrismaService);
+    private getLoaiThayDoi;
     findAll(query: any): Promise<{
         total: number;
         page: number;
@@ -333,6 +335,21 @@ export declare class HoSoService {
         ho_so_luu_url: string | null;
         ghi_chu: string | null;
         ho_so_cu_id: number | null;
+    }>;
+    thayDoi(id: number, data: ThayDoiDto): Promise<{
+        id: number;
+        created_at: Date;
+        ghi_chu: string | null;
+        tinh_trang: string | null;
+        ho_so_chung_id: number;
+        lan_thu: number;
+        noi_dung_thay_doi: string | null;
+        ma_so_tham_chieu: string | null;
+        ngay_thay_doi: Date | null;
+        ngay_phe_duyet: Date | null;
+        cong_van_url: string | null;
+        loai_thay_doi_id: number;
+        nguoi_thuc_hien_id: number | null;
     }>;
     remove(id: number): Promise<{
         message: string;

@@ -17,6 +17,13 @@ let HoSoService = class HoSoService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async getLoaiThayDoi(ma, ten) {
+        let loaiThayDoi = await this.prisma.dm_loai_thay_doi.findFirst({ where: { ma_loai_thay_doi: ma } });
+        if (!loaiThayDoi) {
+            loaiThayDoi = await this.prisma.dm_loai_thay_doi.create({ data: { ma_loai_thay_doi: ma, ten_loai_thay_doi: ten } });
+        }
+        return loaiThayDoi;
+    }
     async findAll(query) {
         const { search, loai_ho_so, tinh_trang, cong_ty_id, ngay_het_han_from, ngay_het_han_to, page = 1, limit = 10 } = query;
         const where = {};
@@ -195,6 +202,20 @@ let HoSoService = class HoSoService {
                     tinh_trang_id: ttConHieuLuc?.id || hoSo.tinh_trang_id
                 }
             });
+            await tx.lich_su_thay_doi_ho_so.create({
+                data: {
+                    ho_so_chung_id: id,
+                    lan_thu: data.lan_thu || hoSo.lich_su_thay_doi.length + 1,
+                    loai_thay_doi_id: data.loai_thay_doi_id || (await this.getLoaiThayDoi('CAP_SO', 'Cấp số')).id,
+                    noi_dung_thay_doi: data.noi_dung_thay_doi || `Cấp số: ${data.so_chinh}`,
+                    ma_so_tham_chieu: data.ma_so_tham_chieu,
+                    ngay_thay_doi: data.ngay_thay_doi ? new Date(data.ngay_thay_doi) : new Date(),
+                    ngay_phe_duyet: data.ngay_phe_duyet ? new Date(data.ngay_phe_duyet) : undefined,
+                    tinh_trang: data.tinh_trang || 'DA_PHE_DUYET',
+                    cong_van_url: data.cong_van_url,
+                    ghi_chu: data.ghi_chu
+                }
+            });
             await tx.nhat_ky_ho_so.create({
                 data: {
                     ho_so_chung_id: id,
@@ -210,10 +231,6 @@ let HoSoService = class HoSoService {
     async giaHan(id, data) {
         const hoSo = await this.findOne(id);
         const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
-        let loaiThayDoi = await this.prisma.dm_loai_thay_doi.findFirst({ where: { ma_loai_thay_doi: 'GIA_HAN' } });
-        if (!loaiThayDoi) {
-            loaiThayDoi = await this.prisma.dm_loai_thay_doi.create({ data: { ma_loai_thay_doi: 'GIA_HAN', ten_loai_thay_doi: 'Gia hạn' } });
-        }
         return this.prisma.$transaction(async (tx) => {
             const updated = await tx.ho_so_chung.update({
                 where: { id },
@@ -226,11 +243,15 @@ let HoSoService = class HoSoService {
             await tx.lich_su_thay_doi_ho_so.create({
                 data: {
                     ho_so_chung_id: id,
-                    lan_thu: hoSo.lich_su_thay_doi.length + 1,
-                    loai_thay_doi_id: loaiThayDoi.id,
-                    noi_dung_thay_doi: `Gia hạn đến ngày ${data.ngay_het_han}`,
-                    ghi_chu: `Ngày hết hạn cũ: ${hoSo.ngay_het_han}`,
-                    ngay_thay_doi: new Date()
+                    lan_thu: data.lan_thu || hoSo.lich_su_thay_doi.length + 1,
+                    loai_thay_doi_id: data.loai_thay_doi_id || (await this.getLoaiThayDoi('GIA_HAN', 'Gia hạn')).id,
+                    noi_dung_thay_doi: data.noi_dung_thay_doi || `Gia hạn đến ngày: ${data.ngay_het_han}`,
+                    ma_so_tham_chieu: data.ma_so_tham_chieu,
+                    ngay_thay_doi: data.ngay_thay_doi ? new Date(data.ngay_thay_doi) : new Date(),
+                    ngay_phe_duyet: data.ngay_phe_duyet ? new Date(data.ngay_phe_duyet) : undefined,
+                    tinh_trang: data.tinh_trang || 'DA_PHE_DUYET',
+                    cong_van_url: data.cong_van_url,
+                    ghi_chu: data.ghi_chu || `Ngày hết hạn cũ: ${hoSo.ngay_het_han}`
                 }
             });
             await tx.nhat_ky_ho_so.create({
@@ -276,6 +297,20 @@ let HoSoService = class HoSoService {
                 where: { id: hoSoCu.id },
                 data: { tinh_trang_id: ttDaThayTheMoi?.id }
             });
+            await tx.lich_su_thay_doi_ho_so.create({
+                data: {
+                    ho_so_chung_id: hoSoCu.id,
+                    lan_thu: data.lan_thu || hoSoCu.lich_su_thay_doi.length + 1,
+                    loai_thay_doi_id: data.loai_thay_doi_id || (await this.getLoaiThayDoi('THAY_THE', 'Thay thế hồ sơ')).id,
+                    noi_dung_thay_doi: data.noi_dung_thay_doi || `Bị thay thế bởi hồ sơ: ${data.ma_ho_so_moi}`,
+                    ma_so_tham_chieu: data.ma_so_tham_chieu,
+                    ngay_thay_doi: data.ngay_thay_doi ? new Date(data.ngay_thay_doi) : new Date(),
+                    ngay_phe_duyet: data.ngay_phe_duyet ? new Date(data.ngay_phe_duyet) : undefined,
+                    tinh_trang: data.tinh_trang || 'DA_PHE_DUYET',
+                    cong_van_url: data.cong_van_url,
+                    ghi_chu: data.ghi_chu
+                }
+            });
             await tx.nhat_ky_ho_so.create({
                 data: {
                     ho_so_chung_id: hoSoCu.id,
@@ -284,6 +319,33 @@ let HoSoService = class HoSoService {
                 }
             });
             return hoSoMoi;
+        });
+    }
+    async thayDoi(id, data) {
+        const hoSo = await this.findOne(id);
+        return this.prisma.$transaction(async (tx) => {
+            const thayDoi = await tx.lich_su_thay_doi_ho_so.create({
+                data: {
+                    ho_so_chung_id: id,
+                    lan_thu: data.lan_thu || hoSo.lich_su_thay_doi.length + 1,
+                    loai_thay_doi_id: data.loai_thay_doi_id || (await this.getLoaiThayDoi('KHAC', 'Khác')).id,
+                    noi_dung_thay_doi: data.noi_dung_thay_doi,
+                    ma_so_tham_chieu: data.ma_so_tham_chieu,
+                    ngay_thay_doi: data.ngay_thay_doi ? new Date(data.ngay_thay_doi) : new Date(),
+                    ngay_phe_duyet: data.ngay_phe_duyet ? new Date(data.ngay_phe_duyet) : undefined,
+                    tinh_trang: data.tinh_trang,
+                    cong_van_url: data.cong_van_url,
+                    ghi_chu: data.ghi_chu
+                }
+            });
+            await tx.nhat_ky_ho_so.create({
+                data: {
+                    ho_so_chung_id: id,
+                    hanh_dong: 'THAY_DOI',
+                    noi_dung: `Thêm thay đổi: ${data.noi_dung_thay_doi || 'Bổ sung thông tin'}`,
+                }
+            });
+            return thayDoi;
         });
     }
     async remove(id) {

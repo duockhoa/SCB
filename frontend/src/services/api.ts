@@ -35,7 +35,7 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry && typeof window !== 'undefined') {
       originalRequest._retry = true;
       const refreshToken = Cookies.get('refreshToken');
-      const authUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'http://14.232.161.66:3012';
+      const authUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'https://server.dkpharma.io.vn';
       const frontendRootUrl = process.env.NEXT_PUBLIC_FRONTEND_ROOT_URL || 'https://hrm.dkpharma.io.vn';
       
       if (refreshToken) {
