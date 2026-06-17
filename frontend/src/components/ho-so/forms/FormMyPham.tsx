@@ -1,4 +1,5 @@
 import { Form, Input, Row, Col, Divider } from 'antd';
+import UploadOrLinkInput from '../../common/UploadOrLinkInput';
 
 export default function FormMyPham() {
   return (
@@ -25,12 +26,12 @@ export default function FormMyPham() {
       <Row gutter={16}>
         <Col span={24}>
           <Form.Item name={['thong_tin_rieng', 'phieu_cong_bo_url']} label="Phiếu công bố" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
-            <Input placeholder="Dán link Google Drive hoặc URL file" />
+            <UploadOrLinkInput />
           </Form.Item>
         </Col>
         <Col span={24}>
           <Form.Item name={['thong_tin_rieng', 'xn_quang_cao_url']} label="Xác nhận Quảng cáo" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
-            <Input placeholder="Dán link Google Drive hoặc URL file" />
+            <UploadOrLinkInput />
           </Form.Item>
         </Col>
       </Row>

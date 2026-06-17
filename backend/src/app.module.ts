@@ -10,7 +10,9 @@ import { CronjobModule } from './cronjob/cronjob.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 
 import { AuthModule } from './auth/auth.module';
-
+import { UploadModule } from './upload/upload.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 @Module({
   imports: [
     AuthModule,
@@ -18,6 +20,11 @@ import { AuthModule } from './auth/auth.module';
     DanhMucModule, 
     CongTyModule, 
     HoSoModule,
+    UploadModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
     ScheduleModule.forRoot(),
     CronjobModule,
     MailerModule.forRoot({

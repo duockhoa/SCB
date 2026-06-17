@@ -1,4 +1,5 @@
 import { Form, Input, Row, Col, Divider } from 'antd';
+import UploadOrLinkInput from '../../common/UploadOrLinkInput';
 
 export default function FormTpbvskTuCongBo() {
   return (
@@ -23,7 +24,7 @@ export default function FormTpbvskTuCongBo() {
       <Row gutter={16}>
         <Col span={24}>
           <Form.Item name={['thong_tin_rieng', 'ban_tu_cong_bo_url']} label="Bản tự công bố" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
-            <Input placeholder="Dán link Google Drive hoặc URL file" />
+            <UploadOrLinkInput />
           </Form.Item>
         </Col>
       </Row>

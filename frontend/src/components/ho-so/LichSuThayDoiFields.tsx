@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Input, InputNumber, DatePicker, Select, Divider } from 'antd';
+import UploadOrLinkInput from '../common/UploadOrLinkInput';
 
 interface Props {
   title?: string;
@@ -43,7 +44,7 @@ export default function LichSuThayDoiFields({ title = "Thông tin Lịch sử / 
       </Form.Item>
 
       <Form.Item name="cong_van_url" label="Link Công văn phê duyệt / File đính kèm" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
-        <Input placeholder="Dán link Google Drive hoặc URL công văn" />
+        <UploadOrLinkInput placeholder="Dán link hoặc tải file đính kèm lên" />
       </Form.Item>
 
       <Form.Item name="ghi_chu" label="Ghi chú thêm">

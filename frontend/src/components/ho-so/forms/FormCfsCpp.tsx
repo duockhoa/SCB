@@ -1,4 +1,5 @@
 import { Form, Input, Row, Col, Select, Divider } from 'antd';
+import UploadOrLinkInput from '../../common/UploadOrLinkInput';
 
 export default function FormCfsCpp() {
   return (
@@ -23,7 +24,7 @@ export default function FormCfsCpp() {
       <Row gutter={16}>
         <Col span={24}>
           <Form.Item name={['thong_tin_rieng', 'cong_van_cap_url']} label="Công văn cấp" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
-            <Input placeholder="Dán link Google Drive hoặc URL file" />
+            <UploadOrLinkInput />
           </Form.Item>
         </Col>
       </Row>

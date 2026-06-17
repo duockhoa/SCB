@@ -12,6 +12,7 @@ import FormTbyt from './forms/FormTbyt';
 import FormTpbvskCongBo from './forms/FormTpbvskCongBo';
 import FormTpbvskTuCongBo from './forms/FormTpbvskTuCongBo';
 import FormCfsCpp from './forms/FormCfsCpp';
+import UploadOrLinkInput from '../common/UploadOrLinkInput';
 
 interface Props {
   mode: 'create' | 'edit';
@@ -182,12 +183,10 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
 
         <Form.Item 
           name="ho_so_luu_url" 
-          label="Link Hồ sơ lưu trữ (Drive)"
-          rules={[
-            { type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }
-          ]}
+          label="Link thư mục lưu Hồ sơ" 
+          rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}
         >
-          <Input placeholder="Dán link Google Drive hoặc URL thư mục lưu trữ" />
+          <UploadOrLinkInput placeholder="Đường dẫn đến thư mục chứa hồ sơ (Google Drive, OneDrive...)" />
         </Form.Item>
 
         {currentLoaiHoSo && (

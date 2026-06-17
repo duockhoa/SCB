@@ -13,13 +13,19 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     let data: any[] = [];
     let idCounter = 1;
 
-    // 1. Hồ sơ lưu trữ chung
+    const getFullUrl = (url: string) => {
+      if (url && url.startsWith('/')) {
+        return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}${url}`;
+      }
+      return url;
+    };
+
     if (hoSo.ho_so_luu_url) {
       data.push({
         id: idCounter++,
         ten_tai_lieu: 'Thư mục Hồ sơ lưu trữ',
         nhom_tai_lieu: 'Tài liệu chung',
-        url: hoSo.ho_so_luu_url,
+        url: getFullUrl(hoSo.ho_so_luu_url),
       });
     }
 
@@ -56,7 +62,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
           id: idCounter++,
           ten_tai_lieu: urlMapping[key] || key,
           nhom_tai_lieu: 'Tài liệu đặc thù',
-          url: thongTinRieng[key],
+          url: getFullUrl(thongTinRieng[key]),
         });
       }
     });

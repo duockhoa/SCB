@@ -78,3 +78,16 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// API Upload file
+export const uploadFile = async (file: File): Promise<any> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await axiosInstance.post('/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response;
+};

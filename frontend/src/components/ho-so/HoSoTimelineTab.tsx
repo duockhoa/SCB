@@ -3,6 +3,7 @@ import { Timeline, Empty, Button, Modal, Form, Input, DatePicker, Select, Space,
 import { PlusOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useUpdateLichSuThayDoi } from '@/hooks/queries/useHoSo';
+import UploadOrLinkInput from '../common/UploadOrLinkInput';
 
 interface Props {
   lichSuData?: any[];
@@ -125,7 +126,7 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
             <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="cong_van_url" label="Link công văn đính kèm">
-            <Input />
+            <UploadOrLinkInput placeholder="Nhập đường dẫn URL hoặc tải file lên" />
           </Form.Item>
           <Form.Item name="ghi_chu" label="Ghi chú">
             <Input.TextArea rows={3} />

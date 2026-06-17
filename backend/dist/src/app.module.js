@@ -18,6 +18,9 @@ const schedule_1 = require("@nestjs/schedule");
 const cronjob_module_1 = require("./cronjob/cronjob.module");
 const mailer_1 = require("@nestjs-modules/mailer");
 const auth_module_1 = require("./auth/auth.module");
+const upload_module_1 = require("./upload/upload.module");
+const serve_static_1 = require("@nestjs/serve-static");
+const path_1 = require("path");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -29,6 +32,11 @@ exports.AppModule = AppModule = __decorate([
             danh_muc_module_1.DanhMucModule,
             cong_ty_module_1.CongTyModule,
             ho_so_module_1.HoSoModule,
+            upload_module_1.UploadModule,
+            serve_static_1.ServeStaticModule.forRoot({
+                rootPath: (0, path_1.join)(__dirname, '..', '..', 'uploads'),
+                serveRoot: '/uploads',
+            }),
             schedule_1.ScheduleModule.forRoot(),
             cronjob_module_1.CronjobModule,
             mailer_1.MailerModule.forRoot({
