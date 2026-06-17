@@ -21,6 +21,9 @@ const cap_so_dto_1 = require("./dto/cap-so.dto");
 const gia_han_dto_1 = require("./dto/gia-han.dto");
 const thay_the_dto_1 = require("./dto/thay-the.dto");
 const swagger_1 = require("@nestjs/swagger");
+const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 let HoSoController = class HoSoController {
     hoSoService;
     constructor(hoSoService) {
@@ -47,6 +50,9 @@ let HoSoController = class HoSoController {
     thayThe(id, thayTheDto) {
         return this.hoSoService.thayThe(id, thayTheDto);
     }
+    thayDoi(id, thayDoiDto) {
+        return this.hoSoService.thayDoi(id, thayDoiDto);
+    }
     remove(id) {
         return this.hoSoService.remove(id);
     }
@@ -55,6 +61,7 @@ exports.HoSoController = HoSoController;
 __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiOperation)({ summary: 'Tạo mới hồ sơ' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_ho_so_dto_1.CreateHoSoDto]),
@@ -87,6 +94,7 @@ __decorate([
 __decorate([
     (0, common_1.Put)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Cập nhật hồ sơ' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký', position: 'PT' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -96,6 +104,7 @@ __decorate([
 __decorate([
     (0, common_1.Patch)(':id/cap-so'),
     (0, swagger_1.ApiOperation)({ summary: 'Cấp số công bố cho hồ sơ' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -105,6 +114,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)(':id/gia-han'),
     (0, swagger_1.ApiOperation)({ summary: 'Gia hạn hồ sơ' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -114,6 +124,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)(':id/thay-the'),
     (0, swagger_1.ApiOperation)({ summary: 'Thay thế hồ sơ (Đổi số công bố)' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký', position: 'PT' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -121,8 +132,19 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], HoSoController.prototype, "thayThe", null);
 __decorate([
+    (0, common_1.Post)(':id/thay-doi'),
+    (0, swagger_1.ApiOperation)({ summary: 'Thêm lịch sử thay đổi bổ sung' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký' }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", void 0)
+], HoSoController.prototype, "thayDoi", null);
+__decorate([
     (0, common_1.Delete)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Xóa hồ sơ' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký', position: 'PT' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
@@ -130,6 +152,8 @@ __decorate([
 ], HoSoController.prototype, "remove", null);
 exports.HoSoController = HoSoController = __decorate([
     (0, swagger_1.ApiTags)('Hồ Sơ'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, common_1.Controller)('ho-so'),
     __metadata("design:paramtypes", [ho_so_service_1.HoSoService])
 ], HoSoController);

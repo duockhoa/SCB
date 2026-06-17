@@ -58,12 +58,12 @@ export default function HoSoMasterDetail() {
       })
     : allHoSo;
   
-  // Tự động chọn item đầu tiên nếu chưa chọn
-  useEffect(() => {
-    if (dsHoSo.length > 0 && !selectedId && !isLoading) {
-      setSelectedId(dsHoSo[0].id);
-    }
-  }, [dsHoSo, selectedId, isLoading]);
+  // Bỏ tính năng tự động chọn item đầu tiên theo yêu cầu của user
+  // useEffect(() => {
+  //   if (dsHoSo.length > 0 && !selectedId && !isLoading) {
+  //     setSelectedId(dsHoSo[0].id);
+  //   }
+  // }, [dsHoSo, selectedId, isLoading]);
   
   const { mutate: deleteHoSo } = useDeleteHoSo();
 
@@ -220,7 +220,10 @@ export default function HoSoMasterDetail() {
               <div 
                 key={item.id}
                 className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors ${selectedId === item.id ? 'bg-[#e6f7ff] border-l-4 border-blue-500' : 'border-l-4 border-transparent'}`}
-                onClick={() => setSelectedId(item.id)}
+                onClick={() => {
+                  setSelectedId(item.id);
+                  window.history.pushState(null, '', `?id=${item.id}`);
+                }}
               >
                 <div className="flex justify-between items-start mb-1">
                   <div className={`font-bold text-sm w-3/4 line-clamp-2 ${selectedId === item.id ? 'text-blue-600' : 'text-gray-800'}`}>
@@ -247,7 +250,10 @@ export default function HoSoMasterDetail() {
         <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-y-auto">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
             <Breadcrumb items={[{ title: 'Hồ sơ công bố' }, { title: `${selectedItem.ma_ho_so}` }]} />
-            <Button type="text" icon={<CloseOutlined />} onClick={() => setSelectedId(null)} />
+            <Button type="text" icon={<CloseOutlined />} onClick={() => {
+              setSelectedId(null);
+              window.history.pushState(null, '', '/ho-so');
+            }} />
           </div>
           
           <div className="p-6">

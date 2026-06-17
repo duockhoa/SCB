@@ -11,8 +11,13 @@ export const usePermissions = () => {
     };
   }
 
-  const isDangKy = user.department === 'Đăng ký';
-  const isTruongPhong = user.position === 'PT';
+  // Đặc quyền cứng cho anh Lê Hoàng Cương (Full quyền Trưởng phòng)
+  const isLeHoangCuong = user.name?.toLowerCase().includes('lê hoàng cương') || 
+                         user.name?.toLowerCase().includes('le hoang cuong') ||
+                         user.username?.toLowerCase().includes('lehoangcuong');
+
+  const isDangKy = user.department === 'Đăng ký' || isLeHoangCuong;
+  const isTruongPhong = user.position === 'PT' || isLeHoangCuong;
 
   return {
     canCreate: isDangKy,

@@ -2,6 +2,15 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
+  // --- HỖ TRỢ TEST LOCAL: Gán thẻ qua URL ---
+  const urlToken = request.nextUrl.searchParams.get('setToken');
+  if (urlToken) {
+    // Xóa chữ setToken ra khỏi URL cho đẹp và nạp thẻ vào Cookie
+    const response = NextResponse.redirect(new URL(request.nextUrl.pathname, request.url));
+    response.cookies.set('accessToken', urlToken, { path: '/' });
+    return response;
+  }
+
   // Lấy token từ cookie
   const token = request.cookies.get('accessToken')?.value;
 

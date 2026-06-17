@@ -15,7 +15,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    // Payload là dữ liệu đã được giải mã từ JWT của HRM
-    return { userId: payload.sub || payload.id, username: payload.username, role: payload.role };
+    // Trả về toàn bộ payload để RolesGuard có thể lấy được các thông tin như name, department, position (nếu HRM có nhúng vào token)
+    return {
+      userId: payload.sub || payload.id,
+      ...payload
+    };
   }
 }

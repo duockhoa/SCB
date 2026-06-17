@@ -12,7 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GiaHanDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
-class GiaHanDto {
+const thay_doi_dto_1 = require("./thay-doi.dto");
+class GiaHanDto extends thay_doi_dto_1.ThayDoiDto {
     ngay_het_han;
     ngay_nhac_han;
 }

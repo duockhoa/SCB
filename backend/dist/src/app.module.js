@@ -17,12 +17,14 @@ const ho_so_module_1 = require("./ho-so/ho-so.module");
 const schedule_1 = require("@nestjs/schedule");
 const cronjob_module_1 = require("./cronjob/cronjob.module");
 const mailer_1 = require("@nestjs-modules/mailer");
+const auth_module_1 = require("./auth/auth.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            auth_module_1.AuthModule,
             prisma_module_1.PrismaModule,
             danh_muc_module_1.DanhMucModule,
             cong_ty_module_1.CongTyModule,
