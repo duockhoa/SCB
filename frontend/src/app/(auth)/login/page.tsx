@@ -6,7 +6,8 @@ export default function LoginPage() {
   useEffect(() => {
     // Tự động chuyển hướng sang trang đăng nhập của HRM
     const currentUrl = encodeURIComponent(window.location.origin);
-    window.location.href = `https://hrm.dkpharma.io.vn/login?redirect=${currentUrl}`;
+    const authUrl = process.env.NEXT_PUBLIC_FRONTEND_ROOT_URL || 'https://hrm.dkpharma.io.vn';
+    window.location.href = `${authUrl}/login?redirect=${currentUrl}`;
   }, []);
 
   return (

@@ -21,10 +21,14 @@ export default function AppHeader() {
   }, [fetchUser]);
 
   const handleLogout = () => {
+    const domain = process.env.NEXT_PUBLIC_DOMAIN || '.dkpharma.io.vn';
+    const authUrl = process.env.NEXT_PUBLIC_FRONTEND_ROOT_URL || 'https://hrm.dkpharma.io.vn';
+    
     logout();
-    Cookies.remove('access_token', { domain: '.dkpharma.io.vn' });
-    Cookies.remove('access_token'); // Dọn phòng hờ nếu cookie ko set domain
-    window.location.href = 'https://hrm.dkpharma.io.vn/login';
+    Cookies.remove('accessToken', { domain, path: '/' });
+    Cookies.remove('refreshToken', { domain, path: '/' });
+    Cookies.remove('id', { domain, path: '/' });
+    window.location.href = `${authUrl}/login`;
   };
 
   const userMenu = [

@@ -17,10 +17,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => set({ token: null, user: null }),
   fetchUser: async () => {
     try {
-      const token = Cookies.get('access_token');
+      const token = Cookies.get('accessToken');
       if (!token) return;
       
-      const hrmApiUrl = process.env.NEXT_PUBLIC_HRM_API_URL || 'http://localhost:3000';
+      const hrmApiUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3000';
       const response = await axios.get(`${hrmApiUrl}/users/me`, {
         headers: {
           Authorization: `Bearer ${token}`
