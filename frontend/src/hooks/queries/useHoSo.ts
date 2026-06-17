@@ -74,3 +74,13 @@ export const useThayDoi = () => {
     },
   });
 };
+
+export const useUpdateLichSuThayDoi = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, lichSuId, data }: { id: number; lichSuId: number; data: any }) => hoSoService.updateLichSuThayDoi(id, lichSuId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};

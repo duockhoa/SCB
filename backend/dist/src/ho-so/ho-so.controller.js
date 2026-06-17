@@ -53,6 +53,9 @@ let HoSoController = class HoSoController {
     thayDoi(id, thayDoiDto) {
         return this.hoSoService.thayDoi(id, thayDoiDto);
     }
+    updateLichSuThayDoi(id, lichSuId, thayDoiDto) {
+        return this.hoSoService.updateLichSuThayDoi(id, lichSuId, thayDoiDto);
+    }
     remove(id) {
         return this.hoSoService.remove(id);
     }
@@ -141,6 +144,17 @@ __decorate([
     __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", void 0)
 ], HoSoController.prototype, "thayDoi", null);
+__decorate([
+    (0, common_1.Patch)(':id/lich-su-thay-doi/:lichSuId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Cập nhật lịch sử thay đổi' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký' }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Param)('lichSuId', common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number, Object]),
+    __metadata("design:returntype", void 0)
+], HoSoController.prototype, "updateLichSuThayDoi", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Xóa hồ sơ' }),

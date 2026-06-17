@@ -348,6 +348,36 @@ let HoSoService = class HoSoService {
             return thayDoi;
         });
     }
+    async updateLichSuThayDoi(hoSoId, lichSuId, data) {
+        const lichSu = await this.prisma.lich_su_thay_doi_ho_so.findUnique({ where: { id: lichSuId } });
+        if (!lichSu || lichSu.ho_so_chung_id !== hoSoId) {
+            throw new common_1.NotFoundException('Không tìm thấy lịch sử thay đổi');
+        }
+        return this.prisma.$transaction(async (tx) => {
+            const updated = await tx.lich_su_thay_doi_ho_so.update({
+                where: { id: lichSuId },
+                data: {
+                    tinh_trang: data.tinh_trang !== undefined ? data.tinh_trang : lichSu.tinh_trang,
+                    ngay_phe_duyet: data.ngay_phe_duyet !== undefined ? (data.ngay_phe_duyet ? new Date(data.ngay_phe_duyet) : null) : lichSu.ngay_phe_duyet,
+                    ma_so_tham_chieu: data.ma_so_tham_chieu !== undefined ? data.ma_so_tham_chieu : lichSu.ma_so_tham_chieu,
+                    cong_van_url: data.cong_van_url !== undefined ? data.cong_van_url : lichSu.cong_van_url,
+                    ghi_chu: data.ghi_chu !== undefined ? data.ghi_chu : lichSu.ghi_chu,
+                    noi_dung_thay_doi: data.noi_dung_thay_doi !== undefined ? data.noi_dung_thay_doi : lichSu.noi_dung_thay_doi,
+                    loai_thay_doi_id: data.loai_thay_doi_id !== undefined ? data.loai_thay_doi_id : lichSu.loai_thay_doi_id,
+                }
+            });
+            await tx.nhat_ky_ho_so.create({
+                data: {
+                    ho_so_chung_id: hoSoId,
+                    hanh_dong: 'UPDATE',
+                    noi_dung: `Cập nhật thông tin lịch sử thay đổi (Lần ${lichSu.lan_thu})`,
+                    du_lieu_cu: JSON.stringify(lichSu),
+                    du_lieu_moi: JSON.stringify(updated)
+                }
+            });
+            return updated;
+        });
+    }
     async remove(id) {
         const hoSo = await this.findOne(id);
         await this.prisma.ho_so_chung.delete({ where: { id } });

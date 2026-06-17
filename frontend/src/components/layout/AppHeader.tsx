@@ -33,7 +33,7 @@ export default function AppHeader() {
   };
 
   // Đồng bộ cấu trúc Menu với UserCard của HRM
-  const userMenu = [
+  const userMenu: any = [
     { key: 'setting', label: <span className="flex items-center"><Settings className="mr-2 h-4 w-4" /> Cài đặt</span>, onClick: () => router.push('/setting') },
     { key: 'profile', label: <span className="flex items-center"><UserIcon className="mr-2 h-4 w-4" /> Hồ sơ cá nhân</span>, onClick: () => router.push('/profile') },
     { key: 'apps', label: <span className="flex items-center"><LayoutGrid className="mr-2 h-4 w-4" /> Tất cả ứng dụng</span>, onClick: () => { window.location.href = process.env.NEXT_PUBLIC_FRONTEND_ROOT_URL || 'https://hrm.dkpharma.io.vn'; } },

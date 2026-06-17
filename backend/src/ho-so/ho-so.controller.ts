@@ -79,6 +79,17 @@ export class HoSoController {
     return this.hoSoService.thayDoi(id, thayDoiDto);
   }
 
+  @Patch(':id/lich-su-thay-doi/:lichSuId')
+  @ApiOperation({ summary: 'Cập nhật lịch sử thay đổi' })
+  @RequireRole({ department: 'Đăng ký' })
+  updateLichSuThayDoi(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('lichSuId', ParseIntPipe) lichSuId: number,
+    @Body() thayDoiDto: import('./dto/thay-doi.dto').ThayDoiDto
+  ) {
+    return this.hoSoService.updateLichSuThayDoi(id, lichSuId, thayDoiDto);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Xóa hồ sơ' })
   @RequireRole({ department: 'Đăng ký', position: 'PT' })

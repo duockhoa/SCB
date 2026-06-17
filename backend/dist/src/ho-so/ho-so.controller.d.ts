@@ -349,6 +349,21 @@ export declare class HoSoController {
         loai_thay_doi_id: number;
         nguoi_thuc_hien_id: number | null;
     }>;
+    updateLichSuThayDoi(id: number, lichSuId: number, thayDoiDto: import('./dto/thay-doi.dto').ThayDoiDto): Promise<{
+        id: number;
+        created_at: Date;
+        ghi_chu: string | null;
+        tinh_trang: string | null;
+        ho_so_chung_id: number;
+        lan_thu: number;
+        noi_dung_thay_doi: string | null;
+        ma_so_tham_chieu: string | null;
+        ngay_thay_doi: Date | null;
+        ngay_phe_duyet: Date | null;
+        cong_van_url: string | null;
+        loai_thay_doi_id: number;
+        nguoi_thuc_hien_id: number | null;
+    }>;
     remove(id: number): Promise<{
         message: string;
     }>;

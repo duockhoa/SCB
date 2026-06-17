@@ -233,7 +233,10 @@ export default function HoSoMasterDetail() {
                     {renderItemMenu(item)}
                   </div>
                 </div>
-                <div className="flex justify-between items-center mt-2">
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] uppercase font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">{item.loai_ho_so?.ten_loai || 'KHÁC'}</span>
+                </div>
+                <div className="flex justify-between items-center mt-1.5">
                   <span className="text-gray-500 text-sm">{item.ma_ho_so}</span>
                   <span className={`text-xs font-semibold ${getStatusColor(item.tinh_trang?.ten_tinh_trang)}`}>
                     {item.tinh_trang?.ten_tinh_trang || 'Chưa rõ'}
