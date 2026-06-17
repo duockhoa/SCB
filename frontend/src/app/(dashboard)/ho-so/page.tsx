@@ -21,7 +21,9 @@ import HoSoNhatKyTab from '@/components/ho-so/HoSoNhatKyTab';
 import { Card } from 'antd';
 import { usePermissions } from '@/hooks/usePermissions';
 
-export default function HoSoMasterDetail() {
+import { Suspense } from 'react';
+
+function HoSoMasterDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const idFromUrl = searchParams.get('id');
@@ -403,5 +405,13 @@ export default function HoSoMasterDetail() {
         initialData={formMode === 'edit' ? selectedItem : undefined} 
       />
     </div>
+  );
+}
+
+export default function HoSoMasterDetail() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Đang tải cấu trúc dữ liệu...</div>}>
+      <HoSoMasterDetailContent />
+    </Suspense>
   );
 }
