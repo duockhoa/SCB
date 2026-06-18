@@ -30,32 +30,32 @@ export default function FormTbyt() {
       <Divider  plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
       <Row gutter={16}>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'phieu_tiep_nhan_url']} label="Phiếu tiếp nhận" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'phieu_tiep_nhan_url']} label="Phiếu tiếp nhận">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'tai_lieu_mo_ta_kt_url']} label="Tài liệu Mô tả Kỹ thuật" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'tai_lieu_mo_ta_kt_url']} label="Tài liệu Mô tả Kỹ thuật">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'tieu_chuan_co_so_url']} label="Tiêu chuẩn Cơ sở" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'tieu_chuan_co_so_url']} label="Tiêu chuẩn Cơ sở">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'nhan_url']} label="Mẫu nhãn" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'nhan_url']} label="Mẫu nhãn">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'hdsd_url']} label="Hướng dẫn sử dụng" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'hdsd_url']} label="Hướng dẫn sử dụng">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'quang_cao_url']} label="Hồ sơ Quảng cáo" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'quang_cao_url']} label="Hồ sơ Quảng cáo">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>

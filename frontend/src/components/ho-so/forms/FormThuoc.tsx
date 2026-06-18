@@ -35,17 +35,17 @@ export default function FormThuoc() {
       <Divider  plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
       <Row gutter={16}>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'quyet_dinh_cap_sdk_url']} label="Quyết định cấp SĐK" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'quyet_dinh_cap_sdk_url']} label="Quyết định cấp SĐK">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'ke_khai_gia_url']} label="Kê khai / Công bố giá" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'ke_khai_gia_url']} label="Kê khai / Công bố giá">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'quang_cao_url']} label="Hồ sơ Quảng cáo" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'quang_cao_url']} label="Hồ sơ Quảng cáo">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>

@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.HoSoService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const event_emitter_1 = require("@nestjs/event-emitter");
 let HoSoService = class HoSoService {
     prisma;
-    constructor(prisma) {
+    eventEmitter;
+    constructor(prisma, eventEmitter) {
         this.prisma = prisma;
+        this.eventEmitter = eventEmitter;
     }
     async getLoaiThayDoi(ma, ten) {
         let loaiThayDoi = await this.prisma.dm_loai_thay_doi.findFirst({ where: { ma_loai_thay_doi: ma } });
@@ -88,7 +91,9 @@ let HoSoService = class HoSoService {
                 ho_so_tpbvsk_tu_cong_bo: true,
                 ho_so_tpbvsk_cong_bo: true,
                 ho_so_cfs_cpp: true,
-                tai_lieu: true,
+                tai_lieu: {
+                    orderBy: { ngay_tai_len: 'desc' }
+                },
                 lich_su_thay_doi: true,
                 nhat_ky: { orderBy: { created_at: 'desc' } }
             }
@@ -151,7 +156,7 @@ let HoSoService = class HoSoService {
             if (exists)
                 throw new common_1.ConflictException('Mã hồ sơ đã tồn tại');
         }
-        return this.prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
             const updatedChung = await tx.ho_so_chung.update({
                 where: { id },
                 data: {
@@ -187,6 +192,16 @@ let HoSoService = class HoSoService {
             });
             return updatedChung;
         });
+        const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+        this.eventEmitter.emit('hoSo.updated', {
+            ownerId,
+            id: hoSo.id,
+            ma_ho_so: result.ma_ho_so,
+            ten_san_pham: result.ten_san_pham,
+            action: 'UPDATE',
+            time: new Date(),
+        });
+        return result;
     }
     async capSo(id, data) {
         const hoSo = await this.findOne(id);
@@ -323,7 +338,7 @@ let HoSoService = class HoSoService {
     }
     async thayDoi(id, data) {
         const hoSo = await this.findOne(id);
-        return this.prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
             const thayDoi = await tx.lich_su_thay_doi_ho_so.create({
                 data: {
                     ho_so_chung_id: id,
@@ -347,13 +362,25 @@ let HoSoService = class HoSoService {
             });
             return thayDoi;
         });
+        const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+        this.eventEmitter.emit('hoSo.updated', {
+            ownerId,
+            id: hoSo.id,
+            ma_ho_so: hoSo.ma_ho_so,
+            ten_san_pham: hoSo.ten_san_pham,
+            action: 'THAY_DOI',
+            noi_dung: data.noi_dung_thay_doi,
+            tinh_trang: data.tinh_trang,
+            time: new Date(),
+        });
+        return result;
     }
     async updateLichSuThayDoi(hoSoId, lichSuId, data) {
         const lichSu = await this.prisma.lich_su_thay_doi_ho_so.findUnique({ where: { id: lichSuId } });
         if (!lichSu || lichSu.ho_so_chung_id !== hoSoId) {
             throw new common_1.NotFoundException('Không tìm thấy lịch sử thay đổi');
         }
-        return this.prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
             const updated = await tx.lich_su_thay_doi_ho_so.update({
                 where: { id: lichSuId },
                 data: {
@@ -377,16 +404,86 @@ let HoSoService = class HoSoService {
             });
             return updated;
         });
+        const hoSo = await this.findOne(hoSoId);
+        const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+        this.eventEmitter.emit('hoSo.updated', {
+            ownerId,
+            id: hoSo.id,
+            ma_ho_so: hoSo.ma_ho_so,
+            ten_san_pham: hoSo.ten_san_pham,
+            action: 'UPDATE_LICH_SU',
+            tinh_trang: data.tinh_trang,
+            time: new Date(),
+        });
+        return result;
     }
     async remove(id) {
         const hoSo = await this.findOne(id);
         await this.prisma.ho_so_chung.delete({ where: { id } });
         return { message: 'Xóa thành công' };
     }
+    async addTaiLieu(hoSoId, data) {
+        const hoSo = await this.findOne(hoSoId);
+        let loaiTaiLieu = await this.prisma.dm_loai_tai_lieu.findFirst({
+            where: { ma_loai_tai_lieu: 'KHAC' }
+        });
+        if (!loaiTaiLieu) {
+            loaiTaiLieu = await this.prisma.dm_loai_tai_lieu.create({
+                data: {
+                    ma_loai_tai_lieu: 'KHAC',
+                    ten_loai_tai_lieu: 'Tài liệu khác',
+                }
+            });
+        }
+        return this.prisma.$transaction(async (tx) => {
+            const taiLieu = await tx.tai_lieu_ho_so.create({
+                data: {
+                    ho_so_chung_id: hoSoId,
+                    loai_tai_lieu_id: loaiTaiLieu.id,
+                    ten_tai_lieu: data.ten_tai_lieu,
+                    duong_dan_url: data.duong_dan_url,
+                    ghi_chu: data.ghi_chu,
+                }
+            });
+            await tx.nhat_ky_ho_so.create({
+                data: {
+                    ho_so_chung_id: hoSoId,
+                    hanh_dong: 'UPDATE',
+                    noi_dung: `Đã thêm tài liệu đính kèm: ${data.ten_tai_lieu}`,
+                    du_lieu_moi: JSON.stringify(taiLieu)
+                }
+            });
+            return taiLieu;
+        });
+    }
+    async deleteTaiLieu(hoSoId, taiLieuId) {
+        const hoSo = await this.findOne(hoSoId);
+        const taiLieu = await this.prisma.tai_lieu_ho_so.findUnique({
+            where: { id: taiLieuId }
+        });
+        if (!taiLieu || taiLieu.ho_so_chung_id !== hoSoId) {
+            throw new common_1.NotFoundException('Không tìm thấy tài liệu trong hồ sơ này');
+        }
+        return this.prisma.$transaction(async (tx) => {
+            await tx.tai_lieu_ho_so.delete({
+                where: { id: taiLieuId }
+            });
+            await tx.nhat_ky_ho_so.create({
+                data: {
+                    ho_so_chung_id: hoSoId,
+                    hanh_dong: 'UPDATE',
+                    noi_dung: `Đã xóa tài liệu đính kèm: ${taiLieu.ten_tai_lieu}`,
+                    du_lieu_cu: JSON.stringify(taiLieu)
+                }
+            });
+            return { message: 'Xóa tài liệu thành công' };
+        });
+    }
 };
 exports.HoSoService = HoSoService;
 exports.HoSoService = HoSoService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        event_emitter_1.EventEmitter2])
 ], HoSoService);
 //# sourceMappingURL=ho-so.service.js.map

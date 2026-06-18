@@ -5,9 +5,11 @@ import { CapSoDto } from './dto/cap-so.dto';
 import { GiaHanDto } from './dto/gia-han.dto';
 import { ThayTheDto } from './dto/thay-the.dto';
 import { ThayDoiDto } from './dto/thay-doi.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 export declare class HoSoService {
     private prisma;
-    constructor(prisma: PrismaService);
+    private eventEmitter;
+    constructor(prisma: PrismaService, eventEmitter: EventEmitter2);
     private getLoaiThayDoi;
     findAll(query: any): Promise<{
         total: number;
@@ -190,14 +192,14 @@ export declare class HoSoService {
             id: number;
             ghi_chu: string | null;
             ho_so_chung_id: number;
-            loai_tai_lieu_id: number;
             ten_tai_lieu: string;
             duong_dan_url: string;
+            ngay_tai_len: Date;
             so_phien_ban: number;
             tai_lieu_hien_hanh: boolean;
             ngay_hieu_luc: Date | null;
             ngay_het_hieu_luc: Date | null;
-            ngay_tai_len: Date;
+            loai_tai_lieu_id: number;
             nguoi_tai_len_id: number | null;
         }[];
         nhat_ky: {
@@ -367,6 +369,23 @@ export declare class HoSoService {
         nguoi_thuc_hien_id: number | null;
     }>;
     remove(id: number): Promise<{
+        message: string;
+    }>;
+    addTaiLieu(hoSoId: number, data: import('./dto/tai-lieu.dto').TaiLieuDto): Promise<{
+        id: number;
+        ghi_chu: string | null;
+        ho_so_chung_id: number;
+        ten_tai_lieu: string;
+        duong_dan_url: string;
+        ngay_tai_len: Date;
+        so_phien_ban: number;
+        tai_lieu_hien_hanh: boolean;
+        ngay_hieu_luc: Date | null;
+        ngay_het_hieu_luc: Date | null;
+        loai_tai_lieu_id: number;
+        nguoi_tai_len_id: number | null;
+    }>;
+    deleteTaiLieu(hoSoId: number, taiLieuId: number): Promise<{
         message: string;
     }>;
 }

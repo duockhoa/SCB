@@ -84,3 +84,23 @@ export const useUpdateLichSuThayDoi = () => {
     },
   });
 };
+
+export const useAddTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { ten_tai_lieu: string, duong_dan_url: string, ghi_chu?: string } }) => hoSoService.addTaiLieu(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};
+
+export const useDeleteTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, taiLieuId }: { id: number; taiLieuId: number }) => hoSoService.deleteTaiLieu(id, taiLieuId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};

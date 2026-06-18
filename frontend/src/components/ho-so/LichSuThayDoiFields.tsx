@@ -43,7 +43,7 @@ export default function LichSuThayDoiFields({ title = "Thông tin Lịch sử / 
         </Select>
       </Form.Item>
 
-      <Form.Item name="cong_van_url" label="Link Công văn phê duyệt / File đính kèm" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+      <Form.Item name="cong_van_url" label="Link Công văn phê duyệt / File đính kèm">
         <UploadOrLinkInput placeholder="Dán link hoặc tải file đính kèm lên" />
       </Form.Item>
 

@@ -184,7 +184,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
         <Form.Item 
           name="ho_so_luu_url" 
           label="Link thư mục lưu Hồ sơ" 
-          rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}
+         
         >
           <UploadOrLinkInput placeholder="Đường dẫn đến thư mục chứa hồ sơ (Google Drive, OneDrive...)" />
         </Form.Item>

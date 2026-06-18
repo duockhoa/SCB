@@ -23,7 +23,7 @@ export default function FormTpbvskTuCongBo() {
       <Divider  plain style={{ margin: '12px 0' }}>Link Tài Liệu Đặc Thù</Divider>
       <Row gutter={16}>
         <Col span={24}>
-          <Form.Item name={['thong_tin_rieng', 'ban_tu_cong_bo_url']} label="Bản tự công bố" rules={[{ type: 'url', message: 'Vui lòng nhập định dạng URL hợp lệ' }]}>
+          <Form.Item name={['thong_tin_rieng', 'ban_tu_cong_bo_url']} label="Bản tự công bố">
             <UploadOrLinkInput />
           </Form.Item>
         </Col>

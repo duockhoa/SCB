@@ -315,3 +315,19 @@ model nhat_ky_ho_so {
 
   @@index([ho_so_chung_id])
 }
+
+// ==========================================
+// E. NHÓM CẤU HÌNH HỆ THỐNG
+// ==========================================
+
+model cau_hinh_gui_mail {
+  id              Int      @id @default(autoincrement())
+  ma_su_kien      String   @db.VarChar(100)
+  loai_dieu_kien  String   @db.VarChar(50) // ROLE, PHONG_BAN, NGUOI_PHU_TRACH, EMAIL_CU_THE
+  gia_tri         String?  @db.VarChar(500)
+  trang_thai      Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@index([ma_su_kien])
+}

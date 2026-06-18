@@ -7,10 +7,14 @@ import { GiaHanDto } from './dto/gia-han.dto';
 import { ThayTheDto } from './dto/thay-the.dto';
 import { ThayDoiDto } from './dto/thay-doi.dto';
 import { Prisma } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class HoSoService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventEmitter: EventEmitter2
+  ) {}
 
   private async getLoaiThayDoi(ma: string, ten: string) {
     let loaiThayDoi = await this.prisma.dm_loai_thay_doi.findFirst({ where: { ma_loai_thay_doi: ma } });
@@ -95,7 +99,9 @@ export class HoSoService {
         ho_so_tpbvsk_tu_cong_bo: true,
         ho_so_tpbvsk_cong_bo: true,
         ho_so_cfs_cpp: true,
-        tai_lieu: true,
+        tai_lieu: {
+          orderBy: { ngay_tai_len: 'desc' }
+        },
         lich_su_thay_doi: true,
         nhat_ky: { orderBy: { created_at: 'desc' } }
       }
@@ -159,7 +165,7 @@ export class HoSoService {
       if (exists) throw new ConflictException('Mã hồ sơ đã tồn tại');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const updatedChung = await tx.ho_so_chung.update({
         where: { id },
         data: {
@@ -192,6 +198,19 @@ export class HoSoService {
 
       return updatedChung;
     });
+    
+    // Phát sự kiện thông báo qua Event Emitter
+    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+    this.eventEmitter.emit('hoSo.updated', {
+      ownerId,
+      id: hoSo.id,
+      ma_ho_so: result.ma_ho_so,
+      ten_san_pham: result.ten_san_pham,
+      action: 'UPDATE',
+      time: new Date(),
+    });
+
+    return result;
   }
 
   async capSo(id: number, data: CapSoDto) {
@@ -345,7 +364,7 @@ export class HoSoService {
 
   async thayDoi(id: number, data: ThayDoiDto) {
     const hoSo = await this.findOne(id);
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const thayDoi = await tx.lich_su_thay_doi_ho_so.create({
         data: {
           ho_so_chung_id: id,
@@ -370,6 +389,21 @@ export class HoSoService {
       });
       return thayDoi;
     });
+
+    // Phát sự kiện
+    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+    this.eventEmitter.emit('hoSo.updated', {
+      ownerId,
+      id: hoSo.id,
+      ma_ho_so: hoSo.ma_ho_so,
+      ten_san_pham: hoSo.ten_san_pham,
+      action: 'THAY_DOI',
+      noi_dung: data.noi_dung_thay_doi,
+      tinh_trang: data.tinh_trang,
+      time: new Date(),
+    });
+
+    return result;
   }
 
   async updateLichSuThayDoi(hoSoId: number, lichSuId: number, data: ThayDoiDto) {
@@ -378,7 +412,7 @@ export class HoSoService {
       throw new NotFoundException('Không tìm thấy lịch sử thay đổi');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.lich_su_thay_doi_ho_so.update({
         where: { id: lichSuId },
         data: {
@@ -404,11 +438,97 @@ export class HoSoService {
 
       return updated;
     });
+
+    const hoSo = await this.findOne(hoSoId);
+    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+    this.eventEmitter.emit('hoSo.updated', {
+      ownerId,
+      id: hoSo.id,
+      ma_ho_so: hoSo.ma_ho_so,
+      ten_san_pham: hoSo.ten_san_pham,
+      action: 'UPDATE_LICH_SU',
+      tinh_trang: data.tinh_trang,
+      time: new Date(),
+    });
+
+    return result;
   }
 
   async remove(id: number) {
     const hoSo = await this.findOne(id);
     await this.prisma.ho_so_chung.delete({ where: { id } });
     return { message: 'Xóa thành công' };
+  }
+
+  // --- QUẢN LÝ TÀI LIỆU KHÁC ---
+
+  async addTaiLieu(hoSoId: number, data: import('./dto/tai-lieu.dto').TaiLieuDto) {
+    const hoSo = await this.findOne(hoSoId);
+
+    // Tìm hoặc tạo loại tài liệu "KHAC"
+    let loaiTaiLieu = await this.prisma.dm_loai_tai_lieu.findFirst({
+      where: { ma_loai_tai_lieu: 'KHAC' }
+    });
+
+    if (!loaiTaiLieu) {
+      loaiTaiLieu = await this.prisma.dm_loai_tai_lieu.create({
+        data: {
+          ma_loai_tai_lieu: 'KHAC',
+          ten_loai_tai_lieu: 'Tài liệu khác',
+        }
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const taiLieu = await tx.tai_lieu_ho_so.create({
+        data: {
+          ho_so_chung_id: hoSoId,
+          loai_tai_lieu_id: loaiTaiLieu.id,
+          ten_tai_lieu: data.ten_tai_lieu,
+          duong_dan_url: data.duong_dan_url,
+          ghi_chu: data.ghi_chu,
+        }
+      });
+
+      await tx.nhat_ky_ho_so.create({
+        data: {
+          ho_so_chung_id: hoSoId,
+          hanh_dong: 'UPDATE',
+          noi_dung: `Đã thêm tài liệu đính kèm: ${data.ten_tai_lieu}`,
+          du_lieu_moi: JSON.stringify(taiLieu)
+        }
+      });
+
+      return taiLieu;
+    });
+  }
+
+  async deleteTaiLieu(hoSoId: number, taiLieuId: number) {
+    const hoSo = await this.findOne(hoSoId);
+    
+    const taiLieu = await this.prisma.tai_lieu_ho_so.findUnique({
+      where: { id: taiLieuId }
+    });
+
+    if (!taiLieu || taiLieu.ho_so_chung_id !== hoSoId) {
+      throw new NotFoundException('Không tìm thấy tài liệu trong hồ sơ này');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.tai_lieu_ho_so.delete({
+        where: { id: taiLieuId }
+      });
+
+      await tx.nhat_ky_ho_so.create({
+        data: {
+          ho_so_chung_id: hoSoId,
+          hanh_dong: 'UPDATE',
+          noi_dung: `Đã xóa tài liệu đính kèm: ${taiLieu.ten_tai_lieu}`,
+          du_lieu_cu: JSON.stringify(taiLieu)
+        }
+      });
+
+      return { message: 'Xóa tài liệu thành công' };
+    });
   }
 }

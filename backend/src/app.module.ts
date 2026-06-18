@@ -13,6 +13,9 @@ import { AuthModule } from './auth/auth.module';
 import { UploadModule } from './upload/upload.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { NotificationsModule } from './notifications/notifications.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { MailModule } from './mail/mail.module';
 @Module({
   imports: [
     AuthModule,
@@ -21,6 +24,9 @@ import { join } from 'path';
     CongTyModule, 
     HoSoModule,
     UploadModule,
+    NotificationsModule,
+    EventEmitterModule.forRoot(),
+    MailModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'uploads'),
       serveRoot: '/uploads',
@@ -29,15 +35,16 @@ import { join } from 'path';
     CronjobModule,
     MailerModule.forRoot({
       transport: {
-        host: process.env.MAIL_HOST || 'smtp.example.com',
+        host: process.env.MAIL_HOST || 'smtp.gmail.com',
         port: Number(process.env.MAIL_PORT) || 587,
+        secure: process.env.MAIL_SECURE === 'true',
         auth: {
           user: process.env.MAIL_USER || 'test@example.com',
           pass: process.env.MAIL_PASS || 'password',
         },
       },
       defaults: {
-        from: '"Hệ thống SCB" <noreply@scb.com>',
+        from: process.env.MAIL_FROM || '"Hệ thống SCB" <noreply@scb.com>',
       },
     }),
   ],

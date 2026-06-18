@@ -96,4 +96,21 @@ export class HoSoController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.hoSoService.remove(id);
   }
+
+  @Post(':id/tai-lieu')
+  @ApiOperation({ summary: 'Thêm tài liệu đính kèm khác' })
+  @RequireRole({ department: 'Đăng ký' })
+  addTaiLieu(@Param('id', ParseIntPipe) id: number, @Body() data: import('./dto/tai-lieu.dto').TaiLieuDto) {
+    return this.hoSoService.addTaiLieu(id, data);
+  }
+
+  @Delete(':id/tai-lieu/:taiLieuId')
+  @ApiOperation({ summary: 'Xóa tài liệu đính kèm khác' })
+  @RequireRole({ department: 'Đăng ký' })
+  deleteTaiLieu(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('taiLieuId', ParseIntPipe) taiLieuId: number
+  ) {
+    return this.hoSoService.deleteTaiLieu(id, taiLieuId);
+  }
 }

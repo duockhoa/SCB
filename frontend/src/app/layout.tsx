@@ -4,6 +4,7 @@ import './globals.css';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { ConfigProvider } from 'antd';
 import QueryProvider from '@/components/providers/QueryProvider';
+import { SocketProvider } from '@/components/providers/SocketProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,7 +18,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="vi">
       <body className={inter.className}>
         <QueryProvider>
-          <AntdRegistry>
+          <SocketProvider>
+            <AntdRegistry>
             <ConfigProvider
               theme={{
                 token: {
@@ -37,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {children}
             </ConfigProvider>
           </AntdRegistry>
+          </SocketProvider>
         </QueryProvider>
       </body>
     </html>

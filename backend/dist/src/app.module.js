@@ -21,6 +21,9 @@ const auth_module_1 = require("./auth/auth.module");
 const upload_module_1 = require("./upload/upload.module");
 const serve_static_1 = require("@nestjs/serve-static");
 const path_1 = require("path");
+const notifications_module_1 = require("./notifications/notifications.module");
+const event_emitter_1 = require("@nestjs/event-emitter");
+const mail_module_1 = require("./mail/mail.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -33,6 +36,9 @@ exports.AppModule = AppModule = __decorate([
             cong_ty_module_1.CongTyModule,
             ho_so_module_1.HoSoModule,
             upload_module_1.UploadModule,
+            notifications_module_1.NotificationsModule,
+            event_emitter_1.EventEmitterModule.forRoot(),
+            mail_module_1.MailModule,
             serve_static_1.ServeStaticModule.forRoot({
                 rootPath: (0, path_1.join)(__dirname, '..', '..', 'uploads'),
                 serveRoot: '/uploads',
@@ -41,15 +47,16 @@ exports.AppModule = AppModule = __decorate([
             cronjob_module_1.CronjobModule,
             mailer_1.MailerModule.forRoot({
                 transport: {
-                    host: process.env.MAIL_HOST || 'smtp.example.com',
+                    host: process.env.MAIL_HOST || 'smtp.gmail.com',
                     port: Number(process.env.MAIL_PORT) || 587,
+                    secure: process.env.MAIL_SECURE === 'true',
                     auth: {
                         user: process.env.MAIL_USER || 'test@example.com',
                         pass: process.env.MAIL_PASS || 'password',
                     },
                 },
                 defaults: {
-                    from: '"Hệ thống SCB" <noreply@scb.com>',
+                    from: process.env.MAIL_FROM || '"Hệ thống SCB" <noreply@scb.com>',
                 },
             }),
         ],

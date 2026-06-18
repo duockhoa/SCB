@@ -59,6 +59,12 @@ let HoSoController = class HoSoController {
     remove(id) {
         return this.hoSoService.remove(id);
     }
+    addTaiLieu(id, data) {
+        return this.hoSoService.addTaiLieu(id, data);
+    }
+    deleteTaiLieu(id, taiLieuId) {
+        return this.hoSoService.deleteTaiLieu(id, taiLieuId);
+    }
 };
 exports.HoSoController = HoSoController;
 __decorate([
@@ -164,6 +170,26 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], HoSoController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)(':id/tai-lieu'),
+    (0, swagger_1.ApiOperation)({ summary: 'Thêm tài liệu đính kèm khác' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký' }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", void 0)
+], HoSoController.prototype, "addTaiLieu", null);
+__decorate([
+    (0, common_1.Delete)(':id/tai-lieu/:taiLieuId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Xóa tài liệu đính kèm khác' }),
+    (0, roles_decorator_1.RequireRole)({ department: 'Đăng ký' }),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Param)('taiLieuId', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:returntype", void 0)
+], HoSoController.prototype, "deleteTaiLieu", null);
 exports.HoSoController = HoSoController = __decorate([
     (0, swagger_1.ApiTags)('Hồ Sơ'),
     (0, swagger_1.ApiBearerAuth)(),
