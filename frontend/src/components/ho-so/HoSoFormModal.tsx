@@ -2,7 +2,7 @@ import { Modal, Form, Input, Select, message, Divider } from 'antd';
 import { useEffect } from 'react';
 import { useCreateHoSo, useUpdateHoSo } from '@/hooks/queries/useHoSo';
 import { useCongTyList } from '@/hooks/queries/useCongTy';
-import { useLoaiHoSoList } from '@/hooks/queries/useDanhMuc';
+import { useLoaiHoSoList, useTinhTrangList } from '@/hooks/queries/useDanhMuc';
 import type { HoSoChung } from '@/types/ho-so.type';
 import { LOAI_HO_SO_CODE } from '@/constants/loai-ho-so';
 
@@ -32,6 +32,9 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
   const { data: loaiHoSoResult, isLoading: loadingLoaiHoSo } = useLoaiHoSoList();
   const loaiHoSoList = loaiHoSoResult?.data || [];
 
+  const { data: tinhTrangResult, isLoading: loadingTinhTrang } = useTinhTrangList();
+  const tinhTrangList = tinhTrangResult?.data || [];
+
   const currentLoaiHoSo = Form.useWatch('loai_ho_so_id', form);
   const currentMaLoai = loaiHoSoList.find((l: any) => l.id === currentLoaiHoSo)?.ma_loai;
 
@@ -55,6 +58,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           ma_ho_so: initialData.ma_ho_so,
           ten_san_pham: initialData.ten_san_pham,
           loai_ho_so_id: initialData.loai_ho_so_id, 
+          tinh_trang_id: initialData.tinh_trang_id,
           cong_ty_so_huu_id: initialData.cong_ty_so_huu_id,
           ghi_chu: initialData.ghi_chu || '',
           ho_so_luu_url: initialData.ho_so_luu_url || '',
@@ -164,6 +168,14 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
             </Select>
           </Form.Item>
           
+          <Form.Item name="tinh_trang_id" label="Trạng thái hồ sơ">
+            <Select placeholder="Chọn trạng thái" loading={loadingTinhTrang} allowClear>
+              {tinhTrangList.map((tt: any) => (
+                <Select.Option key={tt.id} value={tt.id}>{tt.ten_tinh_trang}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
           <Form.Item name="cong_ty_so_huu_id" label="Công ty / Đơn vị sở hữu">
             <Select 
               showSearch

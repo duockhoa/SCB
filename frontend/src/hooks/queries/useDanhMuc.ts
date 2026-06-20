@@ -7,3 +7,10 @@ export const useLoaiHoSoList = () => {
     queryFn: () => danhMucService.getLoaiHoSo(),
   });
 };
+
+export const useTinhTrangList = () => {
+  return useQuery({
+    queryKey: ['DANH_MUC', 'TINH_TRANG'],
+    queryFn: () => danhMucService.getTinhTrang(),
+  });
+};
