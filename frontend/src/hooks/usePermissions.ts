@@ -23,5 +23,6 @@ export const usePermissions = () => {
     canCreate: isDangKy,
     canUpdate: isDangKy,
     canManage: isDangKy && isTruongPhong,
+    canConfigEmail: isTruongPhong,
   };
 };

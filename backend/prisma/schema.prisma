@@ -331,3 +331,16 @@ model cau_hinh_gui_mail {
 
   @@index([ma_su_kien])
 }
+
+model cau_hinh_smtp {
+  id         Int      @id @default(autoincrement())
+  host       String   @db.VarChar(100)
+  port       Int
+  secure     Boolean  @default(false)
+  user       String   @db.VarChar(100)
+  pass       String   @db.VarChar(255)
+  from_email String   @db.VarChar(100)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
