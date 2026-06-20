@@ -16,15 +16,31 @@ export class EmailConfigController {
 
   // Check custom permission based on JWT payload (similar to frontend)
   private checkManagePermission(req: any) {
-    const user = req.user;
-    if (!user) throw new ForbiddenException('User not found in request');
+    const user = req.user || {};
+    if (!req.user) throw new ForbiddenException('User not found in request');
+
+    // Nếu JWT không chứa các thông tin này (vì HRM lưu ở cookie riêng), ta sẽ đọc thêm từ Cookie
+    if (!user.position || !user.name) {
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        cookieHeader.split(';').forEach((cookie: string) => {
+          const parts = cookie.split('=');
+          const key = parts[0].trim();
+          const value = decodeURIComponent(parts.slice(1).join('='));
+          if (key === 'position') user.position = value;
+          if (key === 'name') user.name = value;
+          if (key === 'username') user.username = value;
+          if (key === 'email') user.email = value;
+        });
+      }
+    }
 
     const isLeHoangCuong = user.name?.toLowerCase().includes('lê hoàng cương') || 
                            user.name?.toLowerCase().includes('le hoang cuong') ||
                            user.username?.toLowerCase().includes('lehoangcuong') ||
                            user.email?.toLowerCase().includes('lehoangcuong');
     
-    // Kiểm tra quyền theo position (Phó giám đốc / Trưởng phòng) từ HRM token
+    // Kiểm tra quyền theo position (Phó giám đốc / Trưởng phòng) từ HRM token/cookie
     const isTruongPhong = user.position === 'PT' || isLeHoangCuong;
 
     if (!isTruongPhong) {
