@@ -89,5 +89,5 @@ export const uploadFile = async (file: File): Promise<any> => {
       'Content-Type': 'multipart/form-data',
     },
   });
-  return response;
+  return response?.data || response;
 };
