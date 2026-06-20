@@ -12,7 +12,7 @@ export class EmailConfigController {
   constructor(
     private readonly emailConfigService: EmailConfigService,
     private readonly prisma: PrismaService
-  ) {}
+  ) { }
 
   // Check custom permission
   private async checkManagePermission(req: any) {
@@ -22,17 +22,17 @@ export class EmailConfigController {
       include: { vai_tro: true }
     });
 
-    if (!user) throw new UnauthorizedException('User not found');
+    if (!user) throw new ForbiddenException('User not found');
 
-    const isLeHoangCuong = user.ho_ten.toLowerCase().includes('lê hoàng cương') || 
-                           user.ma_nguoi_dung?.toLowerCase().includes('lehoangcuong') ||
-                           user.email.toLowerCase().includes('lehoangcuong');
-    
+    const isLeHoangCuong = user.ho_ten.toLowerCase().includes('lê hoàng cương') ||
+      user.ma_nguoi_dung?.toLowerCase().includes('lehoangcuong') ||
+      user.email.toLowerCase().includes('lehoangcuong');
+
     // Check if role is EMAIL_CONFIG_MANAGE or Truong phong
-    const hasPermission = isLeHoangCuong || user.vai_tro.ma_vai_tro === 'EMAIL_CONFIG_MANAGE' || user.vai_tro.ma_vai_tro === 'TRUONG_PHONG';
+    const hasPermission = isLeHoangCuong || user.vai_tro.ma_vai_tro === 'EMAIL_CONFIG_MANAGE' || user.vai_tro.ma_vai_tro === 'PT';
 
     if (!hasPermission) {
-      throw new UnauthorizedException('You do not have EMAIL_CONFIG_MANAGE permission');
+      throw new ForbiddenException('You do not have EMAIL_CONFIG_MANAGE permission');
     }
   }
 
