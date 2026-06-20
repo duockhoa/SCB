@@ -45,6 +45,34 @@ export const useTestSmtp = () => {
   });
 };
 
+// Events Config Hooks
+export const useEvents = () => {
+  return useQuery({
+    queryKey: ['eventsConfig'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get('/email-config/events');
+      return data; // Array of strings
+    },
+  });
+};
+
+export const useSaveEvents = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (events: string[]) => {
+      const { data } = await axiosInstance.post('/email-config/events', { events });
+      return data;
+    },
+    onSuccess: () => {
+      message.success('Lưu cấu hình sự kiện thành công');
+      queryClient.invalidateQueries({ queryKey: ['eventsConfig'] });
+    },
+    onError: (error: any) => {
+      message.error(`Lỗi: ${error.response?.data?.message || error.message}`);
+    },
+  });
+};
+
 // Recipient Config Hooks
 export const useRecipients = () => {
   return useQuery({

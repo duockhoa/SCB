@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, Tabs, Form, Input, InputNumber, Switch, Button, Table, Space, Modal, Select, Popconfirm, Alert, Spin } from 'antd';
+import { Card, Tabs, Form, Input, InputNumber, Switch, Button, Table, Space, Modal, Popconfirm, Alert, Spin, Checkbox, Row, Col, Typography, Divider } from 'antd';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRouter } from 'next/navigation';
 import { 
@@ -10,11 +10,22 @@ import {
   useTestSmtp, 
   useRecipients, 
   useAddRecipient, 
-  useUpdateRecipient, 
-  useDeleteRecipient 
+  useDeleteRecipient,
+  useEvents,
+  useSaveEvents
 } from '@/hooks/queries/useEmailConfig';
 
 const { TabPane } = Tabs;
+const { Title, Text } = Typography;
+
+const EVENT_OPTIONS = [
+  { label: 'Hồ sơ được tạo', value: 'HO_SO_CREATED' },
+  { label: 'Hồ sơ được cập nhật', value: 'HO_SO_UPDATED' },
+  { label: 'Hồ sơ sắp hết hạn', value: 'HO_SO_SAP_HET_HAN' },
+  { label: 'Hồ sơ đã hết hạn', value: 'HO_SO_DA_HET_HAN' },
+  { label: 'Hồ sơ gia hạn', value: 'HO_SO_GIA_HAN' },
+  { label: 'Hồ sơ bị thay thế', value: 'HO_SO_THAY_THE' },
+];
 
 export default function EmailConfigPage() {
   const { canConfigEmail } = usePermissions();
@@ -25,19 +36,21 @@ export default function EmailConfigPage() {
   const { mutate: updateSmtp, isPending: isUpdatingSmtp } = useUpdateSmtpConfig();
   const { mutate: testSmtp, isPending: isTestingSmtp } = useTestSmtp();
   
+  // Events
+  const { data: events, isLoading: isEventsLoading } = useEvents();
+  const { mutate: saveEvents, isPending: isSavingEvents } = useSaveEvents();
+
   // Recipients
   const { data: recipients, isLoading: isRecipientsLoading } = useRecipients();
-  const { mutate: addRecipient } = useAddRecipient();
-  const { mutate: updateRecipient } = useUpdateRecipient();
+  const { mutate: addRecipient, isPending: isAddingRecipient } = useAddRecipient();
   const { mutate: deleteRecipient } = useDeleteRecipient();
 
   const [smtpForm] = Form.useForm();
   const [testForm] = Form.useForm();
-  const [recipientForm] = Form.useForm();
+  const [emailForm] = Form.useForm();
   
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
-  const [isRecipientModalOpen, setIsRecipientModalOpen] = useState(false);
-  const [editingRecipientId, setEditingRecipientId] = useState<number | null>(null);
+  const [checkedEvents, setCheckedEvents] = useState<string[]>([]);
 
   useEffect(() => {
     if (!canConfigEmail) {
@@ -59,6 +72,12 @@ export default function EmailConfigPage() {
     }
   }, [smtpConfig, smtpForm]);
 
+  useEffect(() => {
+    if (events) {
+      setCheckedEvents(events);
+    }
+  }, [events]);
+
   if (!canConfigEmail) return <Spin className="w-full mt-20" size="large" />;
 
   const handleSmtpSubmit = (values: any) => {
@@ -71,50 +90,26 @@ export default function EmailConfigPage() {
     });
   };
 
-  const openRecipientModal = (record?: any) => {
-    if (record) {
-      setEditingRecipientId(record.id);
-      recipientForm.setFieldsValue(record);
-    } else {
-      setEditingRecipientId(null);
-      recipientForm.resetFields();
-      recipientForm.setFieldsValue({ trang_thai: true });
-    }
-    setIsRecipientModalOpen(true);
+  const handleSaveEvents = () => {
+    saveEvents(checkedEvents);
   };
 
-  const handleRecipientSubmit = (values: any) => {
-    if (editingRecipientId) {
-      updateRecipient({ id: editingRecipientId, payload: values }, {
-        onSuccess: () => setIsRecipientModalOpen(false)
-      });
-    } else {
-      addRecipient(values, {
-        onSuccess: () => setIsRecipientModalOpen(false)
-      });
-    }
+  const handleAddEmail = (values: any) => {
+    addRecipient({ gia_tri: values.email }, {
+      onSuccess: () => emailForm.resetFields()
+    });
   };
 
   const recipientColumns = [
-    { title: 'Sự kiện', dataIndex: 'ma_su_kien', key: 'ma_su_kien' },
-    { title: 'Loại nhận', dataIndex: 'loai_dieu_kien', key: 'loai_dieu_kien' },
-    { title: 'Giá trị (Email/Phòng/Quyền)', dataIndex: 'gia_tri', key: 'gia_tri' },
-    { 
-      title: 'Trạng thái', 
-      dataIndex: 'trang_thai', 
-      key: 'trang_thai',
-      render: (val: boolean) => val ? <span className="text-green-600 font-medium">Hoạt động</span> : <span className="text-red-500">Tạm dừng</span> 
-    },
+    { title: 'Địa chỉ Email nhận thông báo', dataIndex: 'gia_tri', key: 'gia_tri' },
     {
       title: 'Hành động',
       key: 'actions',
+      width: 150,
       render: (_: any, record: any) => (
-        <Space size="middle">
-          <Button type="link" onClick={() => openRecipientModal(record)}>Sửa</Button>
-          <Popconfirm title="Bạn có chắc muốn xóa?" onConfirm={() => deleteRecipient(record.id)}>
-            <Button type="link" danger>Xóa</Button>
-          </Popconfirm>
-        </Space>
+        <Popconfirm title="Bạn có chắc muốn xóa email này khỏi danh sách?" onConfirm={() => deleteRecipient(record.id)}>
+          <Button type="link" danger>Xóa</Button>
+        </Popconfirm>
       ),
     },
   ];
@@ -179,22 +174,52 @@ export default function EmailConfigPage() {
           </Card>
         </TabPane>
 
-        {/* TAB 2: RECIPIENTS CONFIG */}
-        <TabPane tab="Cấu hình Người Nhận (Events)" key="2">
-          <Card>
-            <div className="mb-4 flex justify-between items-center">
-              <h2 className="text-lg font-medium">Danh sách cấu hình người nhận</h2>
-              <Button type="primary" onClick={() => openRecipientModal()}>Thêm người nhận</Button>
-            </div>
+        {/* TAB 2: RECIPIENTS CONFIG SIMPLIFIED */}
+        <TabPane tab="Cấu hình Nhận Thông báo" key="2">
+          <Row gutter={24}>
+            <Col span={10}>
+              <Card title="Các Sự kiện Kích hoạt Gửi Mail" loading={isEventsLoading}>
+                <Text type="secondary" className="block mb-4">
+                  Đánh dấu vào các sự kiện bạn muốn hệ thống tự động gửi email thông báo.
+                </Text>
+                <Checkbox.Group 
+                  options={EVENT_OPTIONS} 
+                  value={checkedEvents} 
+                  onChange={(list) => setCheckedEvents(list as string[])}
+                  className="flex flex-col gap-3 mb-6"
+                />
+                <Button type="primary" onClick={handleSaveEvents} loading={isSavingEvents}>
+                  Lưu sự kiện
+                </Button>
+              </Card>
+            </Col>
             
-            <Table 
-              dataSource={recipients} 
-              columns={recipientColumns} 
-              rowKey="id" 
-              loading={isRecipientsLoading}
-              pagination={false}
-            />
-          </Card>
+            <Col span={14}>
+              <Card title="Danh sách Email Nhận Thông Báo">
+                <Text type="secondary" className="block mb-4">
+                  Các email trong danh sách này sẽ nhận được thông báo khi các sự kiện được đánh dấu ở bên trái xảy ra.
+                </Text>
+
+                <Form form={emailForm} onFinish={handleAddEmail} layout="inline" className="mb-4">
+                  <Form.Item name="email" rules={[{ required: true, type: 'email', message: 'Vui lòng nhập email hợp lệ' }]}>
+                    <Input placeholder="Nhập địa chỉ email..." style={{ width: '300px' }} />
+                  </Form.Item>
+                  <Form.Item>
+                    <Button type="primary" htmlType="submit" loading={isAddingRecipient}>Thêm Email</Button>
+                  </Form.Item>
+                </Form>
+
+                <Table 
+                  dataSource={recipients} 
+                  columns={recipientColumns} 
+                  rowKey="id" 
+                  loading={isRecipientsLoading}
+                  pagination={false}
+                  size="small"
+                />
+              </Card>
+            </Col>
+          </Row>
         </TabPane>
       </Tabs>
 
@@ -212,66 +237,6 @@ export default function EmailConfigPage() {
           <div className="text-right">
             <Button onClick={() => setIsTestModalOpen(false)} className="mr-2">Hủy</Button>
             <Button type="primary" htmlType="submit" loading={isTestingSmtp}>Gửi</Button>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* MODAL RECIPIENT */}
-      <Modal
-        title={editingRecipientId ? "Sửa người nhận" : "Thêm người nhận"}
-        open={isRecipientModalOpen}
-        onCancel={() => setIsRecipientModalOpen(false)}
-        footer={null}
-        destroyOnClose
-      >
-        <Form form={recipientForm} layout="vertical" onFinish={handleRecipientSubmit}>
-          <Form.Item name="ma_su_kien" label="Sự kiện" rules={[{ required: true }]}>
-            <Select 
-              mode={editingRecipientId ? undefined : "multiple"} 
-              placeholder="Chọn sự kiện"
-              allowClear
-            >
-              <Select.Option value="HO_SO_CREATED">Hồ sơ được tạo</Select.Option>
-              <Select.Option value="HO_SO_UPDATED">Hồ sơ được cập nhật</Select.Option>
-              <Select.Option value="HO_SO_SAP_HET_HAN">Hồ sơ sắp hết hạn</Select.Option>
-              <Select.Option value="HO_SO_DA_HET_HAN">Hồ sơ đã hết hạn</Select.Option>
-              <Select.Option value="HO_SO_GIA_HAN">Hồ sơ gia hạn</Select.Option>
-              <Select.Option value="HO_SO_THAY_THE">Hồ sơ bị thay thế</Select.Option>
-            </Select>
-          </Form.Item>
-          
-          <Form.Item name="loai_dieu_kien" label="Loại điều kiện nhận" rules={[{ required: true }]}>
-            <Select placeholder="Chọn loại điều kiện">
-              <Select.Option value="EMAIL_CU_THE">Email cụ thể</Select.Option>
-              <Select.Option value="ROLE">Theo vai trò</Select.Option>
-              <Select.Option value="PHONG_BAN">Theo phòng ban</Select.Option>
-              <Select.Option value="NGUOI_PHU_TRACH">Người tạo / Phụ trách</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item 
-            noStyle 
-            shouldUpdate={(prevValues, currentValues) => prevValues.loai_dieu_kien !== currentValues.loai_dieu_kien}
-          >
-            {({ getFieldValue }) => {
-              const loai = getFieldValue('loai_dieu_kien');
-              if (loai === 'NGUOI_PHU_TRACH') return null;
-              
-              return (
-                <Form.Item name="gia_tri" label="Giá trị (Email / Mã vai trò / Tên phòng ban)" rules={[{ required: true }]}>
-                  <Input placeholder={loai === 'EMAIL_CU_THE' ? 'VD: a@gmail.com' : 'Nhập giá trị...'} />
-                </Form.Item>
-              );
-            }}
-          </Form.Item>
-
-          <Form.Item name="trang_thai" label="Trạng thái" valuePropName="checked">
-            <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
-          </Form.Item>
-
-          <div className="text-right">
-            <Button onClick={() => setIsRecipientModalOpen(false)} className="mr-2">Hủy</Button>
-            <Button type="primary" htmlType="submit">Lưu</Button>
           </div>
         </Form>
       </Modal>

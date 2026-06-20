@@ -105,45 +105,30 @@ export class EmailConfigService {
     }
   }
 
-  // RECIPIENTS CRUD
+  // RECIPIENTS CRUD (Simplified)
   async getRecipients() {
     return this.prisma.cau_hinh_gui_mail.findMany({
+      where: { ma_su_kien: 'GLOBAL_EMAIL' },
       orderBy: { created_at: 'desc' }
     });
   }
 
   async addRecipient(data: any) {
-    if (Array.isArray(data.ma_su_kien)) {
-      const records = data.ma_su_kien.map((suKien: string) => ({
-        ma_su_kien: suKien,
-        loai_dieu_kien: data.loai_dieu_kien,
-        gia_tri: data.gia_tri,
-        trang_thai: data.trang_thai ?? true,
-      }));
-      return this.prisma.cau_hinh_gui_mail.createMany({
-        data: records,
-      });
-    }
-
     return this.prisma.cau_hinh_gui_mail.create({
       data: {
-        ma_su_kien: data.ma_su_kien,
-        loai_dieu_kien: data.loai_dieu_kien,
+        ma_su_kien: 'GLOBAL_EMAIL',
+        loai_dieu_kien: 'EMAIL_CU_THE',
         gia_tri: data.gia_tri,
-        trang_thai: data.trang_thai ?? true,
+        trang_thai: true,
       }
     });
   }
 
   async updateRecipient(id: number, data: any) {
+    // Không dùng update cho simplified mode nữa, nhưng giữ để tránh lỗi API
     return this.prisma.cau_hinh_gui_mail.update({
       where: { id },
-      data: {
-        ma_su_kien: data.ma_su_kien,
-        loai_dieu_kien: data.loai_dieu_kien,
-        gia_tri: data.gia_tri,
-        trang_thai: data.trang_thai,
-      }
+      data: { gia_tri: data.gia_tri }
     });
   }
 
@@ -151,5 +136,32 @@ export class EmailConfigService {
     return this.prisma.cau_hinh_gui_mail.delete({
       where: { id }
     });
+  }
+
+  // EVENT TOGGLES
+  async getEvents() {
+    const events = await this.prisma.cau_hinh_gui_mail.findMany({
+      where: { ma_su_kien: 'EVENT_TOGGLE', trang_thai: true }
+    });
+    return events.map(e => e.loai_dieu_kien);
+  }
+
+  async saveEvents(data: { events: string[] }) {
+    // Xóa tất cả các event toggle cũ
+    await this.prisma.cau_hinh_gui_mail.deleteMany({
+      where: { ma_su_kien: 'EVENT_TOGGLE' }
+    });
+
+    // Thêm các event toggle mới
+    if (data.events && data.events.length > 0) {
+      const records = data.events.map(event => ({
+        ma_su_kien: 'EVENT_TOGGLE',
+        loai_dieu_kien: event,
+        gia_tri: 'true',
+        trang_thai: true
+      }));
+      await this.prisma.cau_hinh_gui_mail.createMany({ data: records });
+    }
+    return { success: true };
   }
 }

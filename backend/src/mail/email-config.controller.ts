@@ -58,30 +58,44 @@ export class EmailConfigController {
   }
 
   @Get('recipients')
-  @ApiOperation({ summary: 'Lấy danh sách cấu hình người nhận' })
+  @ApiOperation({ summary: 'Lấy danh sách cấu hình nhận mail (simplified)' })
   async getRecipients(@Req() req) {
     await this.checkManagePermission(req);
     return this.emailConfigService.getRecipients();
   }
 
   @Post('recipients')
-  @ApiOperation({ summary: 'Thêm người nhận mới' })
+  @ApiOperation({ summary: 'Thêm người nhận mail' })
   async addRecipient(@Req() req, @Body() data: any) {
     await this.checkManagePermission(req);
     return this.emailConfigService.addRecipient(data);
   }
 
   @Put('recipients/:id')
-  @ApiOperation({ summary: 'Cập nhật cấu hình người nhận' })
+  @ApiOperation({ summary: 'Cập nhật người nhận mail' })
   async updateRecipient(@Req() req, @Param('id') id: string, @Body() data: any) {
     await this.checkManagePermission(req);
     return this.emailConfigService.updateRecipient(Number(id), data);
   }
 
   @Delete('recipients/:id')
-  @ApiOperation({ summary: 'Xóa cấu hình người nhận' })
+  @ApiOperation({ summary: 'Xóa người nhận mail' })
   async deleteRecipient(@Req() req, @Param('id') id: string) {
     await this.checkManagePermission(req);
     return this.emailConfigService.deleteRecipient(Number(id));
+  }
+
+  @Get('events')
+  @ApiOperation({ summary: 'Lấy danh sách các sự kiện được bật gửi mail' })
+  async getEvents(@Req() req) {
+    await this.checkManagePermission(req);
+    return this.emailConfigService.getEvents();
+  }
+
+  @Post('events')
+  @ApiOperation({ summary: 'Lưu cấu hình sự kiện gửi mail' })
+  async saveEvents(@Req() req, @Body() data: { events: string[] }) {
+    await this.checkManagePermission(req);
+    return this.emailConfigService.saveEvents(data);
   }
 }
