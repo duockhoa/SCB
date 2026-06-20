@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Timeline, Empty, Button, Modal, Form, Input, DatePicker, Select, Space, message } from 'antd';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { Timeline, Empty, Button, Modal, Form, Input, DatePicker, Select, Space, message, Popconfirm } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useUpdateLichSuThayDoi } from '@/hooks/queries/useHoSo';
+import { useUpdateLichSuThayDoi, useDeleteLichSuThayDoi } from '@/hooks/queries/useHoSo';
+import { useLoaiThayDoiList } from '@/hooks/queries/useDanhMuc';
 import UploadOrLinkInput from '../common/UploadOrLinkInput';
 
 interface Props {
@@ -13,6 +14,8 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [form] = Form.useForm();
   const updateMutation = useUpdateLichSuThayDoi();
+  const deleteMutation = useDeleteLichSuThayDoi();
+  const { data: loaiThayDoiList } = useLoaiThayDoiList();
 
   // Sắp xếp lịch sử theo thời gian giảm dần (mới nhất ở trên)
   const sortedData = [...(lichSuData || [])].sort((a, b) => {
@@ -33,6 +36,8 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
   const handleEditClick = (item: any) => {
     setEditingItem(item);
     form.setFieldsValue({
+      loai_thay_doi_id: item.loai_thay_doi_id,
+      noi_dung_thay_doi: item.noi_dung_thay_doi,
       tinh_trang: item.tinh_trang || 'DANG_XU_LY',
       ma_so_tham_chieu: item.ma_so_tham_chieu,
       ngay_phe_duyet: item.ngay_phe_duyet ? dayjs(item.ngay_phe_duyet) : undefined,
@@ -52,7 +57,7 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
         { id: editingItem.ho_so_chung_id, lichSuId: editingItem.id, data: payload },
         {
           onSuccess: () => {
-            message.success('Cập nhật trạng thái thành công');
+            message.success('Cập nhật thay đổi thành công');
             setEditingItem(null);
             form.resetFields();
           },
@@ -62,6 +67,23 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
         }
       );
     });
+  };
+
+  const handleDelete = () => {
+    if (!editingItem) return;
+    deleteMutation.mutate(
+      { id: editingItem.ho_so_chung_id, lichSuId: editingItem.id },
+      {
+        onSuccess: () => {
+          message.success('Đã xóa lịch sử thay đổi');
+          setEditingItem(null);
+          form.resetFields();
+        },
+        onError: (err: any) => {
+          message.error(err?.response?.data?.message || 'Có lỗi xảy ra khi xóa');
+        }
+      }
+    );
   };
 
   const handleModalCancel = () => {
@@ -114,15 +136,43 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
       )}
 
       <Modal
-        title="Cập nhật trạng thái thay đổi"
+        title="Cập nhật lịch sử thay đổi"
         open={!!editingItem}
-        onOk={handleModalOk}
         onCancel={handleModalCancel}
-        confirmLoading={updateMutation.isPending}
-        okText="Cập nhật"
-        cancelText="Hủy"
+        footer={[
+          <Popconfirm
+            key="delete"
+            title="Bạn có chắc chắn muốn xóa thay đổi này?"
+            onConfirm={handleDelete}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Button danger icon={<DeleteOutlined />} style={{ float: 'left' }} loading={deleteMutation.isPending}>
+              Xóa thay đổi
+            </Button>
+          </Popconfirm>,
+          <Button key="cancel" onClick={handleModalCancel}>
+            Hủy
+          </Button>,
+          <Button key="submit" type="primary" loading={updateMutation.isPending} onClick={handleModalOk}>
+            Cập nhật
+          </Button>,
+        ]}
       >
         <Form form={form} layout="vertical">
+          <Form.Item name="loai_thay_doi_id" label="Loại thay đổi">
+            <Select placeholder="Chọn loại thay đổi" allowClear>
+              {loaiThayDoiList?.data?.map((item: any) => (
+                <Select.Option key={item.id} value={item.id}>
+                  {item.ten_loai_thay_doi}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item name="noi_dung_thay_doi" label="Nội dung thay đổi">
+            <Input.TextArea rows={2} />
+          </Form.Item>
           <Form.Item name="tinh_trang" label="Trạng thái phê duyệt" rules={[{ required: true }]}>
             <Select>
               <Select.Option value="DANG_XU_LY">Đang xử lý</Select.Option>

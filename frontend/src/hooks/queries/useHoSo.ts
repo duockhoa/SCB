@@ -85,6 +85,16 @@ export const useUpdateLichSuThayDoi = () => {
   });
 };
 
+export const useDeleteLichSuThayDoi = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, lichSuId }: { id: number; lichSuId: number }) => hoSoService.deleteLichSuThayDoi(id, lichSuId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};
+
 export const useAddTaiLieu = () => {
   const queryClient = useQueryClient();
   return useMutation({

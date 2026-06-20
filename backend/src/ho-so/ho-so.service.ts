@@ -454,6 +454,28 @@ export class HoSoService {
     return result;
   }
 
+  async deleteLichSuThayDoi(hoSoId: number, lichSuId: number) {
+    const lichSu = await this.prisma.lich_su_thay_doi_ho_so.findUnique({ where: { id: lichSuId } });
+    if (!lichSu || lichSu.ho_so_chung_id !== hoSoId) {
+      throw new NotFoundException('Không tìm thấy lịch sử thay đổi');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.lich_su_thay_doi_ho_so.delete({ where: { id: lichSuId } });
+
+      await tx.nhat_ky_ho_so.create({
+        data: {
+          ho_so_chung_id: hoSoId,
+          hanh_dong: 'UPDATE',
+          noi_dung: `Đã xóa lịch sử thay đổi (Lần ${lichSu.lan_thu}: ${lichSu.noi_dung_thay_doi})`,
+          du_lieu_cu: JSON.stringify(lichSu)
+        }
+      });
+
+      return { message: 'Xóa lịch sử thay đổi thành công' };
+    });
+  }
+
   async remove(id: number) {
     const hoSo = await this.findOne(id);
     await this.prisma.ho_so_chung.delete({ where: { id } });

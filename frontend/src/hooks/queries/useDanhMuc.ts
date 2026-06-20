@@ -14,3 +14,10 @@ export const useTinhTrangList = () => {
     queryFn: () => danhMucService.getTinhTrang(),
   });
 };
+
+export const useLoaiThayDoiList = () => {
+  return useQuery({
+    queryKey: ['DANH_MUC', 'LOAI_THAY_DOI'],
+    queryFn: () => danhMucService.getLoaiThayDoi(),
+  });
+};

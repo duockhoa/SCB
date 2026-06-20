@@ -90,6 +90,16 @@ export class HoSoController {
     return this.hoSoService.updateLichSuThayDoi(id, lichSuId, thayDoiDto);
   }
 
+  @Delete(':id/lich-su-thay-doi/:lichSuId')
+  @ApiOperation({ summary: 'Xóa lịch sử thay đổi' })
+  @RequireRole({ department: 'Đăng ký' })
+  deleteLichSuThayDoi(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('lichSuId', ParseIntPipe) lichSuId: number
+  ) {
+    return this.hoSoService.deleteLichSuThayDoi(id, lichSuId);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Xóa hồ sơ' })
   @RequireRole({ department: 'Đăng ký', position: 'PT' })

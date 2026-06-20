@@ -12,6 +12,7 @@ export const hoSoService = {
   thayThe: async (id: number, data: any) => axiosInstance.post(`${ENDPOINTS.HO_SO}/${id}/thay-the`, data),
   thayDoi: async (id: number, data: any) => axiosInstance.post(`${ENDPOINTS.HO_SO}/${id}/thay-doi`, data),
   updateLichSuThayDoi: async (id: number, lichSuId: number, data: any) => axiosInstance.patch(`${ENDPOINTS.HO_SO}/${id}/lich-su-thay-doi/${lichSuId}`, data),
+  deleteLichSuThayDoi: async (id: number, lichSuId: number) => axiosInstance.delete(`${ENDPOINTS.HO_SO}/${id}/lich-su-thay-doi/${lichSuId}`),
   addTaiLieu: async (id: number, data: { ten_tai_lieu: string, duong_dan_url: string, ghi_chu?: string }) => axiosInstance.post(`${ENDPOINTS.HO_SO}/${id}/tai-lieu`, data),
   deleteTaiLieu: async (id: number, taiLieuId: number) => axiosInstance.delete(`${ENDPOINTS.HO_SO}/${id}/tai-lieu/${taiLieuId}`),
 };
