@@ -29,7 +29,7 @@ import { MailModule } from './mail/mail.module';
     MailModule,
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'uploads'),
-      serveRoot: '/uploads',
+      serveRoot: '/api/uploads',
     }),
     ScheduleModule.forRoot(),
     CronjobModule,
