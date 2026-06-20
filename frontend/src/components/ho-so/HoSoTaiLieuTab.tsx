@@ -28,10 +28,15 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     let idCounter = 1;
 
     const getFullUrl = (url: string) => {
-      if (url && url.startsWith('/')) {
-        return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}${url}`;
-      }
-      return url;
+      if (!url) return '';
+      if (url.startsWith('http')) return url;
+      
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+      // Đảm bảo có đúng 1 dấu gạch chéo giữa baseUrl và url
+      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+      
+      return `${cleanBase}${cleanUrl}`;
     };
 
     if (hoSo.ho_so_luu_url) {

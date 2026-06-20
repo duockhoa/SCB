@@ -75,21 +75,21 @@ const UploadOrLinkInput: React.FC<UploadOrLinkInputProps> = ({ value, onChange, 
           </Button>
         </Upload>
       </Tooltip>
-      {value && value.startsWith('/') && (
-        <Tooltip title="Mở file đính kèm">
+      {value && (
+        <Tooltip title="Mở file / đường dẫn">
           <Button 
             icon={<FileOutlined />} 
-            onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}${value}`, '_blank')}
+            onClick={() => {
+              let finalUrl = value;
+              if (!value.startsWith('http')) {
+                const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+                const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+                const cleanUrl = value.startsWith('/') ? value : `/${value}`;
+                finalUrl = `${cleanBase}${cleanUrl}`;
+              }
+              window.open(finalUrl, '_blank');
+            }}
             title="Xem file"
-          />
-        </Tooltip>
-      )}
-      {value && value.startsWith('http') && (
-        <Tooltip title="Mở đường dẫn">
-          <Button 
-            icon={<FileOutlined />} 
-            onClick={() => window.open(value, '_blank')}
-            title="Xem link"
           />
         </Tooltip>
       )}
