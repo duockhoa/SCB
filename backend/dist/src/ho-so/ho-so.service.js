@@ -285,7 +285,7 @@ let HoSoService = class HoSoService {
         const hoSoCu = await this.findOne(id);
         const ttDaThayThe = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'DA_THAY_THE' } });
         if (!ttDaThayThe) {
-            await this.prisma.dm_tinh_trang.create({ data: { ma_tinh_trang: 'DA_THAY_THE', ten_tinh_trang: 'Đã bị thay thế' } });
+            await this.prisma.dm_tinh_trang.create({ data: { ma_tinh_trang: 'DA_THAY_THE', ten_tinh_trang: 'Đã thay thế' } });
         }
         const ttDaThayTheMoi = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'DA_THAY_THE' } });
         const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
@@ -416,6 +416,24 @@ let HoSoService = class HoSoService {
             time: new Date(),
         });
         return result;
+    }
+    async deleteLichSuThayDoi(hoSoId, lichSuId) {
+        const lichSu = await this.prisma.lich_su_thay_doi_ho_so.findUnique({ where: { id: lichSuId } });
+        if (!lichSu || lichSu.ho_so_chung_id !== hoSoId) {
+            throw new common_1.NotFoundException('Không tìm thấy lịch sử thay đổi');
+        }
+        return this.prisma.$transaction(async (tx) => {
+            await tx.lich_su_thay_doi_ho_so.delete({ where: { id: lichSuId } });
+            await tx.nhat_ky_ho_so.create({
+                data: {
+                    ho_so_chung_id: hoSoId,
+                    hanh_dong: 'UPDATE',
+                    noi_dung: `Đã xóa lịch sử thay đổi (Lần ${lichSu.lan_thu}: ${lichSu.noi_dung_thay_doi})`,
+                    du_lieu_cu: JSON.stringify(lichSu)
+                }
+            });
+            return { message: 'Xóa lịch sử thay đổi thành công' };
+        });
     }
     async remove(id) {
         const hoSo = await this.findOne(id);

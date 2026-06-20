@@ -185,7 +185,7 @@ function HoSoMasterDetailContent() {
     if (!tenTinhTrang) return 'text-gray-500';
     if (tenTinhTrang.includes('Đang xử lý') || tenTinhTrang.includes('Sắp hết hạn')) return 'text-orange-500';
     if (tenTinhTrang.includes('Còn hiệu lực')) return 'text-emerald-500';
-    if (tenTinhTrang.includes('Đã hết hạn') || tenTinhTrang.includes('Bị thu hồi')) return 'text-red-500';
+    if (tenTinhTrang.includes('Đã hết hạn') || tenTinhTrang.includes('Đã thu hồi')) return 'text-red-500';
     return 'text-gray-500';
   };
 

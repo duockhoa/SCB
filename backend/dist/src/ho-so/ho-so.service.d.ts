@@ -368,6 +368,9 @@ export declare class HoSoService {
         loai_thay_doi_id: number;
         nguoi_thuc_hien_id: number | null;
     }>;
+    deleteLichSuThayDoi(hoSoId: number, lichSuId: number): Promise<{
+        message: string;
+    }>;
     remove(id: number): Promise<{
         message: string;
     }>;

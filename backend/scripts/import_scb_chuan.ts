@@ -52,7 +52,7 @@ const tinhTrangMap = [
   { ma: 'DANG_XU_LY', ten: 'Đang xử lý', mau: 'blue' },
   { ma: 'CAN_XAC_NHAN', ten: 'Cần xác nhận', mau: 'default' },
   { ma: 'DA_HUY', ten: 'Đã hủy', mau: 'default' },
-  { ma: 'BI_THU_HOI', ten: 'Bị thu hồi', mau: 'red' },
+  { ma: 'BI_THU_HOI', ten: 'Đã thu hồi', mau: 'red' },
 ];
 
 async function main() {

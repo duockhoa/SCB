@@ -303,7 +303,7 @@ export class HoSoService {
     const hoSoCu = await this.findOne(id);
     const ttDaThayThe = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'DA_THAY_THE' } });
     if (!ttDaThayThe) {
-      await this.prisma.dm_tinh_trang.create({ data: { ma_tinh_trang: 'DA_THAY_THE', ten_tinh_trang: 'Đã bị thay thế' } });
+      await this.prisma.dm_tinh_trang.create({ data: { ma_tinh_trang: 'DA_THAY_THE', ten_tinh_trang: 'Đã thay thế' } });
     }
     const ttDaThayTheMoi = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'DA_THAY_THE' } });
     const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });

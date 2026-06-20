@@ -41,7 +41,7 @@ exports.AppModule = AppModule = __decorate([
             mail_module_1.MailModule,
             serve_static_1.ServeStaticModule.forRoot({
                 rootPath: (0, path_1.join)(__dirname, '..', '..', 'uploads'),
-                serveRoot: '/uploads',
+                serveRoot: '/api/uploads',
             }),
             schedule_1.ScheduleModule.forRoot(),
             cronjob_module_1.CronjobModule,
