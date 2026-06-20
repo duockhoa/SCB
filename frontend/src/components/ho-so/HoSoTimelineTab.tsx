@@ -19,6 +19,17 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
+  const getFullUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    
+    return `${cleanBase}${cleanUrl}`;
+  };
+
   const handleEditClick = (item: any) => {
     setEditingItem(item);
     form.setFieldsValue({
@@ -89,7 +100,7 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
                 )}
                 {item.cong_van_url && (
                   <div style={{ marginTop: 4 }}>
-                    <a href={item.cong_van_url} target="_blank" rel="noopener noreferrer">
+                    <a href={getFullUrl(item.cong_van_url)} target="_blank" rel="noopener noreferrer">
                       📄 Xem Công văn phê duyệt
                     </a>
                   </div>
