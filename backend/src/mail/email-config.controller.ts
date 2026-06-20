@@ -14,88 +14,84 @@ export class EmailConfigController {
     private readonly prisma: PrismaService
   ) { }
 
-  // Check custom permission
-  private async checkManagePermission(req: any) {
-    const userId = req.user.userId;
-    const user = await this.prisma.nguoi_dung.findUnique({
-      where: { id: userId },
-      include: { vai_tro: true }
-    });
+  // Check custom permission based on JWT payload (similar to frontend)
+  private checkManagePermission(req: any) {
+    const user = req.user;
+    if (!user) throw new ForbiddenException('User not found in request');
 
-    if (!user) throw new ForbiddenException('User not found');
+    const isLeHoangCuong = user.name?.toLowerCase().includes('lê hoàng cương') || 
+                           user.name?.toLowerCase().includes('le hoang cuong') ||
+                           user.username?.toLowerCase().includes('lehoangcuong') ||
+                           user.email?.toLowerCase().includes('lehoangcuong');
+    
+    // Kiểm tra quyền theo position (Phó giám đốc / Trưởng phòng) từ HRM token
+    const isTruongPhong = user.position === 'PT' || isLeHoangCuong;
 
-    const isLeHoangCuong = user.ho_ten.toLowerCase().includes('lê hoàng cương') ||
-      user.ma_nguoi_dung?.toLowerCase().includes('lehoangcuong') ||
-      user.email.toLowerCase().includes('lehoangcuong');
-
-    // Check if role is EMAIL_CONFIG_MANAGE or Truong phong
-    const hasPermission = isLeHoangCuong || user.vai_tro.ma_vai_tro === 'EMAIL_CONFIG_MANAGE' || user.vai_tro.ma_vai_tro === 'PT';
-
-    if (!hasPermission) {
-      throw new ForbiddenException('You do not have EMAIL_CONFIG_MANAGE permission');
+    if (!isTruongPhong) {
+      throw new ForbiddenException(`Bạn không có quyền cấu hình Email. Vai trò hiện tại: ${user.position || 'N/A'}`);
     }
   }
 
   @Get('smtp')
   @ApiOperation({ summary: 'Lấy cấu hình SMTP hiện tại (không trả về pass)' })
   async getSmtp(@Req() req) {
-    await this.checkManagePermission(req);
+    this.checkManagePermission(req);
     return this.emailConfigService.getSmtpConfig();
   }
 
   @Post('smtp')
   @ApiOperation({ summary: 'Lưu hoặc cập nhật cấu hình SMTP' })
   async saveSmtp(@Req() req, @Body() data: any) {
-    await this.checkManagePermission(req);
+    this.checkManagePermission(req);
     return this.emailConfigService.saveSmtpConfig(data);
   }
 
   @Post('smtp/test')
   @ApiOperation({ summary: 'Gửi email test nghiệm thu cấu hình' })
   async testSmtp(@Req() req, @Body() body: { test_email: string }) {
-    await this.checkManagePermission(req);
+    this.checkManagePermission(req);
     return this.emailConfigService.testSmtpConnection(body.test_email);
   }
 
   @Get('recipients')
   @ApiOperation({ summary: 'Lấy danh sách cấu hình nhận mail (simplified)' })
   async getRecipients(@Req() req) {
-    await this.checkManagePermission(req);
+    this.checkManagePermission(req);
     return this.emailConfigService.getRecipients();
   }
 
   @Post('recipients')
   @ApiOperation({ summary: 'Thêm người nhận mail' })
   async addRecipient(@Req() req, @Body() data: any) {
-    await this.checkManagePermission(req);
+    this.checkManagePermission(req);
     return this.emailConfigService.addRecipient(data);
   }
 
   @Put('recipients/:id')
   @ApiOperation({ summary: 'Cập nhật người nhận mail' })
   async updateRecipient(@Req() req, @Param('id') id: string, @Body() data: any) {
-    await this.checkManagePermission(req);
+    this.checkManagePermission(req);
     return this.emailConfigService.updateRecipient(Number(id), data);
   }
 
   @Delete('recipients/:id')
   @ApiOperation({ summary: 'Xóa người nhận mail' })
   async deleteRecipient(@Req() req, @Param('id') id: string) {
-    await this.checkManagePermission(req);
+    this.checkManagePermission(req);
     return this.emailConfigService.deleteRecipient(Number(id));
   }
 
   @Get('events')
   @ApiOperation({ summary: 'Lấy danh sách các sự kiện được bật gửi mail' })
   async getEvents(@Req() req) {
-    await this.checkManagePermission(req);
+    this.checkManagePermission(req);
     return this.emailConfigService.getEvents();
   }
 
   @Post('events')
   @ApiOperation({ summary: 'Lưu cấu hình sự kiện gửi mail' })
   async saveEvents(@Req() req, @Body() data: { events: string[] }) {
-    await this.checkManagePermission(req);
+    this.checkManagePermission(req);
     return this.emailConfigService.saveEvents(data);
   }
 }
