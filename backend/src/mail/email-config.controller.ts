@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { EmailConfigService } from './email-config.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -24,14 +24,6 @@ export class EmailConfigController {
 
     if (!user) throw new UnauthorizedException('User not found');
 
-    // Hardcode Truong phong (position 'PT' check if we had position, but in backend schema, it's vai_tro or hardcoded logic)
-    // The user requested: "Bổ sung permission code chuẩn: EMAIL_CONFIG_MANAGE. Frontend dùng canConfigEmail. Backend cũng phải check quyền ở API"
-    // Since backend might not have 'position' field in nguoi_dung (wait, it has phong_ban, let's see schema), we'll allow if user has EMAIL_CONFIG_MANAGE in vai_tro or is Le Hoang Cuong or PT
-    // Let's implement a basic check here.
-    
-    // For now, let's allow if user has specific roles or we just check if it's the requested user.
-    // In a real app with EMAIL_CONFIG_MANAGE permission, we would check if their vai_tro grants it.
-    // Since we don't have a permissions table, we'll check if they are Le Hoang Cuong or have Truong Phong role
     const isLeHoangCuong = user.ho_ten.toLowerCase().includes('lê hoàng cương') || 
                            user.ma_nguoi_dung?.toLowerCase().includes('lehoangcuong') ||
                            user.email.toLowerCase().includes('lehoangcuong');
