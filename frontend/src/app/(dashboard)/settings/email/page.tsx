@@ -226,7 +226,11 @@ export default function EmailConfigPage() {
       >
         <Form form={recipientForm} layout="vertical" onFinish={handleRecipientSubmit}>
           <Form.Item name="ma_su_kien" label="Sự kiện" rules={[{ required: true }]}>
-            <Select placeholder="Chọn sự kiện">
+            <Select 
+              mode={editingRecipientId ? undefined : "multiple"} 
+              placeholder="Chọn sự kiện"
+              allowClear
+            >
               <Select.Option value="HO_SO_CREATED">Hồ sơ được tạo</Select.Option>
               <Select.Option value="HO_SO_UPDATED">Hồ sơ được cập nhật</Select.Option>
               <Select.Option value="HO_SO_SAP_HET_HAN">Hồ sơ sắp hết hạn</Select.Option>

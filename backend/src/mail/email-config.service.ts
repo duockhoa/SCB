@@ -113,6 +113,18 @@ export class EmailConfigService {
   }
 
   async addRecipient(data: any) {
+    if (Array.isArray(data.ma_su_kien)) {
+      const records = data.ma_su_kien.map((suKien: string) => ({
+        ma_su_kien: suKien,
+        loai_dieu_kien: data.loai_dieu_kien,
+        gia_tri: data.gia_tri,
+        trang_thai: data.trang_thai ?? true,
+      }));
+      return this.prisma.cau_hinh_gui_mail.createMany({
+        data: records,
+      });
+    }
+
     return this.prisma.cau_hinh_gui_mail.create({
       data: {
         ma_su_kien: data.ma_su_kien,
