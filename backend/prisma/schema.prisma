@@ -306,8 +306,8 @@ model nhat_ky_ho_so {
   hanh_dong         String    @db.VarChar(50)
   nguoi_thuc_hien_id Int?
   noi_dung          String?   @db.Text
-  du_lieu_cu        String?   @db.Text
-  du_lieu_moi       String?   @db.Text
+  du_lieu_cu        String?   @db.LongText
+  du_lieu_moi       String?   @db.LongText
   created_at        DateTime  @default(now())
 
   ho_so_chung       ho_so_chung @relation(fields: [ho_so_chung_id], references: [id], onDelete: Cascade)
