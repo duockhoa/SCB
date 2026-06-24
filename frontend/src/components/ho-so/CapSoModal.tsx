@@ -52,7 +52,7 @@ export default function CapSoModal({ open, onCancel, hoSo }: Props) {
         <Form.Item name="ngay_cong_bo" label="Ngày công bố" rules={[{ required: true, message: 'Vui lòng chọn ngày công bố' }]}>
           <DatePicker className="w-full" format="DD/MM/YYYY" />
         </Form.Item>
-        <Form.Item name="ngay_het_han" label="Ngày hết hạn" rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn' }]}>
+        <Form.Item name="ngay_het_han" label="Ngày hết hạn">
           <DatePicker className="w-full" format="DD/MM/YYYY" />
         </Form.Item>
         <LichSuThayDoiFields />

@@ -1,5 +1,6 @@
-import { Modal, Form, Input, Select, message, Divider } from 'antd';
+import { Modal, Form, Input, Select, message, Divider, DatePicker } from 'antd';
 import { useEffect } from 'react';
+import dayjs from 'dayjs';
 import { useCreateHoSo, useUpdateHoSo } from '@/hooks/queries/useHoSo';
 import { useCongTyList } from '@/hooks/queries/useCongTy';
 import { useLoaiHoSoList, useTinhTrangList } from '@/hooks/queries/useDanhMuc';
@@ -60,6 +61,8 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           loai_ho_so_id: initialData.loai_ho_so_id, 
           tinh_trang_id: initialData.tinh_trang_id,
           cong_ty_so_huu_id: initialData.cong_ty_so_huu_id,
+          ngay_cong_bo: initialData.ngay_cong_bo ? dayjs(initialData.ngay_cong_bo) : undefined,
+          ngay_het_han: initialData.ngay_het_han ? dayjs(initialData.ngay_het_han) : undefined,
           ghi_chu: initialData.ghi_chu || '',
           ho_so_luu_url: initialData.ho_so_luu_url || '',
           thong_tin_rieng, // Đổ dữ liệu riêng vào form
@@ -94,6 +97,8 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
   const handleFinish = (values: any) => {
     const payload = {
       ...values,
+      ngay_cong_bo: values.ngay_cong_bo ? values.ngay_cong_bo.format('YYYY-MM-DD') : undefined,
+      ngay_het_han: values.ngay_het_han ? values.ngay_het_han.format('YYYY-MM-DD') : undefined,
     };
 
     if (mode === 'create') {
@@ -174,6 +179,14 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
                 <Select.Option key={tt.id} value={tt.id}>{tt.ten_tinh_trang}</Select.Option>
               ))}
             </Select>
+          </Form.Item>
+
+          <Form.Item name="ngay_cong_bo" label="Ngày công bố/cấp">
+            <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày" />
+          </Form.Item>
+
+          <Form.Item name="ngay_het_han" label="Ngày hết hạn">
+            <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày" />
           </Form.Item>
 
           <Form.Item name="cong_ty_so_huu_id" label="Công ty / Đơn vị sở hữu">
