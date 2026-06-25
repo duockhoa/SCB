@@ -103,7 +103,10 @@ export class HoSoService {
           orderBy: { ngay_tai_len: 'desc' }
         },
         lich_su_thay_doi: true,
-        nhat_ky: { orderBy: { created_at: 'desc' } }
+        nhat_ky: { 
+          orderBy: { created_at: 'desc' },
+          include: { nguoi_thuc_hien: true }
+        }
       }
     });
 
