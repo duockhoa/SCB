@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { CongTyService } from './cong-ty.service';
 import { CreateCongTyDto } from './dto/create-cong-ty.dto';
 import { UpdateCongTyDto } from './dto/update-cong-ty.dto';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Công Ty')
+@UseGuards(AuthGuard('jwt'))
 @Controller('cong-ty')
 export class CongTyController {
   constructor(private readonly congTyService: CongTyService) {}

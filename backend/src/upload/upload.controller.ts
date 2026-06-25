@@ -1,10 +1,12 @@
-import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
 @ApiTags('Upload')
+@UseGuards(AuthGuard('jwt'))
 @Controller('upload')
 export class UploadController {
   @Post()
