@@ -27,7 +27,9 @@ export class SyncService {
         throw new HttpException(`Failed to fetch users: ${response.statusText}`, response.status);
       }
 
-      const users = await response.json();
+      const responseData = await response.json();
+      const users = Array.isArray(responseData) ? responseData : (responseData.data || responseData.users || []);
+      
       this.logger.log(`Fetched ${users.length} users from HRM. Syncing to DB...`);
 
       let synced = 0;
@@ -38,14 +40,14 @@ export class SyncService {
         await this.prisma.nguoi_dung.upsert({
           where: { ma_nguoi_dung },
           update: {
-            ho_ten: user.name || 'Unknown',
+            ho_ten: user.fullName || user.ho_ten || user.name || 'Unknown',
             email: user.email || null,
             phong_ban: user.department || null,
             chuc_vu: user.position || null,
           },
           create: {
             ma_nguoi_dung,
-            ho_ten: user.name || 'Unknown',
+            ho_ten: user.fullName || user.ho_ten || user.name || 'Unknown',
             email: user.email || null,
             phong_ban: user.department || null,
             chuc_vu: user.position || null,
