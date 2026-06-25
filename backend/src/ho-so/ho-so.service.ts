@@ -111,7 +111,7 @@ export class HoSoService {
     return hoSo;
   }
 
-  async create(data: CreateHoSoDto) {
+  async create(data: CreateHoSoDto, userId?: number) {
     const { thong_tin_rieng, nguoi_thuc_hien_id, ...chungData } = data;
 
     const exists = await this.prisma.ho_so_chung.findUnique({ where: { ma_ho_so: data.ma_ho_so } });
@@ -143,7 +143,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: hoSoChung.id,
           hanh_dong: 'CREATE',
-          nguoi_thuc_hien_id: nguoi_thuc_hien_id || null,
+          nguoi_thuc_hien_id: userId || nguoi_thuc_hien_id || null,
           noi_dung: `Tạo mới hồ sơ ${chungData.ma_ho_so}`,
           du_lieu_cu: null,
           du_lieu_moi: JSON.stringify({ chung: chungData, rieng: thong_tin_rieng })
@@ -154,7 +154,7 @@ export class HoSoService {
     });
   }
 
-  async update(id: number, data: UpdateHoSoDto) {
+  async update(id: number, data: UpdateHoSoDto, userId?: number) {
     const hoSo = await this.findOne(id);
     const { thong_tin_rieng, nguoi_thuc_hien_id, ...chungData } = data;
 
@@ -189,7 +189,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: id,
           hanh_dong: 'UPDATE',
-          nguoi_thuc_hien_id: nguoi_thuc_hien_id || null,
+          nguoi_thuc_hien_id: userId || nguoi_thuc_hien_id || null,
           noi_dung: `Cập nhật hồ sơ ${updatedChung.ma_ho_so}`,
           du_lieu_cu: JSON.stringify(hoSo),
           du_lieu_moi: JSON.stringify({ chung: chungData, rieng: thong_tin_rieng })
@@ -213,7 +213,7 @@ export class HoSoService {
     return result;
   }
 
-  async capSo(id: number, data: CapSoDto) {
+  async capSo(id: number, data: CapSoDto, userId?: number) {
     const hoSo = await this.findOne(id);
     const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
     
@@ -248,6 +248,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: id,
           hanh_dong: 'CAP_SO',
+          nguoi_thuc_hien_id: userId || null,
           noi_dung: `Cấp số công bố ${data.so_chinh} cho hồ sơ`,
           du_lieu_cu: JSON.stringify({ so_chinh: hoSo.so_chinh, tinh_trang_id: hoSo.tinh_trang_id }),
           du_lieu_moi: JSON.stringify({ so_chinh: data.so_chinh, tinh_trang_id: ttConHieuLuc?.id })
@@ -257,7 +258,7 @@ export class HoSoService {
     });
   }
 
-  async giaHan(id: number, data: GiaHanDto) {
+  async giaHan(id: number, data: GiaHanDto, userId?: number) {
     const hoSo = await this.findOne(id);
     const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
 
@@ -290,6 +291,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: id,
           hanh_dong: 'GIA_HAN',
+          nguoi_thuc_hien_id: userId || null,
           noi_dung: `Gia hạn số công bố ${hoSo.so_chinh}`,
           du_lieu_cu: JSON.stringify({ ngay_het_han: hoSo.ngay_het_han }),
           du_lieu_moi: JSON.stringify({ ngay_het_han: data.ngay_het_han })
@@ -299,7 +301,7 @@ export class HoSoService {
     });
   }
 
-  async thayThe(id: number, data: ThayTheDto) {
+  async thayThe(id: number, data: ThayTheDto, userId?: number) {
     const hoSoCu = await this.findOne(id);
     const ttDaThayThe = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'DA_THAY_THE' } });
     if (!ttDaThayThe) {
@@ -354,6 +356,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: hoSoCu.id,
           hanh_dong: 'THAY_THE',
+          nguoi_thuc_hien_id: userId || null,
           noi_dung: `Đã thay thế bằng hồ sơ mới ${hoSoMoi.ma_ho_so}`,
         }
       });
@@ -362,7 +365,7 @@ export class HoSoService {
     });
   }
 
-  async thayDoi(id: number, data: ThayDoiDto) {
+  async thayDoi(id: number, data: ThayDoiDto, userId?: number) {
     const hoSo = await this.findOne(id);
     const result = await this.prisma.$transaction(async (tx) => {
       const thayDoi = await tx.lich_su_thay_doi_ho_so.create({
@@ -384,6 +387,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: id,
           hanh_dong: 'THAY_DOI',
+          nguoi_thuc_hien_id: userId || null,
           noi_dung: `Thêm thay đổi: ${data.noi_dung_thay_doi || 'Bổ sung thông tin'}`,
         }
       });
@@ -406,7 +410,7 @@ export class HoSoService {
     return result;
   }
 
-  async updateLichSuThayDoi(hoSoId: number, lichSuId: number, data: ThayDoiDto) {
+  async updateLichSuThayDoi(hoSoId: number, lichSuId: number, data: ThayDoiDto, userId?: number) {
     const lichSu = await this.prisma.lich_su_thay_doi_ho_so.findUnique({ where: { id: lichSuId } });
     if (!lichSu || lichSu.ho_so_chung_id !== hoSoId) {
       throw new NotFoundException('Không tìm thấy lịch sử thay đổi');
@@ -430,6 +434,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: hoSoId,
           hanh_dong: 'UPDATE',
+          nguoi_thuc_hien_id: userId || null,
           noi_dung: `Cập nhật thông tin lịch sử thay đổi (Lần ${lichSu.lan_thu})`,
           du_lieu_cu: JSON.stringify(lichSu),
           du_lieu_moi: JSON.stringify(updated)
@@ -454,7 +459,7 @@ export class HoSoService {
     return result;
   }
 
-  async deleteLichSuThayDoi(hoSoId: number, lichSuId: number) {
+  async deleteLichSuThayDoi(hoSoId: number, lichSuId: number, userId?: number) {
     const lichSu = await this.prisma.lich_su_thay_doi_ho_so.findUnique({ where: { id: lichSuId } });
     if (!lichSu || lichSu.ho_so_chung_id !== hoSoId) {
       throw new NotFoundException('Không tìm thấy lịch sử thay đổi');
@@ -467,6 +472,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: hoSoId,
           hanh_dong: 'UPDATE',
+          nguoi_thuc_hien_id: userId || null,
           noi_dung: `Đã xóa lịch sử thay đổi (Lần ${lichSu.lan_thu}: ${lichSu.noi_dung_thay_doi})`,
           du_lieu_cu: JSON.stringify(lichSu)
         }
@@ -484,7 +490,7 @@ export class HoSoService {
 
   // --- QUẢN LÝ TÀI LIỆU KHÁC ---
 
-  async addTaiLieu(hoSoId: number, data: import('./dto/tai-lieu.dto').TaiLieuDto) {
+  async addTaiLieu(hoSoId: number, data: import('./dto/tai-lieu.dto').TaiLieuDto, userId?: number) {
     const hoSo = await this.findOne(hoSoId);
 
     // Tìm hoặc tạo loại tài liệu "KHAC"
@@ -516,6 +522,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: hoSoId,
           hanh_dong: 'UPDATE',
+          nguoi_thuc_hien_id: userId || null,
           noi_dung: `Đã thêm tài liệu đính kèm: ${data.ten_tai_lieu}`,
           du_lieu_moi: JSON.stringify(taiLieu)
         }
@@ -525,7 +532,7 @@ export class HoSoService {
     });
   }
 
-  async deleteTaiLieu(hoSoId: number, taiLieuId: number) {
+  async deleteTaiLieu(hoSoId: number, taiLieuId: number, userId?: number) {
     const hoSo = await this.findOne(hoSoId);
     
     const taiLieu = await this.prisma.tai_lieu_ho_so.findUnique({
@@ -545,6 +552,7 @@ export class HoSoService {
         data: {
           ho_so_chung_id: hoSoId,
           hanh_dong: 'UPDATE',
+          nguoi_thuc_hien_id: userId || null,
           noi_dung: `Đã xóa tài liệu đính kèm: ${taiLieu.ten_tai_lieu}`,
           du_lieu_cu: JSON.stringify(taiLieu)
         }

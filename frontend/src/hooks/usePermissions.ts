@@ -6,8 +6,10 @@ export const usePermissions = () => {
   if (!user) {
     return {
       canCreate: false,
-      canUpdate: false, // Cấp số, gia hạn, thêm thay đổi
-      canManage: false, // Sửa, Xóa, Thay thế (chỉ Trưởng phòng)
+      canUpdate: false,
+      canManage: false,
+      canConfigEmail: false,
+      canViewSystemLogs: false,
     };
   }
 
@@ -24,5 +26,6 @@ export const usePermissions = () => {
     canUpdate: isDangKy,
     canManage: isDangKy && isTruongPhong,
     canConfigEmail: isTruongPhong,
+    canViewSystemLogs: isTruongPhong,
   };
 };

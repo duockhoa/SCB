@@ -1,7 +1,7 @@
 'use client';
 
 import { Layout, Menu } from 'antd';
-import { DashboardOutlined, FileTextOutlined, AppstoreOutlined, SettingOutlined } from '@ant-design/icons';
+import { DashboardOutlined, FileTextOutlined, AppstoreOutlined, SettingOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useUiStore } from '@/store/uiStore';
 import { useRouter, usePathname } from 'next/navigation';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -13,7 +13,7 @@ export default function AppSidebar() {
   const { setGlobalSearch } = useUiStore();
   const router = useRouter();
   const pathname = usePathname();
-  const { canConfigEmail } = usePermissions();
+  const { canConfigEmail, canViewSystemLogs } = usePermissions();
 
   const menuItems: any[] = [
     { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
@@ -24,6 +24,10 @@ export default function AppSidebar() {
 
   if (canConfigEmail) {
     menuItems.push({ key: '/settings/email', icon: <SettingOutlined />, label: 'Cấu hình Email' });
+  }
+
+  if (canViewSystemLogs) {
+    menuItems.push({ key: '/settings/logs', icon: <HistoryOutlined />, label: 'Nhật ký Hệ thống' });
   }
 
   const handleMenuClick = ({ key }: { key: string }) => {

@@ -16,10 +16,17 @@ import { join } from 'path';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { MailModule } from './mail/mail.module';
+import { SyncModule } from './sync/sync.module';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { LogsModule } from './logs/logs.module';
+
 @Module({
   imports: [
     AuthModule,
     PrismaModule, 
+    SyncModule,
+    LogsModule,
     DanhMucModule, 
     CongTyModule, 
     HoSoModule,
@@ -49,6 +56,12 @@ import { MailModule } from './mail/mail.module';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+  ],
 })
 export class AppModule {}

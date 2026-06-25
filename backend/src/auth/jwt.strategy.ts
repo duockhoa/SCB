@@ -1,23 +1,53 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly prisma: PrismaService) {
     super({
-      // Hỗ trợ 2 cách nhận token: qua Header Authorization (Bearer) hoặc qua Header tùy chỉnh nếu cần
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      // ĐÂY LÀ ĐIỂM QUAN TRỌNG: Cần lấy SECRET_KEY giống hệt với HRM đang dùng
       secretOrKey: process.env.JWT_SECRET || 'DO_NOT_USE_IN_PRODUCTION_JWT_SECRET_KEY_12345',
     });
   }
 
   async validate(payload: any) {
-    // Trả về toàn bộ payload để RolesGuard có thể lấy được các thông tin như name, department, position (nếu HRM có nhúng vào token)
+    const ma_nguoi_dung = payload.username || payload.sub?.toString() || payload.id?.toString();
+    const ho_ten = payload.name || 'Unknown';
+    const email = payload.email || null;
+    const phong_ban = payload.department || null;
+    const chuc_vu = payload.position || null;
+
+    if (!ma_nguoi_dung) {
+      return payload; // Fallback
+    }
+
+    const user = await this.prisma.nguoi_dung.upsert({
+      where: { ma_nguoi_dung },
+      update: {
+        ho_ten,
+        email,
+        phong_ban,
+        chuc_vu,
+      },
+      create: {
+        ma_nguoi_dung,
+        ho_ten,
+        email,
+        phong_ban,
+        chuc_vu,
+      }
+    });
+
     return {
-      userId: payload.sub || payload.id,
+      userId: user.id, // ID cục bộ trong SCB
+      hrmId: payload.id || payload.sub,
+      username: ma_nguoi_dung,
+      name: ho_ten,
+      department: phong_ban,
+      position: chuc_vu,
       ...payload
     };
   }

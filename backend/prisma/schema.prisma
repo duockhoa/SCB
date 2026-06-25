@@ -83,19 +83,34 @@ model nguoi_dung {
   id              Int           @id @default(autoincrement())
   ma_nguoi_dung   String        @unique @db.VarChar(50)
   ho_ten          String        @db.VarChar(200)
-  email           String        @unique @db.VarChar(200)
-  mat_khau_hash   String        @db.VarChar(255)
-  vai_tro_id      Int
+  email           String?       @unique @db.VarChar(200)
+  mat_khau_hash   String?       @db.VarChar(255)
+  vai_tro_id      Int?
   phong_ban       String?       @db.VarChar(200)
+  chuc_vu         String?       @db.VarChar(200)
   trang_thai      Boolean       @default(true)
   created_at      DateTime      @default(now())
   updated_at      DateTime      @updatedAt
 
-  vai_tro         vai_tro       @relation(fields: [vai_tro_id], references: [id])
+  vai_tro         vai_tro?      @relation(fields: [vai_tro_id], references: [id])
   
   tai_lieu_tai_len  tai_lieu_ho_so[]
   lich_su_thuc_hien lich_su_thay_doi_ho_so[]
   nhat_ky_thuc_hien nhat_ky_ho_so[]
+  nhat_ky_he_thong  nhat_ky_he_thong[]
+}
+
+model nhat_ky_he_thong {
+  id              Int           @id @default(autoincrement())
+  nguoi_dung_id   Int?
+  phuong_thuc     String        @db.VarChar(10)
+  duong_dan       String        @db.VarChar(500)
+  chi_tiet        String?       @db.Text
+  ip_address      String?       @db.VarChar(50)
+  status_code     Int?
+  created_at      DateTime      @default(now())
+
+  nguoi_dung      nguoi_dung?   @relation(fields: [nguoi_dung_id], references: [id])
 }
 
 // ==========================================
