@@ -24,22 +24,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       return payload; // Fallback
     }
 
-    const user = await this.prisma.nguoi_dung.upsert({
-      where: { ma_nguoi_dung },
-      update: {
-        ho_ten,
-        email,
-        phong_ban,
-        chuc_vu,
-      },
-      create: {
-        ma_nguoi_dung,
-        ho_ten,
-        email,
-        phong_ban,
-        chuc_vu,
-      }
+    let user = await this.prisma.nguoi_dung.findUnique({
+      where: { ma_nguoi_dung }
     });
+
+    if (!user) {
+      user = await this.prisma.nguoi_dung.create({
+        data: {
+          ma_nguoi_dung,
+          ho_ten,
+          email,
+          phong_ban,
+          chuc_vu,
+        }
+      });
+    }
 
     return {
       userId: user.id, // ID cục bộ trong SCB

@@ -14,6 +14,21 @@ export default function SystemLogsPage() {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSyncUsers = async () => {
+    setSyncing(true);
+    try {
+      const response = await axiosInstance.post('/sync/users');
+      message.success(`Đã đồng bộ thành công ${response.data.totalSynced} người dùng từ HRM`);
+      fetchLogs(pagination.current, pagination.pageSize);
+    } catch (error) {
+      console.error(error);
+      message.error('Lỗi khi đồng bộ người dùng');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const fetchLogs = async (page = 1, limit = 20) => {
     setLoading(true);
@@ -113,7 +128,12 @@ export default function SystemLogsPage() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
         <Title level={4} className="!m-0">Nhật ký Hệ thống (System Logs)</Title>
-        <Button onClick={() => fetchLogs(1, pagination.pageSize)}>Làm mới</Button>
+        <Space>
+          <Button type="primary" loading={syncing} onClick={handleSyncUsers}>
+            Đồng bộ User từ HRM
+          </Button>
+          <Button onClick={() => fetchLogs(1, pagination.pageSize)}>Làm mới</Button>
+        </Space>
       </div>
       
       <Table 
