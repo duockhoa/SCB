@@ -155,6 +155,18 @@ export class HoSoService {
 
       return hoSoChung;
     });
+
+    this.eventEmitter.emit('hoSo.created', {
+      ownerId: userId || nguoi_thuc_hien_id || null,
+      id: result.id,
+      ma_ho_so: result.ma_ho_so,
+      ten_san_pham: result.ten_san_pham,
+      action: 'CREATE',
+      eventName: 'HO_SO_CREATED',
+      time: new Date(),
+    });
+
+    return result;
   }
 
   async update(id: number, data: UpdateHoSoDto, userId?: number) {
@@ -220,7 +232,7 @@ export class HoSoService {
     const hoSo = await this.findOne(id);
     const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
     
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.ho_so_chung.update({
         where: { id },
         data: {
@@ -259,13 +271,26 @@ export class HoSoService {
       });
       return updated;
     });
+
+    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+    this.eventEmitter.emit('hoSo.updated', {
+      ownerId,
+      id: hoSo.id,
+      ma_ho_so: hoSo.ma_ho_so,
+      ten_san_pham: hoSo.ten_san_pham,
+      action: 'CAP_SO',
+      eventName: 'HO_SO_UPDATED',
+      time: new Date(),
+    });
+
+    return result;
   }
 
   async giaHan(id: number, data: GiaHanDto, userId?: number) {
     const hoSo = await this.findOne(id);
     const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.ho_so_chung.update({
         where: { id },
         data: {
@@ -302,6 +327,19 @@ export class HoSoService {
       });
       return updated;
     });
+
+    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+    this.eventEmitter.emit('hoSo.updated', {
+      ownerId,
+      id: hoSo.id,
+      ma_ho_so: hoSo.ma_ho_so,
+      ten_san_pham: hoSo.ten_san_pham,
+      action: 'GIA_HAN',
+      eventName: 'HO_SO_GIA_HAN',
+      time: new Date(),
+    });
+
+    return result;
   }
 
   async thayThe(id: number, data: ThayTheDto, userId?: number) {
@@ -313,7 +351,7 @@ export class HoSoService {
     const ttDaThayTheMoi = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'DA_THAY_THE' } });
     const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Create new
       const hoSoMoi = await tx.ho_so_chung.create({
         data: {
@@ -366,6 +404,19 @@ export class HoSoService {
 
       return hoSoMoi;
     });
+
+    const ownerId = hoSoCu.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+    this.eventEmitter.emit('hoSo.updated', {
+      ownerId,
+      id: hoSoCu.id,
+      ma_ho_so: hoSoCu.ma_ho_so,
+      ten_san_pham: hoSoCu.ten_san_pham,
+      action: 'THAY_THE',
+      eventName: 'HO_SO_THAY_THE',
+      time: new Date(),
+    });
+
+    return result;
   }
 
   async thayDoi(id: number, data: ThayDoiDto, userId?: number) {
