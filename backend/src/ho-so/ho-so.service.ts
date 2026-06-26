@@ -123,7 +123,7 @@ export class HoSoService {
     const loaiHoSo = await this.prisma.dm_loai_ho_so.findUnique({ where: { id: data.loai_ho_so_id } });
     if (!loaiHoSo) throw new NotFoundException('Không tìm thấy loại hồ sơ');
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const hoSoChung = await tx.ho_so_chung.create({
         data: {
           ...chungData,
