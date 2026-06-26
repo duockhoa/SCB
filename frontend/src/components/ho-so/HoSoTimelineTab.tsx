@@ -4,7 +4,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useUpdateLichSuThayDoi, useDeleteLichSuThayDoi } from '@/hooks/queries/useHoSo';
 import { useLoaiThayDoiList } from '@/hooks/queries/useDanhMuc';
-import UploadOrLinkInput from '../common/UploadOrLinkInput';
+import MultiUploadOrLinkInput, { parseUrls } from '../common/MultiUploadOrLinkInput';
 
 interface Props {
   lichSuData?: any[];
@@ -121,10 +121,12 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
                   </div>
                 )}
                 {item.cong_van_url && (
-                  <div style={{ marginTop: 4 }}>
-                    <a href={getFullUrl(item.cong_van_url)} target="_blank" rel="noopener noreferrer">
-                      📄 Xem Công văn phê duyệt
-                    </a>
+                  <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {parseUrls(item.cong_van_url).map((link: any, idx: number) => (
+                      <a key={idx} href={getFullUrl(link.url)} target="_blank" rel="noopener noreferrer">
+                        📄 {link.name || `Xem Công văn phê duyệt ${parseUrls(item.cong_van_url).length > 1 ? idx + 1 : ''}`}
+                      </a>
+                    ))}
                   </div>
                 )}
                 {item.ghi_chu && <div style={{ color: '#888', fontStyle: 'italic', marginTop: 4 }}>Ghi chú: {item.ghi_chu}</div>}
@@ -187,7 +189,7 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
             <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="cong_van_url" label="Link công văn đính kèm">
-            <UploadOrLinkInput placeholder="Nhập đường dẫn URL hoặc tải file lên" />
+            <MultiUploadOrLinkInput placeholder="Nhập đường dẫn URL hoặc tải file lên" />
           </Form.Item>
           <Form.Item name="ghi_chu" label="Ghi chú">
             <Input.TextArea rows={3} />

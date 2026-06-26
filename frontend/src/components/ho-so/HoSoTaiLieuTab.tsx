@@ -5,6 +5,7 @@ import { uploadFile } from '@/services/api';
 import { useUpdateHoSo, useAddTaiLieu, useDeleteTaiLieu } from '@/hooks/queries/useHoSo';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import UploadOrLinkInput from '../common/UploadOrLinkInput';
 
 interface Props {
   hoSo: HoSoChung;
@@ -138,36 +139,32 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
   };
 
   const handleAddNewDocument = async (values: any) => {
-    if (!values.file || values.file.length === 0) {
-      message.error('Vui lòng chọn một tệp để tải lên');
+    if (!values.duong_dan_url) {
+      message.error('Vui lòng cung cấp link hoặc file');
       return;
     }
-    const file = values.file[0].originFileObj;
     setUploadingNew(true);
     try {
-      const response = await uploadFile(file);
-      if (response && response.url) {
-        addTaiLieu({
-          id: hoSo.id,
-          data: {
-            ten_tai_lieu: values.ten_tai_lieu,
-            duong_dan_url: response.url,
-            ghi_chu: values.ghi_chu
-          }
-        }, {
-          onSuccess: () => {
-            message.success('Tải thêm tài liệu thành công!');
-            setIsAddModalOpen(false);
-            form.resetFields();
-          },
-          onError: () => {
-            message.error('Lỗi khi thêm tài liệu');
-          }
-        });
-      }
+      addTaiLieu({
+        id: hoSo.id,
+        data: {
+          ten_tai_lieu: values.ten_tai_lieu,
+          duong_dan_url: values.duong_dan_url,
+          ghi_chu: values.ghi_chu
+        }
+      }, {
+        onSuccess: () => {
+          message.success('Tải thêm tài liệu thành công!');
+          setIsAddModalOpen(false);
+          form.resetFields();
+        },
+        onError: () => {
+          message.error('Lỗi khi thêm tài liệu');
+        }
+      });
     } catch (error) {
       console.error(error);
-      message.error('Lỗi khi tải file lên');
+      message.error('Lỗi khi thêm tài liệu');
     } finally {
       setUploadingNew(false);
     }
@@ -283,10 +280,8 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
           <Form.Item name="ghi_chu" label="Ghi chú">
             <Input.TextArea rows={2} placeholder="Nhập ghi chú thêm nếu có..." />
           </Form.Item>
-          <Form.Item name="file" label="File đính kèm" valuePropName="fileList" getValueFromEvent={normFile} rules={[{ required: true, message: 'Vui lòng chọn file' }]}>
-            <Upload beforeUpload={() => false} maxCount={1}>
-              <Button icon={<UploadOutlined />}>Chọn file</Button>
-            </Upload>
+          <Form.Item name="duong_dan_url" label="Link / File đính kèm" rules={[{ required: true, message: 'Vui lòng cung cấp link hoặc file' }]}>
+            <UploadOrLinkInput placeholder="Dán link hoặc tải file lên..." />
           </Form.Item>
         </Form>
       </Modal>
