@@ -37,6 +37,11 @@ export default function ExpiryAlertTable({ data }: Props) {
         <div>
           <div style={{ fontWeight: 'bold', color: '#1890ff' }}>{record.ma_ho_so}</div>
           <div>{record.ten_san_pham}</div>
+          {record.loai_ho_so && (
+            <Tag color="blue" style={{ marginTop: '4px' }}>
+              {record.loai_ho_so.ten_loai}
+            </Tag>
+          )}
         </div>
       ),
     },
