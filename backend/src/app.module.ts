@@ -11,7 +11,6 @@ import { MailerModule } from '@nestjs-modules/mailer';
 
 import { AuthModule } from './auth/auth.module';
 import { UploadModule } from './upload/upload.module';
-import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -20,6 +19,7 @@ import { SyncModule } from './sync/sync.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LogsModule } from './logs/logs.module';
+import { FileAccessModule } from './file-access/file-access.module';
 
 @Module({
   imports: [
@@ -34,10 +34,6 @@ import { LogsModule } from './logs/logs.module';
     NotificationsModule,
     EventEmitterModule.forRoot(),
     MailModule,
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', '..', 'uploads'),
-      serveRoot: '/api/uploads',
-    }),
     ScheduleModule.forRoot(),
     CronjobModule,
     MailerModule.forRoot({
@@ -54,6 +50,7 @@ import { LogsModule } from './logs/logs.module';
         from: process.env.MAIL_FROM || '"Hệ thống SCB" <noreply@scb.com>',
       },
     }),
+    FileAccessModule,
   ],
   controllers: [AppController],
   providers: [

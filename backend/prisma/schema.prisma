@@ -98,6 +98,9 @@ model nguoi_dung {
   lich_su_thuc_hien lich_su_thay_doi_ho_so[]
   nhat_ky_thuc_hien nhat_ky_ho_so[]
   nhat_ky_he_thong  nhat_ky_he_thong[]
+
+  yeu_cau_truy_cap_file_gui yeu_cau_truy_cap_file[] @relation("NguoiYeuCau")
+  yeu_cau_truy_cap_file_duyet yeu_cau_truy_cap_file[] @relation("NguoiDuyet")
 }
 
 model nhat_ky_he_thong {
@@ -272,6 +275,8 @@ model tai_lieu_ho_so {
   loai_tai_lieu         dm_loai_tai_lieu @relation(fields: [loai_tai_lieu_id], references: [id])
   nguoi_tai_len         nguoi_dung?      @relation(fields: [nguoi_tai_len_id], references: [id])
 
+  yeu_cau_truy_cap_file yeu_cau_truy_cap_file[]
+
   @@index([ho_so_chung_id])
   @@index([loai_tai_lieu_id])
 }
@@ -358,4 +363,29 @@ model cau_hinh_smtp {
   is_active  Boolean  @default(true)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+}
+
+// ==========================================
+// F. NHÓM QUẢN LÝ QUYỀN TRUY CẬP FILE
+// ==========================================
+
+model yeu_cau_truy_cap_file {
+  id                  Int       @id @default(autoincrement())
+  nguoi_yeu_cau_id    Int       
+  tai_lieu_id         Int?      
+  file_name           String?   @db.VarChar(500)
+  trang_thai          String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  nguoi_duyet_id      Int?      
+  ngay_het_han        DateTime? 
+  ly_do               String?   @db.Text
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  nguoi_yeu_cau       nguoi_dung @relation("NguoiYeuCau", fields: [nguoi_yeu_cau_id], references: [id])
+  nguoi_duyet         nguoi_dung? @relation("NguoiDuyet", fields: [nguoi_duyet_id], references: [id])
+  tai_lieu            tai_lieu_ho_so? @relation(fields: [tai_lieu_id], references: [id], onDelete: Cascade)
+
+  @@index([nguoi_yeu_cau_id])
+  @@index([tai_lieu_id])
+  @@index([file_name])
 }
