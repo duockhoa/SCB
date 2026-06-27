@@ -6,6 +6,8 @@ import { useUpdateHoSo, useAddTaiLieu, useDeleteTaiLieu } from '@/hooks/queries/
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import UploadOrLinkInput from '../common/UploadOrLinkInput';
+import { axiosInstance, requestFileAccess } from '@/services/api';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface Props {
   hoSo: HoSoChung;
@@ -16,11 +18,17 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
   const { mutate: updateHoSo } = useUpdateHoSo();
   const { mutate: addTaiLieu, isPending: addingTaiLieu } = useAddTaiLieu();
   const { mutate: deleteTaiLieu } = useDeleteTaiLieu();
+  const { canUpdate, canDelete } = usePermissions();
   
   const queryClient = useQueryClient();
   const [uploadingId, setUploadingId] = useState<number | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [requestingRecord, setRequestingRecord] = useState<any>(null);
+  const [viewingRecordId, setViewingRecordId] = useState<number | null>(null);
+  
   const [form] = Form.useForm();
+  const [formRequest] = Form.useForm();
   const [uploadingNew, setUploadingNew] = useState(false);
 
   // Lấy các link từ dữ liệu
@@ -182,6 +190,52 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     return e?.fileList;
   };
 
+  const handleViewFile = async (record: any) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    if (!record.url || !record.url.startsWith(apiUrl)) {
+      window.open(record.url, '_blank');
+      return;
+    }
+
+    setViewingRecordId(record.id);
+    try {
+      const response = await axiosInstance.get(record.url, {
+        responseType: 'blob',
+      });
+      const fileUrl = window.URL.createObjectURL(response as unknown as Blob);
+      window.open(fileUrl, '_blank');
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        setRequestingRecord(record);
+        setIsRequestModalOpen(true);
+      } else {
+        message.error('Lỗi khi mở tài liệu hoặc bạn chưa được cấp quyền');
+      }
+    } finally {
+      setViewingRecordId(null);
+    }
+  };
+
+  const handleRequestAccess = async (values: any) => {
+    if (!requestingRecord) return;
+    try {
+      let fileName = null;
+      let taiLieuId = null;
+      if (requestingRecord.is_dynamic) {
+         taiLieuId = requestingRecord.real_id;
+      } else {
+         fileName = requestingRecord.url.split('/').pop();
+      }
+
+      await requestFileAccess(taiLieuId, fileName, values.ly_do);
+      message.success('Đã gửi yêu cầu cấp quyền xem tài liệu. Vui lòng chờ phê duyệt.');
+      setIsRequestModalOpen(false);
+      formRequest.resetFields();
+    } catch (error: any) {
+      message.error(error.response?.data?.message || 'Lỗi khi gửi yêu cầu');
+    }
+  };
+
   const columns = [
     {
       title: 'Tên tài liệu',
@@ -189,7 +243,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
       key: 'ten_tai_lieu',
       render: (text: string, record: any) => (
         <Space direction="vertical" size="small">
-          <a href={record.url} target="_blank" rel="noopener noreferrer">
+          <a onClick={() => handleViewFile(record)}>
             {record.nhom_tai_lieu === 'Tài liệu chung' ? <FolderOpenOutlined style={{ marginRight: 8 }} /> : null}
             {text}
           </a>
@@ -218,11 +272,12 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
             type="primary" 
             ghost
             icon={<EyeOutlined />} 
-            onClick={() => window.open(record.url, '_blank')}
+            onClick={() => handleViewFile(record)}
+            loading={viewingRecordId === record.id}
           >
             Mở xem
           </Button>
-          {!record.is_dynamic ? (
+          {canUpdate && !record.is_dynamic && (
             <Upload 
               showUploadList={false}
               beforeUpload={(file) => handleUploadReplace(file, record)}
@@ -234,7 +289,8 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
                 Upload thay thế
               </Button>
             </Upload>
-          ) : (
+          )}
+          {canDelete && record.is_dynamic && (
             <Popconfirm title="Bạn có chắc chắn muốn xóa tài liệu này?" onConfirm={() => handleDeleteDocument(record)}>
               <Button danger icon={<DeleteOutlined />}>Xóa</Button>
             </Popconfirm>
@@ -248,9 +304,11 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0 }}>Danh sách tài liệu đính kèm</h3>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalOpen(true)}>
-          Thêm tài liệu khác
-        </Button>
+        {canUpdate && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalOpen(true)}>
+            Thêm tài liệu khác
+          </Button>
+        )}
       </div>
 
       {dataSource.length === 0 ? (
@@ -282,6 +340,26 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
           </Form.Item>
           <Form.Item name="duong_dan_url" label="Link / File đính kèm" rules={[{ required: true, message: 'Vui lòng cung cấp link hoặc file' }]}>
             <UploadOrLinkInput placeholder="Dán link hoặc tải file lên..." />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal xin quyền xem tài liệu */}
+      <Modal
+        title="Yêu cầu quyền truy cập tài liệu"
+        open={isRequestModalOpen}
+        onCancel={() => { setIsRequestModalOpen(false); formRequest.resetFields(); }}
+        onOk={() => formRequest.submit()}
+        okText="Gửi yêu cầu"
+        cancelText="Hủy"
+      >
+        <div style={{ marginBottom: 16 }}>
+          Bạn không có quyền truy cập file <strong>{requestingRecord?.ten_tai_lieu}</strong>.
+          Vui lòng điền lý do xin quyền để Trưởng phòng phê duyệt.
+        </div>
+        <Form form={formRequest} layout="vertical" onFinish={handleRequestAccess}>
+          <Form.Item name="ly_do" label="Lý do cần xem tài liệu" rules={[{ required: true, message: 'Vui lòng nhập lý do' }]}>
+            <Input.TextArea rows={4} placeholder="Ví dụ: Tôi cần xem file để kiểm tra lại thông tin hồ sơ..." />
           </Form.Item>
         </Form>
       </Modal>
