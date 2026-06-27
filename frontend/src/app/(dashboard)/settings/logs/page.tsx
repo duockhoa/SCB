@@ -148,7 +148,7 @@ export default function SystemLogsPage() {
           showTotal: (t) => `Tổng số ${t} bản ghi`
         }}
         onChange={handleTableChange}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 1000, y: 'calc(100vh - 280px)' }}
       />
 
       <Modal
