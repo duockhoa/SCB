@@ -1,0 +1,10 @@
+import FileAccessManager from '@/components/file-access/FileAccessManager';
+
+export default function FileAccessPage() {
+  return (
+    <div className="p-6">
+      <h2 className="text-2xl font-bold mb-6">Quản lý Yêu cầu truy cập tài liệu</h2>
+      <FileAccessManager />
+    </div>
+  );
+}
