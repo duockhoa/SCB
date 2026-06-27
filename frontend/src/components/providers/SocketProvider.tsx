@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import { notification } from 'antd';
 import { API_URL } from '@/constants/endpoints';
 import dayjs from 'dayjs';
+import { useNotificationStore } from '@/store/notificationStore';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -64,11 +65,20 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
       description += `\nThời gian: ${dayjs(time).format('DD/MM/YYYY HH:mm:ss')}`;
 
+      // 1. Toast popup (giữ nguyên)
       api.info({
         message,
         description: <span style={{ whiteSpace: 'pre-wrap' }}>{description}</span>,
         placement: 'topRight',
         duration: 5,
+      });
+
+      // 2. Lưu vào notification store (cho bell icon)
+      useNotificationStore.getState().addNotification({
+        title: message,
+        message: description,
+        maHoSo: ma_ho_so,
+        link: ma_ho_so ? `/ho-so/${data.hoSoId || ''}` : undefined,
       });
     });
 
