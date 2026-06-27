@@ -46,7 +46,7 @@ export class HoSoController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Cập nhật hồ sơ' })
-  @RequireRole({ department: 'Đăng ký', position: 'PT' })
+  @RequireRole({ department: 'Đăng ký', position: 'TP' })
   update(@Param('id', ParseIntPipe) id: number, @Body() updateHoSoDto: UpdateHoSoDto, @Req() req: any) {
     return this.hoSoService.update(id, updateHoSoDto, req.user?.userId);
   }
@@ -67,7 +67,7 @@ export class HoSoController {
 
   @Post(':id/thay-the')
   @ApiOperation({ summary: 'Thay thế hồ sơ (Đổi số công bố)' })
-  @RequireRole({ department: 'Đăng ký', position: 'PT' })
+  @RequireRole({ department: 'Đăng ký', position: 'TP' })
   thayThe(@Param('id', ParseIntPipe) id: number, @Body() thayTheDto: ThayTheDto, @Req() req: any) {
     return this.hoSoService.thayThe(id, thayTheDto, req.user?.userId);
   }
@@ -93,7 +93,7 @@ export class HoSoController {
 
   @Delete(':id/lich-su-thay-doi/:lichSuId')
   @ApiOperation({ summary: 'Xóa lịch sử thay đổi' })
-  @RequireRole({ department: 'Đăng ký' })
+  @RequireRole({ department: 'Đăng ký', position: 'TP' })
   deleteLichSuThayDoi(
     @Param('id', ParseIntPipe) id: number,
     @Param('lichSuId', ParseIntPipe) lichSuId: number,
@@ -104,7 +104,7 @@ export class HoSoController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Xóa hồ sơ' })
-  @RequireRole({ department: 'Đăng ký', position: 'PT' })
+  @RequireRole({ department: 'Đăng ký', position: 'TP' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.hoSoService.remove(id);
   }
@@ -118,7 +118,7 @@ export class HoSoController {
 
   @Delete(':id/tai-lieu/:taiLieuId')
   @ApiOperation({ summary: 'Xóa tài liệu đính kèm khác' })
-  @RequireRole({ department: 'Đăng ký' })
+  @RequireRole({ department: 'Đăng ký', position: 'TP' })
   deleteTaiLieu(
     @Param('id', ParseIntPipe) id: number,
     @Param('taiLieuId', ParseIntPipe) taiLieuId: number,

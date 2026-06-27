@@ -23,12 +23,39 @@ export class RolesGuard implements CanActivate {
     }
 
     // TẠM THỜI: In toàn bộ cấu trúc Token ra log để phân tích xem HRM gửi sang những gì
-    console.log('=== DỮ LIỆU TOKEN TỪ HRM ===');
-    console.log(user);
-    console.log('=============================');
+    // console.log('=== DỮ LIỆU TOKEN TỪ HRM ===');
+    // console.log(user);
+    // console.log('=============================');
 
-    // TẠM THỜI: Cho phép tất cả request đi qua để không chặn tiến độ test của bạn
-    // Sau khi xem log tôi sẽ cấu hình lại chính xác.
+    // Kiểm tra đặc quyền Developer (Admin tối cao)
+    const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
+    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
+    if (isDeveloper) {
+      return true;
+    }
+
+    // Kiểm tra quyền theo phòng ban
+    if (requiredRole.department) {
+      // Đổi literal string thành biến môi trường
+      let expectedDept = requiredRole.department;
+      if (expectedDept === 'Đăng ký') expectedDept = process.env.DEPT_REGISTRATION || 'Đăng ký';
+
+      if (user.department !== expectedDept) {
+        throw new ForbiddenException(`Bạn không thuộc bộ phận ${expectedDept} để thực hiện hành động này`);
+      }
+    }
+
+    // Kiểm tra quyền theo chức vụ (vd: TP)
+    if (requiredRole.position) {
+      let expectedPos = requiredRole.position;
+      if (expectedPos === 'TP') expectedPos = process.env.ROLE_MANAGER || 'TP';
+      else if (expectedPos === 'NV') expectedPos = process.env.ROLE_STAFF || 'NV';
+
+      if (user.position !== expectedPos) {
+        throw new ForbiddenException(`Hành động này yêu cầu chức vụ cấp ${expectedPos}`);
+      }
+    }
+
     return true;
   }
 }
