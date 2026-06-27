@@ -1,5 +1,7 @@
 import { useAuthStore } from '@/store/authStore';
 
+const DEVELOPER_USERNAMES = (process.env.NEXT_PUBLIC_DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
+
 export const usePermissions = () => {
   const { user } = useAuthStore();
 
@@ -7,25 +9,39 @@ export const usePermissions = () => {
     return {
       canCreate: false,
       canUpdate: false,
+      canDelete: false,
       canManage: false,
       canConfigEmail: false,
       canViewSystemLogs: false,
+      canViewDanhMuc: false,
+      canApproveFile: false,
+      isDeveloper: false,
+      isDangKy: false,
+      isTruongPhong: false,
+      isNhanVien: false,
     };
   }
 
-  // Đặc quyền cứng cho anh Lê Hoàng Cương (Full quyền Trưởng phòng)
-  const isLeHoangCuong = user.name?.toLowerCase().includes('lê hoàng cương') || 
-                         user.name?.toLowerCase().includes('le hoang cuong') ||
-                         user.username?.toLowerCase().includes('lehoangcuong');
+  const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
+  const isDangKy = user.department === (process.env.NEXT_PUBLIC_DEPT_REGISTRATION || 'Đăng ký');
+  const isTruongPhong = user.position === (process.env.NEXT_PUBLIC_ROLE_MANAGER || 'TP');
+  const isNhanVien = user.position === (process.env.NEXT_PUBLIC_ROLE_STAFF || 'NV');
 
-  const isDangKy = user.department === 'Đăng ký' || isLeHoangCuong;
-  const isTruongPhong = user.position === 'PT' || isLeHoangCuong;
+  const canCreateUpdate = isDeveloper || isDangKy;
+  const canDeleteManage = isDeveloper || (isDangKy && isTruongPhong);
 
   return {
-    canCreate: isDangKy,
-    canUpdate: isDangKy,
-    canManage: isDangKy && isTruongPhong,
-    canConfigEmail: isTruongPhong,
-    canViewSystemLogs: isTruongPhong,
+    canCreate: canCreateUpdate,
+    canUpdate: canCreateUpdate,
+    canDelete: canDeleteManage,
+    canManage: canDeleteManage,
+    canConfigEmail: canDeleteManage,
+    canViewSystemLogs: canDeleteManage,
+    canViewDanhMuc: canDeleteManage,
+    canApproveFile: canDeleteManage,
+    isDeveloper,
+    isDangKy,
+    isTruongPhong,
+    isNhanVien,
   };
 };

@@ -91,3 +91,9 @@ export const uploadFile = async (file: File): Promise<any> => {
   });
   return response?.data || response;
 };
+
+// API xin quyền truy cập file
+export const requestFileAccess = async (taiLieuId: number | null, fileName: string | null, lyDo: string) => {
+  const response = await axiosInstance.post('/file-access/request', { taiLieuId, fileName, lyDo });
+  return response?.data || response;
+};
