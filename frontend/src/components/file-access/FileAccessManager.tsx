@@ -1,3 +1,5 @@
+'use client';
+
 import { Table, Tag, Button, Space, message, Modal, Form, InputNumber } from 'antd';
 import { EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
