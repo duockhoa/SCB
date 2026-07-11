@@ -6,7 +6,7 @@ import { LogOut, User as UserIcon, Settings, LayoutGrid } from 'lucide-react';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+
 import Cookies from 'js-cookie';
 import { useEffect } from 'react';
 import HeaderSearch from '@/components/common/HeaderSearch';
@@ -57,13 +57,13 @@ export default function AppHeader() {
           {sidebarCollapsed ? <MenuUnfoldOutlined className="text-xl text-gray-700" /> : <MenuFoldOutlined className="text-xl text-gray-700" />}
         </button>
         
-        {/* Logo đồng bộ HRM: dùng next/image, width=140, height=60, className="p-4" */}
-        <Image 
+        {/* Logo đồng bộ HRM: dùng img HTML thông thường để tránh lỗi Sharp/404 trên server */}
+        <img 
           src="/dkpharmalogo.png" 
           alt="DKPharma Logo" 
           width={140}
           height={60}
-          className="p-4 hidden sm:block" 
+          className="p-4 hidden sm:block object-contain" 
         />
         
         {/* Tiêu đề: giống HRM text-xl hidden md:block */}
