@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { UploadController } from './upload.controller';
+import { UploadController, LegacyUploadController } from './upload.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [UploadController],
+  controllers: [UploadController, LegacyUploadController],
 })
 export class UploadModule {}
