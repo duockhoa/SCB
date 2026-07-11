@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Breadcrumb, Button, Skeleton, Dropdown, MenuProps, Popconfirm, message, Input, Descriptions, Empty, Timeline } from 'antd';
 import { CloseOutlined, PlusCircleOutlined, SyncOutlined, SwapOutlined, StopOutlined, EditOutlined, DeleteOutlined, MoreOutlined, PlusOutlined, SearchOutlined, ClockCircleOutlined, FileAddOutlined } from '@ant-design/icons';
@@ -39,6 +39,39 @@ function HoSoMasterDetailContent() {
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [formOpen, setFormOpen] = useState(false);
 
+  // Resizable master pane
+  const [masterWidth, setMasterWidth] = useState(35);
+  const isDragging = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pct = ((ev.clientX - rect.left) / rect.width) * 100;
+      setMasterWidth(Math.min(Math.max(pct, 20), 60));
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // Filter theo loại hồ sơ
+  const [selectedLoaiFilter, setSelectedLoaiFilter] = useState<string[]>([]);
+
   const { globalSearch } = useUiStore();
 
   // Fetch API
@@ -47,18 +80,20 @@ function HoSoMasterDetailContent() {
   
   const { canCreate, canUpdate, canManage } = usePermissions();
 
-  // Lọc theo ô tìm kiếm trên Header
+  // Lọc theo ô tìm kiếm trên Header + loại hồ sơ
   const combinedSearch = (globalSearch || '').toLowerCase();
-  const dsHoSo = combinedSearch
-    ? allHoSo.filter((hs) => {
-        return (
-          hs.ten_san_pham?.toLowerCase().includes(combinedSearch) ||
-          hs.ma_ho_so?.toLowerCase().includes(combinedSearch) ||
-          hs.so_chinh?.toLowerCase().includes(combinedSearch) ||
-          hs.ma_san_pham_noi_bo?.toLowerCase().includes(combinedSearch)
-        );
-      })
-    : allHoSo;
+  const dsHoSo = allHoSo.filter((hs) => {
+    // Lọc theo text search
+    const matchSearch = !combinedSearch || (
+      hs.ten_san_pham?.toLowerCase().includes(combinedSearch) ||
+      hs.ma_ho_so?.toLowerCase().includes(combinedSearch) ||
+      hs.so_chinh?.toLowerCase().includes(combinedSearch) ||
+      hs.ma_san_pham_noi_bo?.toLowerCase().includes(combinedSearch)
+    );
+    // Lọc theo loại hồ sơ (nếu không chọn gì = hiện tất cả)
+    const matchLoai = selectedLoaiFilter.length === 0 || selectedLoaiFilter.includes(hs.loai_ho_so?.ma_loai || '');
+    return matchSearch && matchLoai;
+  });
   
   // Bỏ tính năng tự động chọn item đầu tiên theo yêu cầu của user
   // useEffect(() => {
@@ -181,6 +216,18 @@ function HoSoMasterDetailContent() {
   };
 
   // Helper functions cho UI
+  const getLoaiHoSoColor = (maLoai?: string) => {
+    switch (maLoai) {
+      case 'THUOC':              return 'text-red-600 bg-red-50 border-red-200';
+      case 'MY_PHAM':            return 'text-pink-600 bg-pink-50 border-pink-200';
+      case 'TBYT':               return 'text-violet-600 bg-violet-50 border-violet-200';
+      case 'TPBVSK_CONG_BO':     return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+      case 'TPBVSK_TU_CONG_BO':  return 'text-teal-600 bg-teal-50 border-teal-200';
+      case 'CFS_CPP':            return 'text-amber-600 bg-amber-50 border-amber-200';
+      default:                   return 'text-blue-500 bg-blue-50 border-blue-100';
+    }
+  };
+
   const getStatusColor = (tenTinhTrang?: string) => {
     if (!tenTinhTrang) return 'text-gray-500';
     if (tenTinhTrang.includes('Đang xử lý') || tenTinhTrang.includes('Sắp hết hạn')) return 'text-orange-500';
@@ -193,7 +240,7 @@ function HoSoMasterDetailContent() {
   const isConHieuLuc = selectedItem?.tinh_trang?.ten_tinh_trang?.includes('Còn hiệu lực') || selectedItem?.tinh_trang?.ten_tinh_trang?.includes('Sắp hết hạn');
 
   return (
-    <div className="flex h-full bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200 relative">
+    <div ref={containerRef} className="flex h-full bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200 relative">
       {/* Loading overlay */}
       {isLoading && (
         <div className="absolute inset-0 z-50 bg-white/80 p-6">
@@ -202,7 +249,7 @@ function HoSoMasterDetailContent() {
       )}
 
       {/* Master Pane (Left) */}
-      <div className={`flex flex-col border-r border-gray-200 transition-all duration-300 ${selectedId ? 'w-[35%]' : 'w-full'}`}>
+      <div className="flex flex-col border-r border-gray-200" style={{ width: selectedId ? `${masterWidth}%` : '100%', transition: isDragging.current ? 'none' : 'width 0.3s' }}>
         <div className="p-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
           <span className="font-semibold text-gray-700">{selectedId ? '> Danh sách Hồ sơ' : 'Danh sách Hồ sơ'}</span>
           {canCreate && (
@@ -214,6 +261,40 @@ function HoSoMasterDetailContent() {
             >
               Tạo mới
             </Button>
+          )}
+        </div>
+        {/* Filter loại hồ sơ */}
+        <div className="px-3 py-2 border-b border-gray-200 bg-white flex flex-wrap gap-1.5">
+          {[
+            { code: 'THUOC', label: 'Thuốc' },
+            { code: 'MY_PHAM', label: 'Mỹ phẩm' },
+            { code: 'TBYT', label: 'TBYT' },
+            { code: 'TPBVSK_CONG_BO', label: 'TPBVSK CB' },
+            { code: 'TPBVSK_TU_CONG_BO', label: 'TPBVSK TCB' },
+            { code: 'CFS_CPP', label: 'CFS/CPP' },
+          ].map(({ code, label }) => {
+            const isActive = selectedLoaiFilter.includes(code);
+            return (
+              <button
+                key={code}
+                onClick={() => setSelectedLoaiFilter(prev =>
+                  prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+                )}
+                className={`text-[11px] font-semibold px-2 py-1 rounded-full border transition-all cursor-pointer ${
+                  isActive ? getLoaiHoSoColor(code) + ' ring-1 ring-current' : 'text-gray-400 bg-gray-50 border-gray-200 hover:bg-gray-100'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+          {selectedLoaiFilter.length > 0 && (
+            <button
+              onClick={() => setSelectedLoaiFilter([])}
+              className="text-[11px] text-gray-400 hover:text-gray-600 px-1.5 py-1 cursor-pointer transition-colors"
+            >
+              ✕ Bỏ lọc
+            </button>
           )}
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -236,7 +317,7 @@ function HoSoMasterDetailContent() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] uppercase font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">{item.loai_ho_so?.ten_loai || 'KHÁC'}</span>
+                  <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${getLoaiHoSoColor(item.loai_ho_so?.ma_loai)}`}>{item.loai_ho_so?.ten_loai || 'KHÁC'}</span>
                 </div>
                 <div className="flex justify-between items-center mt-1.5">
                   <span className="text-gray-500 text-sm">{item.ma_ho_so}</span>
@@ -250,9 +331,19 @@ function HoSoMasterDetailContent() {
         </div>
       </div>
 
+      {/* Drag Handle */}
+      {selectedId && (
+        <div
+          onMouseDown={handleMouseDown}
+          className="w-1.5 hover:w-2 bg-transparent hover:bg-blue-400/30 cursor-col-resize transition-all flex-shrink-0 relative group"
+        >
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 bg-gray-200 group-hover:bg-blue-400 transition-colors" />
+        </div>
+      )}
+
       {/* Detail Pane (Right) */}
       {selectedId && selectedItem ? (
-        <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-y-auto">
+        <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-y-auto min-w-0">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
             <Breadcrumb items={[{ title: 'Hồ sơ công bố' }, { title: `${selectedItem.ma_ho_so}` }]} />
             <Button type="text" icon={<CloseOutlined />} onClick={() => {

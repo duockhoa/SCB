@@ -84,7 +84,7 @@ export default function HeaderNotification() {
   );
 
   return (
-    <Dropdown dropdownRender={dropdownRender} placement="bottomRight" trigger={['click']}>
+    <Dropdown popupRender={dropdownRender} placement="bottomRight" trigger={['click']}>
       <button className="p-2 rounded-full hover:bg-gray-100 transition-colors relative cursor-pointer">
         <Badge count={unreadCount} size="small" offset={[2, 0]}>
           <BellOutlined className="text-xl text-gray-600" />

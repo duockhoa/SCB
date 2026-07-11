@@ -27,7 +27,7 @@ export default function StatCard({ title, value, icon, color = '#1890ff', isActi
         title={<span style={{ fontSize: '14px', fontWeight: isActive ? 600 : 500, color: isActive ? color : '#595959' }}>{title}</span>}
         value={value}
         prefix={icon && <span style={{ color, marginRight: '8px' }}>{icon}</span>}
-        valueStyle={{ color, fontWeight: 'bold', marginTop: '8px' }}
+        styles={{ content: { color, fontWeight: 'bold', marginTop: '8px' } }}
       />
     </Card>
   );

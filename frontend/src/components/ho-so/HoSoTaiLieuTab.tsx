@@ -242,7 +242,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
       dataIndex: 'ten_tai_lieu',
       key: 'ten_tai_lieu',
       render: (text: string, record: any) => (
-        <Space direction="vertical" size="small">
+        <Space orientation="vertical" size="small">
           <a onClick={() => handleViewFile(record)}>
             {record.nhom_tai_lieu === 'Tài liệu chung' ? <FolderOpenOutlined style={{ marginRight: 8 }} /> : null}
             {text}

@@ -20,6 +20,8 @@ import { useRouter } from 'next/navigation';
 const { Title } = Typography;
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [activeCategory, setActiveCategory] = useState<string>('SAP_HET_HAN');
   const { data: result, isLoading } = useHoSoList({ limit: 1000 });
   const hoSoList = result?.data?.data || [];
 
@@ -31,8 +33,6 @@ export default function DashboardPage() {
     );
   }
 
-  const router = useRouter();
-  const [activeCategory, setActiveCategory] = useState<string>('SAP_HET_HAN');
   const stats = calculateDashboardStats(hoSoList);
   const currentList = getListByCategory(hoSoList, activeCategory);
 
