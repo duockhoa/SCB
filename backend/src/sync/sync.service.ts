@@ -57,7 +57,7 @@ export class SyncService {
       }
 
       this.logger.log(`Successfully synced ${synced} users.`);
-      return { message: 'Sync successful', totalSynced: synced };
+      return { data: { totalSynced: synced }, message: 'Sync successful' };
     } catch (error: any) {
       this.logger.error('Error syncing users', error);
       throw new HttpException(error.message || 'Error syncing users from HRM', error.status || HttpStatus.INTERNAL_SERVER_ERROR);
