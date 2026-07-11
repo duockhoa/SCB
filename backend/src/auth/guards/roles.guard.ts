@@ -40,7 +40,10 @@ export class RolesGuard implements CanActivate {
       let expectedDept = requiredRole.department;
       if (expectedDept === 'Đăng ký') expectedDept = process.env.DEPT_REGISTRATION || 'Đăng ký';
 
-      if (user.department !== expectedDept) {
+      const userDept = user.department ? user.department.toString().trim().normalize('NFC').toLowerCase() : '';
+      const targetDept = expectedDept.toString().trim().normalize('NFC').toLowerCase();
+
+      if (userDept !== targetDept) {
         throw new ForbiddenException(`Bạn không thuộc bộ phận ${expectedDept} để thực hiện hành động này`);
       }
     }

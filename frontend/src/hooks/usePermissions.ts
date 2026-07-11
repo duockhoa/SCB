@@ -23,9 +23,15 @@ export const usePermissions = () => {
   }
 
   const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
-  const isDangKy = user.department === (process.env.NEXT_PUBLIC_DEPT_REGISTRATION || 'Đăng ký');
-  const isTruongPhong = user.position === (process.env.NEXT_PUBLIC_ROLE_MANAGER || 'TP');
-  const isNhanVien = user.position === (process.env.NEXT_PUBLIC_ROLE_STAFF || 'NV');
+  const isDangKy = user.department
+    ? user.department.toString().trim().normalize('NFC').toLowerCase() === (process.env.NEXT_PUBLIC_DEPT_REGISTRATION || 'Đăng ký').toString().trim().normalize('NFC').toLowerCase()
+    : false;
+  const isTruongPhong = user.position
+    ? user.position.toString().trim().normalize('NFC').toLowerCase() === (process.env.NEXT_PUBLIC_ROLE_MANAGER || 'TP').toString().trim().normalize('NFC').toLowerCase()
+    : false;
+  const isNhanVien = user.position
+    ? user.position.toString().trim().normalize('NFC').toLowerCase() === (process.env.NEXT_PUBLIC_ROLE_STAFF || 'NV').toString().trim().normalize('NFC').toLowerCase()
+    : false;
 
   const canCreateUpdate = isDeveloper || isDangKy;
   const canDeleteManage = isDeveloper || (isDangKy && isTruongPhong);
