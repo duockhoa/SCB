@@ -69,7 +69,6 @@ const UploadOrLinkInput: React.FC<UploadOrLinkInputProps> = ({ value, onChange, 
             icon={<UploadOutlined />} 
             loading={uploading}
             type={value ? 'default' : 'primary'}
-            ghost={!!value}
           >
             Upload
           </Button>
