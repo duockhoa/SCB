@@ -29,7 +29,11 @@ export default function FileAccessManager() {
     setLoading(true);
     try {
       const res = await axiosInstance.get('/file-access/requests');
-      setData(res as unknown as any[]);
+      // Trích xuất dữ liệu mảng an toàn từ response
+      const requestsArray = Array.isArray(res) 
+        ? res 
+        : (res && Array.isArray((res as any).data) ? (res as any).data : []);
+      setData(requestsArray);
     } catch (error) {
       message.error('Lỗi khi tải danh sách yêu cầu');
     } finally {
