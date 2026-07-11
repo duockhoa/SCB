@@ -53,9 +53,22 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
       // Tùy theo cấu trúc token HRM mà map role phù hợp, tạm check các trường phổ biến
       const role = payload.role || payload.roleName || payload.position;
-      if (role && (role.toString().toUpperCase().includes('ADMIN') || role.toString().toUpperCase().includes('MANAGER'))) {
+      const username = payload.username || '';
+      const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
+      const isDeveloper = DEVELOPER_USERNAMES.includes(username.toLowerCase());
+
+      if (isDeveloper || (role && (role.toString().toUpperCase().includes('ADMIN') || role.toString().toUpperCase().includes('MANAGER')))) {
         client.join('role_ADMIN');
         this.logger.log(`Client ${client.id} joined room role_ADMIN`);
+      }
+
+      // Đưa user vào phòng ban của họ (nếu có phòng ban đồng bộ từ HRM)
+      const department = payload.department;
+      if (department) {
+        // Chuẩn hóa tên phòng ban viết liền không dấu hoặc giữ nguyên để làm tên room
+        const deptRoom = `dept_${department.toString().replace(/\s+/g, '')}`;
+        client.join(deptRoom);
+        this.logger.log(`Client ${client.id} joined room ${deptRoom}`);
       }
 
       this.logger.log(`Client connected: ${client.id} - User ID: ${userId}`);
@@ -70,7 +83,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   // Bắt sự kiện qua Event Emitter
-  @OnEvent('hoSo.updated')
+  @OnEvent('hoSo.*')
   handleProfileUpdated(data: any) {
     const ownerId = data.ownerId;
     // 1. Phát cho chủ sở hữu hồ sơ
@@ -79,5 +92,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     }
     // 2. Phát cho tất cả Admin/Manager
     this.server.to('role_ADMIN').emit('profileUpdated', data);
+
+    // 3. Phát cho phòng ban Đăng ký (Phòng chuyên môn quản lý hồ sơ)
+    // Lấy biến môi trường phòng Đăng ký hoặc mặc định là 'Đăng ký'
+    const deptRegistration = (process.env.DEPT_REGISTRATION || 'Đăng ký').replace(/\s+/g, '');
+    this.server.to(`dept_${deptRegistration}`).emit('profileUpdated', data);
   }
 }
