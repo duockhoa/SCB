@@ -133,8 +133,10 @@ function HoSoMasterDetailContent() {
       
       // Hồ sơ Thuốc (ho_so_thuoc)
       ho_chat_chinh: 'Hoạt chất chính',
+      hoat_chat_ham_luong: 'Hoạt chất hàm lượng',
       ham_luong: 'Hàm lượng',
       dang_bao_che: 'Dạng bào chế',
+      bao_che: 'Bào chế',
       quy_cach_dong_goi: 'Quy cách đóng gói',
       tuoi_tho: 'Tuổi thọ',
       tieu_chuan_chat_luong: 'Tiêu chuẩn chất lượng',
