@@ -192,7 +192,8 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
 
   const handleViewFile = async (record: any) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    if (!record.url || !record.url.startsWith(apiUrl)) {
+    // Nếu là link ngoài (bắt đầu bằng http) và KHÔNG thuộc API của mình -> mở tab mới trực tiếp
+    if (record.url && record.url.startsWith('http') && !record.url.startsWith(apiUrl)) {
       window.open(record.url, '_blank');
       return;
     }
