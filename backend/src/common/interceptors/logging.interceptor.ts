@@ -30,13 +30,17 @@ export class LoggingInterceptor implements NestInterceptor {
           const userId = user?.userId || null; // userId từ JwtStrategy
           
           try {
+            const clientIp = request.headers['x-forwarded-for'] 
+              ? (request.headers['x-forwarded-for'] as string).split(',')[0].trim()
+              : ip;
+
             await this.prisma.nhat_ky_he_thong.create({
               data: {
                 nguoi_dung_id: userId,
                 phuong_thuc: method,
                 duong_dan: url,
                 chi_tiet: JSON.stringify(body),
-                ip_address: ip,
+                ip_address: clientIp,
                 status_code: statusCode,
               },
             });
