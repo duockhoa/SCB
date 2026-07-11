@@ -49,9 +49,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userId: user.id, // ID cục bộ trong SCB
       hrmId: payload.id || payload.sub,
       username: ma_nguoi_dung,
-      name: ho_ten,
-      department: phong_ban,
-      position: chuc_vu,
+      name: user.ho_ten || ho_ten,
+      department: user.phong_ban || phong_ban,  // Ưu tiên lấy từ DB (đã đồng bộ từ HRM)
+      position: user.chuc_vu || chuc_vu,        // Ưu tiên lấy từ DB (đã đồng bộ từ HRM)
       ...payload
     };
   }
