@@ -58,51 +58,49 @@ export default function HoSoDetailPage() {
   const formatLabelFromKey = (key: string) => {
     // Từ điển ánh xạ key database -> Tiếng Việt có dấu chuẩn
     const dictionary: Record<string, string> = {
-      // Dùng chung & Thông tin chung
+      // Dùng chung
       id: 'ID',
       ho_so_chung_id: 'ID hồ sơ chung',
       
       // Hồ sơ Thuốc (ho_so_thuoc)
-      ho_chat_chinh: 'Hoạt chất chính',
       hoat_chat_ham_luong: 'Hoạt chất hàm lượng',
-      ham_luong: 'Hàm lượng',
-      dang_bao_che: 'Dạng bào chế',
       bao_che: 'Bào chế',
       quy_cach_dong_goi: 'Quy cách đóng gói',
-      tuoi_tho: 'Tuổi thọ',
-      tieu_chuan_chat_luong: 'Tiêu chuẩn chất lượng',
-      nha_san_xuat: 'Nhà sản xuất',
-      nuoc_san_xuat: 'Nước sản xuất',
-      dia_chi_nha_san_xuat: 'Địa chỉ nhà sản xuất',
+      dot_cap_so: 'Đợt cấp số',
+      gia_han: 'Gia hạn',
+      quyet_dinh_cap_sdk_url: 'Quyết định cấp SĐK',
+      ke_khai_gia_url: 'Kê khai giá',
+      quang_cao_url: 'Quảng cáo',
       
       // Hồ sơ Mỹ phẩm (ho_so_my_pham)
       nhan_hang: 'Nhãn hàng',
-      ten_bo_phan_co_the: 'Bộ phận cơ thể sử dụng',
-      muc_dich_su_dung: 'Mục đích sử dụng',
       dang_my_pham: 'Dạng mỹ phẩm',
-      cong_ty_dai_dien: 'Công ty đại diện',
+      phieu_cong_bo_url: 'Phiếu công bố',
+      hs_thay_the_ghi_chu: 'Hồ sơ thay thế / Ghi chú',
+      xn_quang_cao_url: 'Xác nhận quảng cáo',
       
       // Hồ sơ Trang thiết bị y tế (ho_so_tbyt)
+      ten_thuong_mai: 'Tên thương mại',
+      ten_tbyt_chung_loai: 'Tên TBYT chủng loại',
       phan_loai: 'Phân loại',
-      hang_san_xuat: 'Hãng sản xuất',
       chu_so_huu: 'Chủ sở hữu',
-      so_luu_hanh: 'Số lưu hành',
-      muc_dich_su_dung_tbyt: 'Mục đích sử dụng',
-      
-      // Hồ sơ TPBVSK Công bộ (ho_so_tpbvsk_cong_bo)
-      dang_dung: 'Dạng dùng',
-      han_dung: 'Hạn dùng',
-      thanh_phan: 'Thành phần',
-      so_tiep_nhan: 'Số tiếp nhận',
+      phieu_tiep_nhan_url: 'Phiếu tiếp nhận',
+      tai_lieu_mo_ta_kt_url: 'Tài liệu mô tả kỹ thuật',
+      tieu_chuan_co_so_url: 'Tiêu chuẩn cơ sở',
+      nhan_url: 'Nhãn',
+      hdsd_url: 'Hướng dẫn sử dụng',
       
       // Hồ sơ TPBVSK Tự công bố (ho_so_tpbvsk_tu_cong_bo)
-      so_tu_cong_bo: 'Số tự công bố',
+      co_so_dung_ten: 'Cơ sở đứng tên',
+      dang_san_pham: 'Dạng sản phẩm',
+      
+      // Hồ sơ TPBVSK Công bố (ho_so_tpbvsk_cong_bo)
+      thanh_phan: 'Thành phần',
       
       // Hồ sơ CFS/CPP (ho_so_cfs_cpp)
-      co_quan_cap: 'Cơ quan cấp',
-      quoc_gia_cap: 'Quốc gia cấp',
-      ngay_cap: 'Ngày cấp',
-      pham_vi_ap_dung: 'Phạm vi áp dụng',
+      loai_hinh: 'Loại hình',
+      nuoc_xuat_khau: 'Nước xuất khẩu',
+      cong_van_cap_url: 'Công văn cấp',
     };
 
     if (dictionary[key]) {
