@@ -56,6 +56,58 @@ export default function HoSoDetailPage() {
   }
 
   const formatLabelFromKey = (key: string) => {
+    // Từ điển ánh xạ key database -> Tiếng Việt có dấu chuẩn
+    const dictionary: Record<string, string> = {
+      // Dùng chung & Thông tin chung
+      id: 'ID',
+      ho_so_chung_id: 'ID hồ sơ chung',
+      
+      // Hồ sơ Thuốc (ho_so_thuoc)
+      ho_chat_chinh: 'Hoạt chất chính',
+      ham_luong: 'Hàm lượng',
+      dang_bao_che: 'Dạng bào chế',
+      quy_cach_dong_goi: 'Quy cách đóng gói',
+      tuoi_tho: 'Tuổi thọ',
+      tieu_chuan_chat_luong: 'Tiêu chuẩn chất lượng',
+      nha_san_xuat: 'Nhà sản xuất',
+      nuoc_san_xuat: 'Nước sản xuất',
+      dia_chi_nha_san_xuat: 'Địa chỉ nhà sản xuất',
+      
+      // Hồ sơ Mỹ phẩm (ho_so_my_pham)
+      nhan_hang: 'Nhãn hàng',
+      ten_bo_phan_co_the: 'Bộ phận cơ thể sử dụng',
+      muc_dich_su_dung: 'Mục đích sử dụng',
+      dang_my_pham: 'Dạng mỹ phẩm',
+      cong_ty_dai_dien: 'Công ty đại diện',
+      
+      // Hồ sơ Trang thiết bị y tế (ho_so_tbyt)
+      phan_loai: 'Phân loại',
+      hang_san_xuat: 'Hãng sản xuất',
+      chu_so_huu: 'Chủ sở hữu',
+      so_luu_hanh: 'Số lưu hành',
+      muc_dich_su_dung_tbyt: 'Mục đích sử dụng',
+      
+      // Hồ sơ TPBVSK Công bộ (ho_so_tpbvsk_cong_bo)
+      dang_dung: 'Dạng dùng',
+      han_dung: 'Hạn dùng',
+      thanh_phan: 'Thành phần',
+      so_tiep_nhan: 'Số tiếp nhận',
+      
+      // Hồ sơ TPBVSK Tự công bố (ho_so_tpbvsk_tu_cong_bo)
+      so_tu_cong_bo: 'Số tự công bố',
+      
+      // Hồ sơ CFS/CPP (ho_so_cfs_cpp)
+      co_quan_cap: 'Cơ quan cấp',
+      quoc_gia_cap: 'Quốc gia cấp',
+      ngay_cap: 'Ngày cấp',
+      pham_vi_ap_dung: 'Phạm vi áp dụng',
+    };
+
+    if (dictionary[key]) {
+      return dictionary[key];
+    }
+
+    // Fallback nếu không có trong từ điển
     const words = key.split('_');
     if (words.length === 0) return key;
     const first = words[0].charAt(0).toUpperCase() + words[0].slice(1);
