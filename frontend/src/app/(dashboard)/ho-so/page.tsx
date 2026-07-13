@@ -73,26 +73,26 @@ function HoSoMasterDetailContent() {
   const [selectedLoaiFilter, setSelectedLoaiFilter] = useState<string[]>([]);
 
   const { globalSearch } = useUiStore();
+  const [debouncedSearch, setDebouncedSearch] = useState(globalSearch);
 
-  // Fetch API
-  const { data: result, isLoading } = useHoSoList({ limit: 1000 });
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(globalSearch);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [globalSearch]);
+
+  // Fetch API - Chuyển search xuống backend để tìm kiếm sâu (deep search)
+  const { data: result, isLoading } = useHoSoList({ limit: 1000, search: debouncedSearch });
   const allHoSo: HoSoChung[] = result?.data?.data || [];
   
   const { canCreate, canUpdate, canManage } = usePermissions();
 
-  // Lọc theo ô tìm kiếm trên Header + loại hồ sơ
-  const combinedSearch = (globalSearch || '').toLowerCase();
+  // Lọc theo loại hồ sơ (frontend chỉ lọc loại, search nhường backend)
   const dsHoSo = allHoSo.filter((hs) => {
-    // Lọc theo text search
-    const matchSearch = !combinedSearch || (
-      hs.ten_san_pham?.toLowerCase().includes(combinedSearch) ||
-      hs.ma_ho_so?.toLowerCase().includes(combinedSearch) ||
-      hs.so_chinh?.toLowerCase().includes(combinedSearch) ||
-      hs.ma_san_pham_noi_bo?.toLowerCase().includes(combinedSearch)
-    );
     // Lọc theo loại hồ sơ (nếu không chọn gì = hiện tất cả)
     const matchLoai = selectedLoaiFilter.length === 0 || selectedLoaiFilter.includes(hs.loai_ho_so?.ma_loai || '');
-    return matchSearch && matchLoai;
+    return matchLoai;
   });
   
   // Bỏ tính năng tự động chọn item đầu tiên theo yêu cầu của user
