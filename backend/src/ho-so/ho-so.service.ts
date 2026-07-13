@@ -24,6 +24,20 @@ export class HoSoService {
     return loaiThayDoi;
   }
 
+  private emitHoSoEvent(hoSo: any, action: string, eventName: string, extraData: any = {}) {
+    const ownerId = hoSo.nhat_ky?.find((n: any) => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
+    this.eventEmitter.emit('hoSo.updated', {
+      ownerId,
+      id: hoSo.id,
+      ma_ho_so: hoSo.ma_ho_so,
+      ten_san_pham: hoSo.ten_san_pham,
+      action,
+      eventName,
+      time: new Date(),
+      ...extraData
+    });
+  }
+
   async findAll(query: any) {
     const {
       search,
@@ -180,13 +194,18 @@ export class HoSoService {
       });
 
       if (thong_tin_rieng) {
-        const maLoai = loaiHoSo.ma_loai;
-        if (maLoai === 'THUOC') await tx.ho_so_thuoc.create({ data: { ho_so_chung_id: hoSoChung.id, ...thong_tin_rieng } });
-        else if (maLoai === 'MY_PHAM') await tx.ho_so_my_pham.create({ data: { ho_so_chung_id: hoSoChung.id, ...thong_tin_rieng } });
-        else if (maLoai === 'TBYT') await tx.ho_so_tbyt.create({ data: { ho_so_chung_id: hoSoChung.id, ...thong_tin_rieng } });
-        else if (maLoai === 'TPBVSK_TU_CONG_BO') await tx.ho_so_tpbvsk_tu_cong_bo.create({ data: { ho_so_chung_id: hoSoChung.id, ...thong_tin_rieng } });
-        else if (maLoai === 'TPBVSK_CONG_BO') await tx.ho_so_tpbvsk_cong_bo.create({ data: { ho_so_chung_id: hoSoChung.id, ...thong_tin_rieng } });
-        else if (maLoai === 'CFS_CPP') await tx.ho_so_cfs_cpp.create({ data: { ho_so_chung_id: hoSoChung.id, ...thong_tin_rieng } });
+        const delegateMap: Record<string, any> = {
+          'THUOC': tx.ho_so_thuoc,
+          'MY_PHAM': tx.ho_so_my_pham,
+          'TBYT': tx.ho_so_tbyt,
+          'TPBVSK_TU_CONG_BO': tx.ho_so_tpbvsk_tu_cong_bo,
+          'TPBVSK_CONG_BO': tx.ho_so_tpbvsk_cong_bo,
+          'CFS_CPP': tx.ho_so_cfs_cpp
+        };
+        const delegate = delegateMap[loaiHoSo.ma_loai];
+        if (delegate) {
+          await delegate.create({ data: { ho_so_chung_id: hoSoChung.id, ...thong_tin_rieng } });
+        }
       }
 
       await tx.nhat_ky_ho_so.create({
@@ -238,13 +257,22 @@ export class HoSoService {
       });
 
       if (thong_tin_rieng) {
-        const maLoai = hoSo.loai_ho_so.ma_loai;
-        if (maLoai === 'THUOC') await tx.ho_so_thuoc.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
-        else if (maLoai === 'MY_PHAM') await tx.ho_so_my_pham.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
-        else if (maLoai === 'TBYT') await tx.ho_so_tbyt.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
-        else if (maLoai === 'TPBVSK_TU_CONG_BO') await tx.ho_so_tpbvsk_tu_cong_bo.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
-        else if (maLoai === 'TPBVSK_CONG_BO') await tx.ho_so_tpbvsk_cong_bo.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
-        else if (maLoai === 'CFS_CPP') await tx.ho_so_cfs_cpp.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
+        const delegateMap: Record<string, any> = {
+          'THUOC': tx.ho_so_thuoc,
+          'MY_PHAM': tx.ho_so_my_pham,
+          'TBYT': tx.ho_so_tbyt,
+          'TPBVSK_TU_CONG_BO': tx.ho_so_tpbvsk_tu_cong_bo,
+          'TPBVSK_CONG_BO': tx.ho_so_tpbvsk_cong_bo,
+          'CFS_CPP': tx.ho_so_cfs_cpp
+        };
+        const delegate = delegateMap[hoSo.loai_ho_so.ma_loai];
+        if (delegate) {
+          await delegate.upsert({
+            where: { ho_so_chung_id: id },
+            update: thong_tin_rieng,
+            create: { ho_so_chung_id: id, ...thong_tin_rieng }
+          });
+        }
       }
 
       await tx.nhat_ky_ho_so.create({
@@ -262,16 +290,7 @@ export class HoSoService {
     });
     
     // Phát sự kiện thông báo qua Event Emitter
-    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
-    this.eventEmitter.emit('hoSo.updated', {
-      ownerId,
-      id: hoSo.id,
-      ma_ho_so: result.ma_ho_so,
-      ten_san_pham: result.ten_san_pham,
-      action: 'UPDATE',
-      eventName: 'HO_SO_UPDATED',
-      time: new Date(),
-    });
+    this.emitHoSoEvent(hoSo, 'UPDATE', 'HO_SO_UPDATED');
 
     return result;
   }
@@ -320,16 +339,7 @@ export class HoSoService {
       return updated;
     });
 
-    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
-    this.eventEmitter.emit('hoSo.updated', {
-      ownerId,
-      id: hoSo.id,
-      ma_ho_so: hoSo.ma_ho_so,
-      ten_san_pham: hoSo.ten_san_pham,
-      action: 'CAP_SO',
-      eventName: 'HO_SO_UPDATED',
-      time: new Date(),
-    });
+    this.emitHoSoEvent(hoSo, 'CAP_SO', 'HO_SO_UPDATED');
 
     return result;
   }
@@ -376,27 +386,17 @@ export class HoSoService {
       return updated;
     });
 
-    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
-    this.eventEmitter.emit('hoSo.updated', {
-      ownerId,
-      id: hoSo.id,
-      ma_ho_so: hoSo.ma_ho_so,
-      ten_san_pham: hoSo.ten_san_pham,
-      action: 'GIA_HAN',
-      eventName: 'HO_SO_GIA_HAN',
-      time: new Date(),
-    });
+    this.emitHoSoEvent(hoSo, 'GIA_HAN', 'HO_SO_GIA_HAN');
 
     return result;
   }
 
   async thayThe(id: number, data: ThayTheDto, userId?: number) {
     const hoSoCu = await this.findOne(id);
-    const ttDaThayThe = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'DA_THAY_THE' } });
-    if (!ttDaThayThe) {
-      await this.prisma.dm_tinh_trang.create({ data: { ma_tinh_trang: 'DA_THAY_THE', ten_tinh_trang: 'Đã thay thế' } });
+    let ttDaThayTheMoi = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'DA_THAY_THE' } });
+    if (!ttDaThayTheMoi) {
+      ttDaThayTheMoi = await this.prisma.dm_tinh_trang.create({ data: { ma_tinh_trang: 'DA_THAY_THE', ten_tinh_trang: 'Đã thay thế' } });
     }
-    const ttDaThayTheMoi = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'DA_THAY_THE' } });
     const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
 
     const result = await this.prisma.$transaction(async (tx) => {
@@ -453,16 +453,7 @@ export class HoSoService {
       return hoSoMoi;
     });
 
-    const ownerId = hoSoCu.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
-    this.eventEmitter.emit('hoSo.updated', {
-      ownerId,
-      id: hoSoCu.id,
-      ma_ho_so: hoSoCu.ma_ho_so,
-      ten_san_pham: hoSoCu.ten_san_pham,
-      action: 'THAY_THE',
-      eventName: 'HO_SO_THAY_THE',
-      time: new Date(),
-    });
+    this.emitHoSoEvent(hoSoCu, 'THAY_THE', 'HO_SO_THAY_THE');
 
     return result;
   }
@@ -497,17 +488,9 @@ export class HoSoService {
     });
 
     // Phát sự kiện
-    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
-    this.eventEmitter.emit('hoSo.updated', {
-      ownerId,
-      id: hoSo.id,
-      ma_ho_so: hoSo.ma_ho_so,
-      ten_san_pham: hoSo.ten_san_pham,
-      action: 'THAY_DOI',
-      eventName: 'HO_SO_THAY_DOI',
+    this.emitHoSoEvent(hoSo, 'THAY_DOI', 'HO_SO_THAY_DOI', {
       noi_dung: data.noi_dung_thay_doi,
-      tinh_trang: data.tinh_trang,
-      time: new Date(),
+      tinh_trang: data.tinh_trang
     });
 
     return result;
@@ -523,13 +506,13 @@ export class HoSoService {
       const updated = await tx.lich_su_thay_doi_ho_so.update({
         where: { id: lichSuId },
         data: {
-          tinh_trang: data.tinh_trang !== undefined ? data.tinh_trang : lichSu.tinh_trang,
+          tinh_trang: data.tinh_trang ?? lichSu.tinh_trang,
           ngay_phe_duyet: data.ngay_phe_duyet !== undefined ? (data.ngay_phe_duyet ? new Date(data.ngay_phe_duyet) : null) : lichSu.ngay_phe_duyet,
-          ma_so_tham_chieu: data.ma_so_tham_chieu !== undefined ? data.ma_so_tham_chieu : lichSu.ma_so_tham_chieu,
-          cong_van_url: data.cong_van_url !== undefined ? data.cong_van_url : lichSu.cong_van_url,
-          ghi_chu: data.ghi_chu !== undefined ? data.ghi_chu : lichSu.ghi_chu,
-          noi_dung_thay_doi: data.noi_dung_thay_doi !== undefined ? data.noi_dung_thay_doi : lichSu.noi_dung_thay_doi,
-          loai_thay_doi_id: data.loai_thay_doi_id !== undefined ? data.loai_thay_doi_id : lichSu.loai_thay_doi_id,
+          ma_so_tham_chieu: data.ma_so_tham_chieu ?? lichSu.ma_so_tham_chieu,
+          cong_van_url: data.cong_van_url ?? lichSu.cong_van_url,
+          ghi_chu: data.ghi_chu ?? lichSu.ghi_chu,
+          noi_dung_thay_doi: data.noi_dung_thay_doi ?? lichSu.noi_dung_thay_doi,
+          loai_thay_doi_id: data.loai_thay_doi_id ?? lichSu.loai_thay_doi_id,
         }
       });
 
@@ -548,16 +531,8 @@ export class HoSoService {
     });
 
     const hoSo = await this.findOne(hoSoId);
-    const ownerId = hoSo.nhat_ky?.find(n => n.hanh_dong === 'CREATE')?.nguoi_thuc_hien_id || null;
-    this.eventEmitter.emit('hoSo.updated', {
-      ownerId,
-      id: hoSo.id,
-      ma_ho_so: hoSo.ma_ho_so,
-      ten_san_pham: hoSo.ten_san_pham,
-      action: 'UPDATE_LICH_SU',
-      eventName: 'HO_SO_THAY_DOI',
-      tinh_trang: data.tinh_trang,
-      time: new Date(),
+    this.emitHoSoEvent(hoSo, 'UPDATE_LICH_SU', 'HO_SO_THAY_DOI', {
+      tinh_trang: data.tinh_trang
     });
 
     return result;
