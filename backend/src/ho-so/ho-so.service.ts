@@ -222,6 +222,7 @@ export class HoSoService {
       ma_ho_so: result.ma_ho_so,
       ten_san_pham: result.ten_san_pham,
       action: 'UPDATE',
+      eventName: 'HO_SO_UPDATED',
       time: new Date(),
     });
 
@@ -456,6 +457,7 @@ export class HoSoService {
       ma_ho_so: hoSo.ma_ho_so,
       ten_san_pham: hoSo.ten_san_pham,
       action: 'THAY_DOI',
+      eventName: 'HO_SO_THAY_DOI',
       noi_dung: data.noi_dung_thay_doi,
       tinh_trang: data.tinh_trang,
       time: new Date(),
@@ -506,6 +508,7 @@ export class HoSoService {
       ma_ho_so: hoSo.ma_ho_so,
       ten_san_pham: hoSo.ten_san_pham,
       action: 'UPDATE_LICH_SU',
+      eventName: 'HO_SO_THAY_DOI',
       tinh_trang: data.tinh_trang,
       time: new Date(),
     });

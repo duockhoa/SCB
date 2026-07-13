@@ -25,6 +25,7 @@ const EVENT_OPTIONS = [
   { label: 'Hồ sơ đã hết hạn', value: 'HO_SO_DA_HET_HAN' },
   { label: 'Hồ sơ gia hạn', value: 'HO_SO_GIA_HAN' },
   { label: 'Hồ sơ bị thay thế', value: 'HO_SO_THAY_THE' },
+  { label: 'Hồ sơ có thay đổi', value: 'HO_SO_THAY_DOI' },
 ];
 
 export default function EmailConfigPage() {
