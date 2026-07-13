@@ -36,33 +36,80 @@ export class HoSoService {
       limit = 10
     } = query;
 
-    const where: Prisma.ho_so_chungWhereInput = {};
+    const andConditions: Prisma.ho_so_chungWhereInput[] = [];
 
     if (search) {
-      where.OR = [
-        { ma_ho_so: { contains: search } },
-        { so_chinh: { contains: search } },
-        { ten_san_pham: { contains: search } },
-        { ten_san_pham_khong_dau: { contains: search } },
-        { ma_san_pham_noi_bo: { contains: search } }
-      ];
+      andConditions.push({
+        OR: [
+          // Bảng chung
+          { ma_ho_so: { contains: search } },
+          { so_chinh: { contains: search } },
+          { ten_san_pham: { contains: search } },
+          { ten_san_pham_khong_dau: { contains: search } },
+          { ma_san_pham_noi_bo: { contains: search } },
+          
+          // Chi tiết Thuốc
+          { ho_so_thuoc: { is: { OR: [
+            { hoat_chat_ham_luong: { contains: search } },
+            { bao_che: { contains: search } },
+            { quy_cach_dong_goi: { contains: search } }
+          ]}}},
+          
+          // Chi tiết Mỹ Phẩm
+          { ho_so_my_pham: { is: { OR: [
+            { nhan_hang: { contains: search } },
+            { dang_my_pham: { contains: search } }
+          ]}}},
+          
+          // Chi tiết TBYT
+          { ho_so_tbyt: { is: { OR: [
+            { ten_thuong_mai: { contains: search } },
+            { ten_tbyt_chung_loai: { contains: search } },
+            { chu_so_huu: { contains: search } }
+          ]}}},
+          
+          // Chi tiết TPBVSK Tự Công Bố
+          { ho_so_tpbvsk_tu_cong_bo: { is: { OR: [
+            { co_so_dung_ten: { contains: search } },
+            { dang_san_pham: { contains: search } }
+          ]}}},
+          
+          // Chi tiết TPBVSK Công Bố
+          { ho_so_tpbvsk_cong_bo: { is: { OR: [
+            { thanh_phan: { contains: search } },
+            { chu_so_huu: { contains: search } }
+          ]}}},
+          
+          // Chi tiết CFS/CPP
+          { ho_so_cfs_cpp: { is: { OR: [
+            { nuoc_xuat_khau: { contains: search } }
+          ]}}}
+        ]
+      });
     }
-    if (loai_ho_so) where.loai_ho_so_id = Number(loai_ho_so);
-    if (tinh_trang) where.tinh_trang_id = Number(tinh_trang);
+
+    if (loai_ho_so) andConditions.push({ loai_ho_so_id: Number(loai_ho_so) });
+    if (tinh_trang) andConditions.push({ tinh_trang_id: Number(tinh_trang) });
+    
     if (cong_ty_id) {
       const cid = Number(cong_ty_id);
-      where.OR = [
-        ...(where.OR ? where.OR : []),
-        { cong_ty_so_huu_id: cid },
-        { cong_ty_dung_ten_id: cid },
-        { cong_ty_phan_phoi_id: cid }
-      ];
+      andConditions.push({
+        OR: [
+          { cong_ty_so_huu_id: cid },
+          { cong_ty_dung_ten_id: cid },
+          { cong_ty_phan_phoi_id: cid }
+        ]
+      });
     }
+
     if (ngay_het_han_from || ngay_het_han_to) {
-      where.ngay_het_han = {};
-      if (ngay_het_han_from) where.ngay_het_han.gte = new Date(ngay_het_han_from);
-      if (ngay_het_han_to) where.ngay_het_han.lte = new Date(ngay_het_han_to);
+      const dateFilter: any = {};
+      if (ngay_het_han_from) dateFilter.gte = new Date(ngay_het_han_from);
+      if (ngay_het_han_to) dateFilter.lte = new Date(ngay_het_han_to);
+      andConditions.push({ ngay_het_han: dateFilter });
     }
+
+    const where: Prisma.ho_so_chungWhereInput = andConditions.length > 0 ? { AND: andConditions } : {};
 
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -192,12 +239,12 @@ export class HoSoService {
 
       if (thong_tin_rieng) {
         const maLoai = hoSo.loai_ho_so.ma_loai;
-        if (maLoai === 'THUOC') await tx.ho_so_thuoc.update({ where: { ho_so_chung_id: id }, data: thong_tin_rieng }).catch(() => tx.ho_so_thuoc.create({ data: { ho_so_chung_id: id, ...thong_tin_rieng } }));
-        else if (maLoai === 'MY_PHAM') await tx.ho_so_my_pham.update({ where: { ho_so_chung_id: id }, data: thong_tin_rieng }).catch(() => tx.ho_so_my_pham.create({ data: { ho_so_chung_id: id, ...thong_tin_rieng } }));
-        else if (maLoai === 'TBYT') await tx.ho_so_tbyt.update({ where: { ho_so_chung_id: id }, data: thong_tin_rieng }).catch(() => tx.ho_so_tbyt.create({ data: { ho_so_chung_id: id, ...thong_tin_rieng } }));
-        else if (maLoai === 'TPBVSK_TU_CONG_BO') await tx.ho_so_tpbvsk_tu_cong_bo.update({ where: { ho_so_chung_id: id }, data: thong_tin_rieng }).catch(() => tx.ho_so_tpbvsk_tu_cong_bo.create({ data: { ho_so_chung_id: id, ...thong_tin_rieng } }));
-        else if (maLoai === 'TPBVSK_CONG_BO') await tx.ho_so_tpbvsk_cong_bo.update({ where: { ho_so_chung_id: id }, data: thong_tin_rieng }).catch(() => tx.ho_so_tpbvsk_cong_bo.create({ data: { ho_so_chung_id: id, ...thong_tin_rieng } }));
-        else if (maLoai === 'CFS_CPP') await tx.ho_so_cfs_cpp.update({ where: { ho_so_chung_id: id }, data: thong_tin_rieng }).catch(() => tx.ho_so_cfs_cpp.create({ data: { ho_so_chung_id: id, ...thong_tin_rieng } }));
+        if (maLoai === 'THUOC') await tx.ho_so_thuoc.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
+        else if (maLoai === 'MY_PHAM') await tx.ho_so_my_pham.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
+        else if (maLoai === 'TBYT') await tx.ho_so_tbyt.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
+        else if (maLoai === 'TPBVSK_TU_CONG_BO') await tx.ho_so_tpbvsk_tu_cong_bo.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
+        else if (maLoai === 'TPBVSK_CONG_BO') await tx.ho_so_tpbvsk_cong_bo.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
+        else if (maLoai === 'CFS_CPP') await tx.ho_so_cfs_cpp.upsert({ where: { ho_so_chung_id: id }, update: thong_tin_rieng, create: { ho_so_chung_id: id, ...thong_tin_rieng } });
       }
 
       await tx.nhat_ky_ho_so.create({
