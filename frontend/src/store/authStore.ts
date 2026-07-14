@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import Cookies from 'js-cookie';
 import { axiosInstance } from '@/services/api';
+import axios from 'axios';
 
 interface AuthState {
   token: string | null;
@@ -20,15 +21,37 @@ export const useAuthStore = create<AuthState>((set) => ({
       const token = Cookies.get('accessToken');
       if (!token) return;
       
-      // Lấy thông tin user kèm vai trò từ Backend của SCB
+      // 1. Lấy thông tin chi tiết (bao gồm cả avatar) từ HRM
+      const hrmApiUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3000';
+      const hrmResponse = await axios.get(`${hrmApiUrl}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const hrmUser = hrmResponse.data;
+
+      // 2. Lấy thông tin vai trò cục bộ từ SCB Backend
       const response = await axiosInstance.get('/users/me');
-      const userData = response?.data || response;
+      const scbUser = response?.data || response;
       
-      if (userData) {
-        set({ user: userData, token });
+      if (hrmUser && scbUser) {
+        // Hợp nhất thông tin: giữ avatar từ HRM và vai trò/ID từ SCB
+        const mergedUser = {
+          ...hrmUser,
+          role: scbUser.role,
+          vai_tro: scbUser.vai_tro,
+          userId: scbUser.userId || scbUser.id,
+          // Nếu HRM lưu avatar ở đường dẫn tương đối, ghép với hrmApiUrl
+          avatar: hrmUser.avatar 
+            ? (hrmUser.avatar.startsWith('http') ? hrmUser.avatar : `${hrmApiUrl}${hrmUser.avatar}`)
+            : null
+        };
+        set({ user: mergedUser, token });
+      } else if (scbUser) {
+        set({ user: scbUser, token });
       }
     } catch (error) {
-      console.error('Failed to fetch user from SCB backend:', error);
+      console.error('Failed to fetch user profile:', error);
     }
   }
 }));
