@@ -22,9 +22,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       
       // Lấy thông tin user kèm vai trò từ Backend của SCB
       const response = await axiosInstance.get('/users/me');
+      const userData = response?.data || response;
       
-      if (response) {
-        set({ user: response, token });
+      if (userData) {
+        set({ user: userData, token });
       }
     } catch (error) {
       console.error('Failed to fetch user from SCB backend:', error);
