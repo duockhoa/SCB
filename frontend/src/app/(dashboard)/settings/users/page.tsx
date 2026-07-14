@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Table, Typography, Select, Button, Space, message, Card } from 'antd';
+import { Table, Typography, Select, Button, Space, message, Card, Input } from 'antd';
 import { axiosInstance } from '@/services/api';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,7 @@ export default function UserManagementPage() {
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
   // Gating page check
   useEffect(() => {
@@ -129,6 +130,17 @@ export default function UserManagementPage() {
     },
   ];
 
+  const filteredUsers = users.filter((u) => {
+    const searchLower = searchText.toLowerCase();
+    return (
+      (u.ho_ten && u.ho_ten.toLowerCase().includes(searchLower)) ||
+      (u.ma_nguoi_dung && u.ma_nguoi_dung.toLowerCase().includes(searchLower)) ||
+      (u.email && u.email.toLowerCase().includes(searchLower)) ||
+      (u.phong_ban && u.phong_ban.toLowerCase().includes(searchLower)) ||
+      (u.chuc_vu && u.chuc_vu.toLowerCase().includes(searchLower))
+    );
+  });
+
   if (!isDeveloper) return null;
 
   return (
@@ -147,9 +159,19 @@ export default function UserManagementPage() {
           </Space>
         </div>
 
+        <div style={{ marginBottom: 20 }}>
+          <Input.Search
+            placeholder="Tìm kiếm theo tên, mã nhân sự, email, bộ phận, chức vụ..."
+            allowClear
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{ maxWidth: 455 }}
+          />
+        </div>
+
         <Table
           columns={columns}
-          dataSource={users}
+          dataSource={filteredUsers}
           rowKey="id"
           loading={loading}
           pagination={{

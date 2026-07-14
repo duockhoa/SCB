@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
 import Cookies from 'js-cookie';
+import { axiosInstance } from '@/services/api';
 
 interface AuthState {
   token: string | null;
@@ -20,18 +20,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       const token = Cookies.get('accessToken');
       if (!token) return;
       
-      const hrmApiUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3000';
-      const response = await axios.get(`${hrmApiUrl}/users/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      // Lấy thông tin user kèm vai trò từ Backend của SCB
+      const response = await axiosInstance.get('/users/me');
       
-      if (response.data) {
-        set({ user: response.data, token });
+      if (response) {
+        set({ user: response, token });
       }
     } catch (error) {
-      console.error('Failed to fetch user from HRM:', error);
+      console.error('Failed to fetch user from SCB backend:', error);
     }
   }
 }));

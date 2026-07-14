@@ -43,4 +43,10 @@ export class UsersController {
     this.checkDeveloper(req);
     return this.usersService.updateRole(id, body.roleId);
   }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Lấy thông tin tài khoản hiện tại kèm vai trò từ DB' })
+  getMe(@Req() req: any) {
+    return req.user;
+  }
 }
