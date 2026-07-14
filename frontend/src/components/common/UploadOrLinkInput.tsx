@@ -3,6 +3,7 @@ import { Input, Button, Upload, message, Tooltip, Space } from 'antd';
 import { UploadOutlined, LinkOutlined, FileOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { uploadFile } from '@/services/api';
+import Cookies from 'js-cookie';
 
 interface UploadOrLinkInputProps {
   value?: string;
@@ -78,15 +79,30 @@ const UploadOrLinkInput: React.FC<UploadOrLinkInputProps> = ({ value, onChange, 
         <Tooltip title="Mở file / đường dẫn">
           <Button 
             icon={<FileOutlined />} 
-            onClick={() => {
+            onClick={async () => {
               let finalUrl = value;
+              const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
               if (!value.startsWith('http')) {
-                const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
                 const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
                 const cleanUrl = value.startsWith('/') ? value : `/${value}`;
                 finalUrl = `${cleanBase}${cleanUrl}`;
               }
-              window.open(finalUrl, '_blank');
+              
+              // Nếu là link API cục bộ, sử dụng axios để tải blob bảo mật (giấu token trong Header)
+              if (finalUrl.startsWith(baseUrl)) {
+                try {
+                  const response = await axiosInstance.get(finalUrl, {
+                    responseType: 'blob',
+                  });
+                  const blobUrl = window.URL.createObjectURL(response as unknown as Blob);
+                  window.open(blobUrl, '_blank');
+                } catch (error) {
+                  console.error(error);
+                  message.error('Không có quyền xem tài liệu này hoặc file không tồn tại');
+                }
+              } else {
+                window.open(finalUrl, '_blank');
+              }
             }}
             title="Xem file"
           />

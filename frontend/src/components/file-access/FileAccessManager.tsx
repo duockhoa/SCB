@@ -7,6 +7,7 @@ import { axiosInstance } from '@/services/api';
 import dayjs from 'dayjs';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 
 export default function FileAccessManager() {
   const [data, setData] = useState<any[]>([]);
@@ -144,7 +145,7 @@ export default function FileAccessManager() {
           <Button 
             type="default" 
             icon={<EyeOutlined />}
-            onClick={() => {
+            onClick={async () => {
               // Construct url based on backend update we will make
               const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
               let fileUrl = '';
@@ -153,8 +154,24 @@ export default function FileAccessManager() {
                 if (record.tai_lieu.duong_dan_url.startsWith('http')) fileUrl = record.tai_lieu.duong_dan_url;
                 else fileUrl = `${apiUrl}${record.tai_lieu.duong_dan_url.startsWith('/') ? '' : '/'}${record.tai_lieu.duong_dan_url}`;
               }
-              if (fileUrl) window.open(fileUrl, '_blank');
-              else message.error('Không tìm thấy đường dẫn file');
+              if (fileUrl) {
+                if (fileUrl.startsWith(apiUrl)) {
+                  try {
+                    const response = await axiosInstance.get(fileUrl, {
+                      responseType: 'blob',
+                    });
+                    const blobUrl = window.URL.createObjectURL(response as unknown as Blob);
+                    window.open(blobUrl, '_blank');
+                  } catch (error) {
+                    console.error(error);
+                    message.error('Không có quyền xem tài liệu này hoặc file không tồn tại');
+                  }
+                } else {
+                  window.open(fileUrl, '_blank');
+                }
+              } else {
+                message.error('Không tìm thấy đường dẫn file');
+              }
             }}
           >
             Xem

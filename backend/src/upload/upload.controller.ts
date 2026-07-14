@@ -64,7 +64,7 @@ export class UploadController {
     
     // 1. Kiểm tra quyền ưu tiên: Lập trình viên hoặc người thuộc Phòng Đăng Ký
     const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
-    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
+    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '') || user.role === 'ADMIN';
     const userDept = user.department ? user.department.toString().trim().normalize('NFC').toLowerCase() : '';
     const targetDept = (process.env.DEPT_REGISTRATION || 'Đăng ký').toString().trim().normalize('NFC').toLowerCase();
     const isDangKy = userDept === targetDept;
@@ -116,7 +116,7 @@ export class LegacyUploadController {
     
     // 1. Kiểm tra quyền ưu tiên
     const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
-    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
+    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '') || user.role === 'ADMIN';
     const userDept = user.department ? user.department.toString().trim().normalize('NFC').toLowerCase() : '';
     const targetDept = (process.env.DEPT_REGISTRATION || 'Đăng ký').toString().trim().normalize('NFC').toLowerCase();
     const isDangKy = userDept === targetDept;
