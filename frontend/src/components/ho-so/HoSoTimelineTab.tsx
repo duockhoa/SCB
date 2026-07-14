@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { useUpdateLichSuThayDoi, useDeleteLichSuThayDoi } from '@/hooks/queries/useHoSo';
 import { useLoaiThayDoiList } from '@/hooks/queries/useDanhMuc';
 import MultiUploadOrLinkInput, { parseUrls } from '../common/MultiUploadOrLinkInput';
+import { axiosInstance } from '@/services/api';
 
 interface Props {
   lichSuData?: any[];
@@ -31,6 +32,27 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
     const cleanUrl = url.startsWith('/') ? url : `/${url}`;
     
     return `${cleanBase}${cleanUrl}`;
+  };
+
+  const handleViewFile = async (url: string) => {
+    let finalUrl = getFullUrl(url);
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    
+    // Nếu là link API cục bộ, sử dụng axios để tải blob bảo mật (giấu token trong Header)
+    if (finalUrl.startsWith(baseUrl)) {
+      try {
+        const response = await axiosInstance.get(finalUrl, {
+          responseType: 'blob',
+        });
+        const blobUrl = window.URL.createObjectURL(response as unknown as Blob);
+        window.open(blobUrl, '_blank');
+      } catch (error) {
+        console.error(error);
+        message.error('Không có quyền xem tài liệu này hoặc file không tồn tại');
+      }
+    } else {
+      window.open(finalUrl, '_blank');
+    }
   };
 
   const handleEditClick = (item: any) => {
@@ -123,9 +145,14 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
                 {item.cong_van_url && (
                   <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {parseUrls(item.cong_van_url).map((link: any, idx: number) => (
-                      <a key={idx} href={getFullUrl(link.url)} target="_blank" rel="noopener noreferrer">
+                      <span
+                        key={idx}
+                        onClick={() => handleViewFile(link.url)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1 mt-1"
+                        style={{ display: 'inline-flex', width: 'fit-content' }}
+                      >
                         📄 {link.name || `Xem Công văn phê duyệt ${parseUrls(item.cong_van_url).length > 1 ? idx + 1 : ''}`}
-                      </a>
+                      </span>
                     ))}
                   </div>
                 )}
