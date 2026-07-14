@@ -31,7 +31,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     let user = await this.prisma.nguoi_dung.findUnique({
-      where: { ma_nguoi_dung }
+      where: { ma_nguoi_dung },
+      include: { vai_tro: true }
     });
 
     // Nếu user chưa tồn tại hoặc thiếu phong_ban/chuc_vu trong DB, thử lấy trực tiếp từ HRM để đồng bộ
@@ -70,7 +71,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           email,
           phong_ban,
           chuc_vu,
-        }
+        },
+        include: { vai_tro: true }
       });
     } else if ((phong_ban && user.phong_ban !== phong_ban) || (chuc_vu && user.chuc_vu !== chuc_vu)) {
       // Cập nhật thông tin mới nhất từ HRM vào DB nếu phát hiện thay đổi
@@ -79,7 +81,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         data: {
           phong_ban: phong_ban || user.phong_ban,
           chuc_vu: chuc_vu || user.chuc_vu,
-        }
+        },
+        include: { vai_tro: true }
       });
     }
 
@@ -90,6 +93,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       name: user.ho_ten || ho_ten,
       department: user.phong_ban || phong_ban,  // Ưu tiên lấy từ DB
       position: user.chuc_vu || chuc_vu,        // Ưu tiên lấy từ DB
+      role: user.vai_tro?.ma_vai_tro || null,    // Vai trò lấy từ DB
       ...payload
     };
   }

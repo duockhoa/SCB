@@ -20,6 +20,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LogsModule } from './logs/logs.module';
 import { FileAccessModule } from './file-access/file-access.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { FileAccessModule } from './file-access/file-access.module';
       },
     }),
     FileAccessModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [

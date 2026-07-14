@@ -22,7 +22,10 @@ export const usePermissions = () => {
     };
   }
 
+  const isAdmin = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '') || user.role === 'ADMIN' || user.vai_tro?.ma_vai_tro === 'ADMIN';
+  const isEditor = user.role === 'EDITOR' || user.vai_tro?.ma_vai_tro === 'EDITOR';
   const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
+
   const isDangKy = user.department
     ? user.department.toString().trim().normalize('NFC').toLowerCase() === (process.env.NEXT_PUBLIC_DEPT_REGISTRATION || 'Đăng ký').toString().trim().normalize('NFC').toLowerCase()
     : false;
@@ -33,8 +36,8 @@ export const usePermissions = () => {
     ? user.position.toString().trim().normalize('NFC').toLowerCase() === (process.env.NEXT_PUBLIC_ROLE_STAFF || 'NV').toString().trim().normalize('NFC').toLowerCase()
     : false;
 
-  const canCreateUpdate = isDeveloper || isDangKy;
-  const canDeleteManage = isDeveloper || (isDangKy && isTruongPhong);
+  const canCreateUpdate = isAdmin || isEditor || isDangKy;
+  const canDeleteManage = isAdmin || (isDangKy && isTruongPhong);
 
   return {
     canCreate: canCreateUpdate,
@@ -46,6 +49,7 @@ export const usePermissions = () => {
     canViewDanhMuc: canDeleteManage,
     canApproveFile: canDeleteManage,
     isDeveloper,
+    isAdmin,
     isDangKy,
     isTruongPhong,
     isNhanVien,

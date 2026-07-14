@@ -27,9 +27,9 @@ export class RolesGuard implements CanActivate {
     // console.log(user);
     // console.log('=============================');
 
-    // Kiểm tra đặc quyền Developer (Admin tối cao)
+    // Kiểm tra đặc quyền Developer (Admin tối cao) hoặc vai trò ADMIN trong DB
     const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
-    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
+    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '') || user.role === 'ADMIN';
     if (isDeveloper) {
       return true;
     }
