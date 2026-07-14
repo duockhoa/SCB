@@ -34,6 +34,13 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
+    // Cho phép vai trò EDITOR thực hiện các hành động thêm/sửa (các method không phải DELETE)
+    const request = context.switchToHttp().getRequest();
+    const isEditor = user.role === 'EDITOR' && request.method !== 'DELETE';
+    if (isEditor) {
+      return true;
+    }
+
     // Kiểm tra quyền theo phòng ban
     if (requiredRole.department) {
       // Đổi literal string thành biến môi trường
