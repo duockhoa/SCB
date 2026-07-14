@@ -54,7 +54,10 @@ export class RolesGuard implements CanActivate {
       if (expectedPos === 'TP') expectedPos = process.env.ROLE_MANAGER || 'TP';
       else if (expectedPos === 'NV') expectedPos = process.env.ROLE_STAFF || 'NV';
 
-      if (user.position !== expectedPos) {
+      const userPos = user.position ? user.position.toString().trim().normalize('NFC').toLowerCase() : '';
+      const targetPos = expectedPos.toString().trim().normalize('NFC').toLowerCase();
+
+      if (userPos !== targetPos) {
         throw new ForbiddenException(`Hành động này yêu cầu chức vụ cấp ${expectedPos}`);
       }
     }

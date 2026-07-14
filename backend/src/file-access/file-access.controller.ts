@@ -19,7 +19,11 @@ export class FileAccessController {
     const user = req.user;
     const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
     const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
-    const isTruongPhongDangKy = user.department === (process.env.DEPT_REGISTRATION || 'Đăng ký') && user.position === (process.env.ROLE_MANAGER || 'TP');
+    const userDept = user.department ? user.department.toString().trim().normalize('NFC').toLowerCase() : '';
+    const targetDept = (process.env.DEPT_REGISTRATION || 'Đăng ký').toString().trim().normalize('NFC').toLowerCase();
+    const userPos = user.position ? user.position.toString().trim().normalize('NFC').toLowerCase() : '';
+    const targetPos = (process.env.ROLE_MANAGER || 'TP').toString().trim().normalize('NFC').toLowerCase();
+    const isTruongPhongDangKy = userDept === targetDept && userPos === targetPos;
 
     if (!isDeveloper && !isTruongPhongDangKy) {
       throw new ForbiddenException('Bạn không có quyền xem danh sách phê duyệt');
@@ -33,7 +37,11 @@ export class FileAccessController {
     const user = req.user;
     const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
     const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
-    const isTruongPhongDangKy = user.department === (process.env.DEPT_REGISTRATION || 'Đăng ký') && user.position === (process.env.ROLE_MANAGER || 'TP');
+    const userDept = user.department ? user.department.toString().trim().normalize('NFC').toLowerCase() : '';
+    const targetDept = (process.env.DEPT_REGISTRATION || 'Đăng ký').toString().trim().normalize('NFC').toLowerCase();
+    const userPos = user.position ? user.position.toString().trim().normalize('NFC').toLowerCase() : '';
+    const targetPos = (process.env.ROLE_MANAGER || 'TP').toString().trim().normalize('NFC').toLowerCase();
+    const isTruongPhongDangKy = userDept === targetDept && userPos === targetPos;
 
     if (!isDeveloper && !isTruongPhongDangKy) {
       throw new ForbiddenException('Bạn không có quyền phê duyệt');
@@ -47,7 +55,11 @@ export class FileAccessController {
     const user = req.user;
     const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
     const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
-    const isTruongPhongDangKy = user.department === (process.env.DEPT_REGISTRATION || 'Đăng ký') && user.position === (process.env.ROLE_MANAGER || 'TP');
+    const userDept = user.department ? user.department.toString().trim().normalize('NFC').toLowerCase() : '';
+    const targetDept = (process.env.DEPT_REGISTRATION || 'Đăng ký').toString().trim().normalize('NFC').toLowerCase();
+    const userPos = user.position ? user.position.toString().trim().normalize('NFC').toLowerCase() : '';
+    const targetPos = (process.env.ROLE_MANAGER || 'TP').toString().trim().normalize('NFC').toLowerCase();
+    const isTruongPhongDangKy = userDept === targetDept && userPos === targetPos;
 
     if (!isDeveloper && !isTruongPhongDangKy) {
       throw new ForbiddenException('Bạn không có quyền phê duyệt');
