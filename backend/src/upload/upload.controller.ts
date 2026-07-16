@@ -58,47 +58,9 @@ export class UploadController {
   }
 
   @Get('files/:filename')
-  @ApiOperation({ summary: 'Tải và Xem file bảo mật' })
+  @ApiOperation({ summary: 'Tải và Xem file' })
   async getFile(@Param('filename') filename: string, @Req() req: any, @Res() res: Response) {
-    const user = req.user;
-    
-    // 1. Kiểm tra quyền ưu tiên: Lập trình viên hoặc người thuộc Phòng Đăng Ký
-    const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
-    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '') || user.role === 'ADMIN';
-    const userDept = user.department ? user.department.toString().trim().normalize('NFC').toLowerCase() : '';
-    const targetDept = (process.env.DEPT_REGISTRATION || 'Đăng ký').toString().trim().normalize('NFC').toLowerCase();
-    const isDangKy = userDept === targetDept;
-    
-    if (isDeveloper || isDangKy) {
-      return res.sendFile(join(process.cwd(), 'uploads', filename));
-    }
-
-    // 2. Tìm tài liệu trong DB
-    const taiLieu = await this.prisma.tai_lieu_ho_so.findFirst({
-      where: { duong_dan_url: { contains: filename } }
-    });
-
-    // 3. Kiểm tra xem người này có yêu cầu xin quyền nào được duyệt còn hạn không
-
-    const orConditions: any[] = [{ file_name: filename }];
-    if (taiLieu) {
-      orConditions.push({ tai_lieu_id: taiLieu.id });
-    }
-
-    const request = await this.prisma.yeu_cau_truy_cap_file.findFirst({
-      where: {
-        nguoi_yeu_cau_id: user.userId,
-        trang_thai: 'APPROVED',
-        ngay_het_han: { gt: new Date() },
-        OR: orConditions
-      }
-    });
-
-    if (!request) {
-      throw new ForbiddenException('Bạn chưa được cấp quyền xem tài liệu này hoặc quyền đã hết hạn');
-    }
-
-    // Nếu hợp lệ, trả file về
+    // Cho phép toàn bộ người dùng đã xác thực (qua jwt) tải và xem file trực tiếp
     return res.sendFile(join(process.cwd(), 'uploads', filename));
   }
 }
@@ -112,43 +74,7 @@ export class LegacyUploadController {
   @Get(':filename')
   @ApiOperation({ summary: 'Hỗ trợ xem file từ link cũ (/api/uploads/...)' })
   async getFile(@Param('filename') filename: string, @Req() req: any, @Res() res: Response) {
-    const user = req.user;
-    
-    // 1. Kiểm tra quyền ưu tiên
-    const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
-    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '') || user.role === 'ADMIN';
-    const userDept = user.department ? user.department.toString().trim().normalize('NFC').toLowerCase() : '';
-    const targetDept = (process.env.DEPT_REGISTRATION || 'Đăng ký').toString().trim().normalize('NFC').toLowerCase();
-    const isDangKy = userDept === targetDept;
-    
-    if (isDeveloper || isDangKy) {
-      return res.sendFile(join(process.cwd(), 'uploads', filename));
-    }
-
-    // 2. Tìm tài liệu trong DB
-    const taiLieu = await this.prisma.tai_lieu_ho_so.findFirst({
-      where: { duong_dan_url: { contains: filename } }
-    });
-
-    // 3. Kiểm tra yêu cầu xin quyền
-    const orConditions: any[] = [{ file_name: filename }];
-    if (taiLieu) {
-      orConditions.push({ tai_lieu_id: taiLieu.id });
-    }
-
-    const request = await this.prisma.yeu_cau_truy_cap_file.findFirst({
-      where: {
-        nguoi_yeu_cau_id: user.userId,
-        trang_thai: 'APPROVED',
-        ngay_het_han: { gt: new Date() },
-        OR: orConditions
-      }
-    });
-
-    if (!request) {
-      throw new ForbiddenException('Bạn chưa được cấp quyền xem tài liệu này hoặc quyền đã hết hạn');
-    }
-
+    // Cho phép toàn bộ người dùng đã xác thực (qua jwt) tải và xem file trực tiếp
     return res.sendFile(join(process.cwd(), 'uploads', filename));
   }
 }

@@ -13,7 +13,7 @@ export default function AppSidebar() {
   const { setGlobalSearch } = useUiStore();
   const router = useRouter();
   const pathname = usePathname();
-  const { canConfigEmail, canViewSystemLogs, canViewDanhMuc, canApproveFile, isDeveloper } = usePermissions();
+  const { canConfigEmail, canViewSystemLogs, canViewDanhMuc, isDeveloper } = usePermissions();
 
   const menuItems: any[] = [
     { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
@@ -29,13 +29,7 @@ export default function AppSidebar() {
     });
   }
 
-  if (canApproveFile) {
-    menuItems.push({
-      key: '/file-access',
-      icon: <FileProtectOutlined />,
-      label: 'Xin quyền xem file',
-    });
-  }
+
 
   if (isDeveloper) {
     menuItems.push({ key: '/settings/users', icon: <SettingOutlined />, label: 'Quản lý Người dùng' });

@@ -19,7 +19,6 @@ import { SyncModule } from './sync/sync.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { LogsModule } from './logs/logs.module';
-import { FileAccessModule } from './file-access/file-access.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -51,7 +50,6 @@ import { UsersModule } from './users/users.module';
         from: process.env.MAIL_FROM || '"Hệ thống SCB" <noreply@scb.com>',
       },
     }),
-    FileAccessModule,
     UsersModule,
   ],
   controllers: [AppController],

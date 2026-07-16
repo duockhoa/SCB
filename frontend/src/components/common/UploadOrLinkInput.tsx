@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Input, Button, Upload, message, Tooltip, Space } from 'antd';
 import { UploadOutlined, LinkOutlined, FileOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
-import { uploadFile } from '@/services/api';
+import { uploadFile, axiosInstance } from '@/services/api';
 import Cookies from 'js-cookie';
 
 interface UploadOrLinkInputProps {
