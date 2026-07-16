@@ -233,16 +233,21 @@ function HoSoMasterDetailContent() {
   };
 
   const renderItemMenu = (item: HoSoChung) => {
-    if (!canManage) return null;
+    if (!canUpdate && !canManage) return null;
 
-    const menuItems: MenuProps['items'] = [
-      {
+    const menuItems: MenuProps['items'] = [];
+
+    if (canUpdate) {
+      menuItems.push({
         key: 'edit',
         icon: <EditOutlined className="text-blue-500" />,
         label: 'Sửa hồ sơ',
         onClick: () => handleEdit(item),
-      },
-      {
+      });
+    }
+
+    if (canManage) {
+      menuItems.push({
         key: 'delete',
         icon: <DeleteOutlined className="text-red-500" />,
         label: (
@@ -257,8 +262,10 @@ function HoSoMasterDetailContent() {
             <span className="text-red-500">Xóa hồ sơ</span>
           </Popconfirm>
         ),
-      },
-    ];
+      });
+    }
+
+    if (menuItems.length === 0) return null;
 
     return (
       <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
