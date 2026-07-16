@@ -32,7 +32,9 @@ import { UsersModule } from './users/users.module';
     HoSoModule,
     UploadModule,
     NotificationsModule,
-    EventEmitterModule.forRoot(),
+    EventEmitterModule.forRoot({
+      wildcard: true,
+    }),
     MailModule,
     ScheduleModule.forRoot(),
     CronjobModule,

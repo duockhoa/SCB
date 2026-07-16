@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { PrismaService } from '../prisma/prisma.service';
 
 @WebSocketGateway({
   cors: {
@@ -24,7 +25,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
 
   private readonly logger = new Logger(NotificationsGateway.name);
 
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private prisma: PrismaService
+  ) {}
 
   async handleConnection(client: Socket) {
     try {
@@ -51,22 +55,35 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         this.logger.log(`Client ${client.id} joined room user_${userId}`);
       }
 
-      // Tùy theo cấu trúc token HRM mà map role phù hợp, tạm check các trường phổ biến
-      const role = payload.role || payload.roleName || payload.position;
+      // 4. Lấy dữ liệu vai trò và phòng ban thực tế từ database
+      const ma_nguoi_dung = payload.username || payload.sub?.toString() || payload.id?.toString();
+      let userRole = payload.role || payload.roleName || payload.position;
+      let userDept = payload.department;
+
+      if (ma_nguoi_dung) {
+        const dbUser = await this.prisma.nguoi_dung.findUnique({
+          where: { ma_nguoi_dung },
+          include: { vai_tro: true }
+        });
+        if (dbUser) {
+          userRole = dbUser.vai_tro?.ma_vai_tro || userRole;
+          userDept = dbUser.phong_ban || userDept;
+        }
+      }
+
       const username = payload.username || '';
       const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
-      const isDeveloper = DEVELOPER_USERNAMES.includes(username.toLowerCase());
+      const isDeveloper = DEVELOPER_USERNAMES.includes(username.toLowerCase()) || userRole === 'ADMIN';
 
-      if (isDeveloper || (role && (role.toString().toUpperCase().includes('ADMIN') || role.toString().toUpperCase().includes('MANAGER')))) {
+      if (isDeveloper || (userRole && (userRole.toString().toUpperCase().includes('ADMIN') || userRole.toString().toUpperCase().includes('MANAGER')))) {
         client.join('role_ADMIN');
         this.logger.log(`Client ${client.id} joined room role_ADMIN`);
       }
 
-      // Đưa user vào phòng ban của họ (nếu có phòng ban đồng bộ từ HRM)
-      const department = payload.department;
-      if (department) {
+      // Đưa user vào phòng ban của họ (nếu có phòng ban đồng bộ từ DB/HRM)
+      if (userDept) {
         // Chuẩn hóa tên phòng ban viết liền không dấu hoặc giữ nguyên để làm tên room
-        const deptRoom = `dept_${department.toString().replace(/\s+/g, '')}`;
+        const deptRoom = `dept_${userDept.toString().replace(/\s+/g, '')}`;
         client.join(deptRoom);
         this.logger.log(`Client ${client.id} joined room ${deptRoom}`);
       }
