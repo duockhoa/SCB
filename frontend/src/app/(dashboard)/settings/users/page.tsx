@@ -17,6 +17,7 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [changedRoles, setChangedRoles] = useState<Record<number, number | null>>({});
 
   // Gating page check
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function UserManagementPage() {
       ]);
       setUsers(usersRes.data);
       setRoles(rolesRes.data);
+      setChangedRoles({});
     } catch (error) {
       console.error(error);
       message.error('Không thể tải danh sách người dùng và vai trò');
@@ -112,21 +114,49 @@ export default function UserManagementPage() {
     {
       title: 'Quyền hạn (Vai trò)',
       key: 'role',
-      width: 220,
-      render: (_: any, record: any) => (
-        <Select
-          style={{ width: '100%' }}
-          value={record.vai_tro_id}
-          onChange={(val) => handleRoleChange(record.id, val)}
-          options={[
-            { value: null, label: 'Chưa cấu hình (Lấy mặc định)' },
-            ...roles.map((r) => ({
-              value: r.id,
-              label: `${r.ten_vai_tro} (${r.ma_vai_tro})`,
-            })),
-          ]}
-        />
-      ),
+      width: 280,
+      render: (_: any, record: any) => {
+        const currentValue = changedRoles[record.id] !== undefined ? changedRoles[record.id] : record.vai_tro_id;
+        const isChanged = changedRoles[record.id] !== undefined && changedRoles[record.id] !== record.vai_tro_id;
+
+        return (
+          <Space>
+            <Select
+              style={{ width: 180 }}
+              value={currentValue}
+              onChange={(val) => {
+                setChangedRoles(prev => ({
+                  ...prev,
+                  [record.id]: val
+                }));
+              }}
+              options={[
+                { value: null, label: 'Chưa cấu hình (Mặc định)' },
+                ...roles.map((r) => ({
+                  value: r.id,
+                  label: `${r.ten_vai_tro} (${r.ma_vai_tro})`,
+                })),
+              ]}
+            />
+            {isChanged && (
+              <Button 
+                type="primary" 
+                size="small" 
+                onClick={async () => {
+                  await handleRoleChange(record.id, currentValue);
+                  setChangedRoles(prev => {
+                    const next = { ...prev };
+                    delete next[record.id];
+                    return next;
+                  });
+                }}
+              >
+                Lưu
+              </Button>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
