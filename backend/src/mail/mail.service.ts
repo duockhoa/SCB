@@ -4,7 +4,6 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { RecipientService } from './recipient.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { decryptString } from '../common/utils/crypto.util';
-import { getLogoAttachment } from './logo.util';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
@@ -33,6 +32,7 @@ export class MailService {
       // Xây dựng đường dẫn truy cập trực tiếp tới hồ sơ trên Frontend
       const frontendUrl = (process.env.FRONTEND_URL || 'https://scb.dkpharma.io.vn').replace(/\/$/, '');
       const accessUrl = data.id ? `${frontendUrl}/ho-so?id=${data.id}` : `${frontendUrl}/ho-so`;
+      const logoUrl = `${frontendUrl}/api/mail/logo.png`;
 
       // Xác định tiêu đề và mô tả sự kiện chi tiết
       let actionTitle = 'Cập nhật thông tin hồ sơ';
@@ -83,14 +83,12 @@ Vui lòng truy cập đường dẫn sau để xem chi tiết hồ sơ:
 ${accessUrl}
 `;
 
-      const attachments = getLogoAttachment();
-
-      // Mẫu HTML tinh tế (trắng sạch theo phong cách OTP mail DKPharma, nhúng CID logo đảm bảo hiển thị 100%)
+      // Mẫu HTML tinh tế (dùng URL logo trực tiếp từ API backend, hoàn toàn không gửi tệp đính kèm)
       const htmlContent = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
   <!-- Logo Section -->
   <div style="text-align: center; margin-bottom: 32px;">
-    <img src="cid:dkpharmalogo" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
+    <img src="${logoUrl}" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
   </div>
 
   <!-- Content Section -->
@@ -177,7 +175,6 @@ ${accessUrl}
             subject: subject,
             text: textContent,
             html: htmlContent,
-            attachments: attachments,
           });
           useDbSmtp = true;
           this.logger.log(`Email sent successfully via DB SMTP to ${emails.length} recipients.`);

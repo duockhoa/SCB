@@ -118,18 +118,18 @@ export class EmailConfigService {
     try {
       const frontendUrl = (process.env.FRONTEND_URL || 'https://scb.dkpharma.io.vn').replace(/\/$/, '');
       const accessUrl = `${frontendUrl}/ho-so`;
+      const logoUrl = `${frontendUrl}/api/mail/logo.png`;
 
       await transporter.sendMail({
         from: config.from_email,
         to: testEmail,
         subject: '[Hệ thống SCB] Kiểm tra Cấu hình Gửi Email',
         text: 'Nếu bạn nhận được email này, cấu hình SMTP của bạn đã hoạt động bình thường.',
-        attachments: getLogoAttachment(),
         html: `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
   <!-- Logo Section -->
   <div style="text-align: center; margin-bottom: 32px;">
-    <img src="cid:dkpharmalogo" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
+    <img src="${logoUrl}" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
   </div>
 
   <!-- Content Section -->
