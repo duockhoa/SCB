@@ -128,7 +128,7 @@ ${accessUrl}
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 6px 0; font-weight: 600; color: #64748b; width: 140px;">Sự kiện:</td>
-          <td style="padding: 6px 0; font-weight: 600; color: #004680;">${actionTitle}</td>
+          <td style="padding: 6px 0; font-weight: 600; color: #006655;">${actionTitle}</td>
         </tr>
         <tr>
           <td style="padding: 6px 0; font-weight: 600; color: #64748b;">Mã hồ sơ:</td>
@@ -157,14 +157,14 @@ ${accessUrl}
 
     <!-- Action Button -->
     <div style="margin: 32px 0 24px 0;">
-      <a href="${accessUrl}" target="_blank" style="background-color: #004680; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+      <a href="${accessUrl}" target="_blank" style="background-color: #006655; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
         Xem Chi Tiết Hồ Sơ
       </a>
     </div>
 
     <div style="font-size: 12px; color: #94a3b8; word-break: break-all; margin-top: 16px;">
       Nếu nút bấm không mở được, bạn có thể sao chép liên kết sau:<br>
-      <a href="${accessUrl}" target="_blank" style="color: #004680; text-decoration: underline;">${accessUrl}</a>
+      <a href="${accessUrl}" target="_blank" style="color: #006655; text-decoration: underline;">${accessUrl}</a>
     </div>
   </div>
 

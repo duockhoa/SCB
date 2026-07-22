@@ -142,7 +142,7 @@ export class EmailConfigService {
 
     <!-- Action Button -->
     <div style="margin: 32px 0 24px 0;">
-      <a href="${accessUrl}" target="_blank" style="background-color: #004680; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+      <a href="${accessUrl}" target="_blank" style="background-color: #006655; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
         Truy Cập Hệ Thống SCB
       </a>
     </div>
