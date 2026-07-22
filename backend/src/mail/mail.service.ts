@@ -5,6 +5,8 @@ import { RecipientService } from './recipient.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { decryptString } from '../common/utils/crypto.util';
 import * as nodemailer from 'nodemailer';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class MailService {
@@ -15,6 +17,26 @@ export class MailService {
     private recipientService: RecipientService,
     private prisma: PrismaService
   ) {}
+
+  private getLogoAttachments() {
+    const candidates = [
+      path.join(__dirname, '../assets/dkpharmalogo.png'),
+      path.join(__dirname, '../../src/assets/dkpharmalogo.png'),
+      path.join(process.cwd(), 'src/assets/dkpharmalogo.png'),
+      path.join(process.cwd(), 'dist/assets/dkpharmalogo.png'),
+      path.join(process.cwd(), '../frontend/public/dkpharmalogo.png'),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        return [{
+          filename: 'dkpharmalogo.png',
+          path: p,
+          cid: 'dkpharmalogo'
+        }];
+      }
+    }
+    return [];
+  }
 
   @OnEvent('hoSo.*', { async: true })
   async handleHoSoEvents(data: any) {
@@ -30,7 +52,7 @@ export class MailService {
       }
 
       // Xây dựng đường dẫn truy cập trực tiếp tới hồ sơ trên Frontend
-      const frontendUrl = (process.env.FRONTEND_URL || 'http://test.dkpharma.io.vn:3006').replace(/\/$/, '');
+      const frontendUrl = (process.env.FRONTEND_URL || 'https://scb.dkpharma.io.vn').replace(/\/$/, '');
       const accessUrl = data.id ? `${frontendUrl}/ho-so?id=${data.id}` : `${frontendUrl}/ho-so`;
 
       // Xác định tiêu đề và mô tả sự kiện chi tiết
@@ -82,61 +104,73 @@ Vui lòng truy cập đường dẫn sau để xem chi tiết hồ sơ:
 ${accessUrl}
 `;
 
-      // Nội dung HTML định dạng đẹp
+      const attachments = this.getLogoAttachments();
+
+      // Mẫu HTML tinh tế (trắng sạch theo phong cách OTP mail DKPharma)
       const htmlContent = `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
-  <div style="background-color: #004680; color: #ffffff; padding: 20px 24px; text-align: center;">
-    <div style="margin-bottom: 8px;">
-      <img src="${frontendUrl}/dkpharmalogo.png" alt="DKPharma" style="max-height: 45px; background-color: #ffffff; padding: 4px 12px; border-radius: 6px; display: inline-block;" />
-    </div>
-    <div style="font-size: 18px; font-weight: bold; letter-spacing: 0.5px;">HỆ THỐNG QUẢN LÝ HỒ SƠ SCB</div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
+  <!-- Logo Section -->
+  <div style="text-align: center; margin-bottom: 32px;">
+    <img src="cid:dkpharmalogo" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
   </div>
-  <div style="padding: 24px; color: #2d3748; line-height: 1.6;">
-    <div style="display: inline-block; background-color: #ebf8ff; color: #2b6cb0; font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 4px; margin-bottom: 12px;">
-      ${actionTitle.toUpperCase()}
+
+  <!-- Content Section -->
+  <div style="color: #374151; font-size: 15px; line-height: 1.6; text-align: center;">
+    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">
+      ${subject}
     </div>
-    <p style="font-size: 15px; margin-top: 4px; margin-bottom: 20px;">
+    <div style="color: #475569; font-size: 14px; margin-bottom: 24px;">
       ${eventDescription}
-    </p>
+    </div>
 
-    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #f7fafc; border-radius: 6px; border: 1px solid #edf2f7; font-size: 14px;">
-      <tr>
-        <td style="padding: 10px 14px; font-weight: bold; border-bottom: 1px solid #edf2f7; width: 140px; color: #4a5568;">Mã hồ sơ:</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #edf2f7; color: #1a202c;"><strong>${data.ma_ho_so || 'N/A'}</strong></td>
-      </tr>
-      <tr>
-        <td style="padding: 10px 14px; font-weight: bold; border-bottom: 1px solid #edf2f7; color: #4a5568;">Tên sản phẩm:</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #edf2f7; color: #1a202c;">${data.ten_san_pham || 'N/A'}</td>
-      </tr>
-      ${data.so_chinh ? `
-      <tr>
-        <td style="padding: 10px 14px; font-weight: bold; border-bottom: 1px solid #edf2f7; color: #4a5568;">Số công bố/đăng ký:</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #edf2f7; color: #1a202c;"><strong>${data.so_chinh}</strong></td>
-      </tr>` : ''}
-      ${data.noi_dung ? `
-      <tr>
-        <td style="padding: 10px 14px; font-weight: bold; border-bottom: 1px solid #edf2f7; color: #4a5568;">Chi tiết nội dung:</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #edf2f7; color: #1a202c;">${data.noi_dung}</td>
-      </tr>` : ''}
-      <tr>
-        <td style="padding: 10px 14px; font-weight: bold; color: #4a5568;">Thời gian:</td>
-        <td style="padding: 10px 14px; color: #1a202c;">${timeStr}</td>
-      </tr>
-    </table>
+    <!-- Info Box -->
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: left; margin-bottom: 28px; font-size: 14px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 6px 0; font-weight: 600; color: #64748b; width: 140px;">Sự kiện:</td>
+          <td style="padding: 6px 0; font-weight: 600; color: #004680;">${actionTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; font-weight: 600; color: #64748b;">Mã hồ sơ:</td>
+          <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${data.ma_ho_so || 'N/A'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; font-weight: 600; color: #64748b;">Tên sản phẩm:</td>
+          <td style="padding: 6px 0; color: #0f172a;">${data.ten_san_pham || 'N/A'}</td>
+        </tr>
+        ${data.so_chinh ? `
+        <tr>
+          <td style="padding: 6px 0; font-weight: 600; color: #64748b;">Số đăng ký/công bố:</td>
+          <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${data.so_chinh}</td>
+        </tr>` : ''}
+        ${data.noi_dung ? `
+        <tr>
+          <td style="padding: 6px 0; font-weight: 600; color: #64748b;">Chi tiết:</td>
+          <td style="padding: 6px 0; color: #0f172a;">${data.noi_dung}</td>
+        </tr>` : ''}
+        <tr>
+          <td style="padding: 6px 0; font-weight: 600; color: #64748b;">Thời gian:</td>
+          <td style="padding: 6px 0; color: #475569;">${timeStr}</td>
+        </tr>
+      </table>
+    </div>
 
-    <div style="text-align: center; margin: 28px 0 20px 0;">
-      <a href="${accessUrl}" target="_blank" style="background-color: #004680; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <!-- Action Button -->
+    <div style="margin: 32px 0 24px 0;">
+      <a href="${accessUrl}" target="_blank" style="background-color: #004680; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
         Xem Chi Tiết Hồ Sơ
       </a>
     </div>
 
-    <div style="font-size: 12px; color: #718096; background-color: #f7fafc; padding: 10px 12px; border-radius: 4px; border-left: 3px solid #cbd5e0; word-break: break-all;">
-      Nếu nút bấm không hoạt động, bạn có thể truy cập trực tiếp đường dẫn sau:<br>
+    <div style="font-size: 12px; color: #94a3b8; word-break: break-all; margin-top: 16px;">
+      Nếu nút bấm không mở được, bạn có thể sao chép liên kết sau:<br>
       <a href="${accessUrl}" target="_blank" style="color: #004680; text-decoration: underline;">${accessUrl}</a>
     </div>
   </div>
-  <div style="background-color: #edf2f7; color: #718096; padding: 12px 24px; font-size: 12px; text-align: center; border-top: 1px solid #e2e8f0;">
-    Thông báo tự động từ Hệ thống Quản lý Hồ sơ Đăng ký SCB - DKPharma
+
+  <!-- Footer -->
+  <div style="border-top: 1px solid #f1f5f9; margin-top: 40px; padding-top: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+    Đây là email tự động từ Hệ thống SCB - DKPharma. Vui lòng không trả lời email này.
   </div>
 </div>
 `;
@@ -164,6 +198,7 @@ ${accessUrl}
             subject: subject,
             text: textContent,
             html: htmlContent,
+            attachments: attachments,
           });
           useDbSmtp = true;
           this.logger.log(`Email sent successfully via DB SMTP to ${emails.length} recipients.`);

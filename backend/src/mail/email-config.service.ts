@@ -3,11 +3,34 @@ import { PrismaService } from '../prisma/prisma.service';
 import { encryptString, decryptString } from '../common/utils/crypto.util';
 import * as nodemailer from 'nodemailer';
 
+import * as path from 'path';
+import * as fs from 'fs';
+
 @Injectable()
 export class EmailConfigService {
   private readonly logger = new Logger(EmailConfigService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  private getLogoAttachments() {
+    const candidates = [
+      path.join(__dirname, '../assets/dkpharmalogo.png'),
+      path.join(__dirname, '../../src/assets/dkpharmalogo.png'),
+      path.join(process.cwd(), 'src/assets/dkpharmalogo.png'),
+      path.join(process.cwd(), 'dist/assets/dkpharmalogo.png'),
+      path.join(process.cwd(), '../frontend/public/dkpharmalogo.png'),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        return [{
+          filename: 'dkpharmalogo.png',
+          path: p,
+          cid: 'dkpharmalogo'
+        }];
+      }
+    }
+    return [];
+  }
 
   async getSmtpConfig() {
     const config = await this.prisma.cau_hinh_smtp.findFirst();
@@ -92,7 +115,7 @@ export class EmailConfigService {
     });
 
     try {
-      const frontendUrl = (process.env.FRONTEND_URL || 'http://test.dkpharma.io.vn:3006').replace(/\/$/, '');
+      const frontendUrl = (process.env.FRONTEND_URL || 'https://scb.dkpharma.io.vn').replace(/\/$/, '');
       const accessUrl = `${frontendUrl}/ho-so`;
 
       await transporter.sendMail({
@@ -100,30 +123,34 @@ export class EmailConfigService {
         to: testEmail,
         subject: '[Hệ thống SCB] Kiểm tra Cấu hình Gửi Email',
         text: 'Nếu bạn nhận được email này, cấu hình SMTP của bạn đã hoạt động bình thường.',
+        attachments: this.getLogoAttachments(),
         html: `
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
-  <div style="background-color: #004680; color: #ffffff; padding: 20px 24px; text-align: center;">
-    <div style="margin-bottom: 8px;">
-      <img src="${frontendUrl}/dkpharmalogo.png" alt="DKPharma" style="max-height: 45px; background-color: #ffffff; padding: 4px 12px; border-radius: 6px; display: inline-block;" />
-    </div>
-    <div style="font-size: 18px; font-weight: bold; letter-spacing: 0.5px;">HỆ THỐNG QUẢN LÝ HỒ SƠ SCB</div>
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
+  <!-- Logo Section -->
+  <div style="text-align: center; margin-bottom: 32px;">
+    <img src="cid:dkpharmalogo" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
   </div>
-  <div style="padding: 24px; color: #2d3748; line-height: 1.6;">
-    <div style="display: inline-block; background-color: #c6f6d5; color: #22543d; font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 4px; margin-bottom: 12px;">
-      KIỂM TRA KẾT NỐI SMTP THÀNH CÔNG
+
+  <!-- Content Section -->
+  <div style="color: #374151; font-size: 15px; line-height: 1.6; text-align: center;">
+    <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px;">
+      Kiểm Tra Cấu Hình Gửi Email Thành Công
     </div>
-    <p style="font-size: 15px; margin-top: 4px; margin-bottom: 20px;">
-      Chúc mừng! Cấu hình gửi mail hệ thống SCB của bạn đã hoạt động bình thường.
+    <p style="color: #475569; font-size: 14px; margin-bottom: 24px;">
+      Chúc mừng! Cấu hình gửi mail trên Hệ thống SCB của bạn đã hoạt động bình thường và sẵn sàng gửi thông báo tự động.
     </p>
 
-    <div style="text-align: center; margin: 28px 0 20px 0;">
-      <a href="${accessUrl}" target="_blank" style="background-color: #004680; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <!-- Action Button -->
+    <div style="margin: 32px 0 24px 0;">
+      <a href="${accessUrl}" target="_blank" style="background-color: #004680; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
         Truy Cập Hệ Thống SCB
       </a>
     </div>
   </div>
-  <div style="background-color: #edf2f7; color: #718096; padding: 12px 24px; font-size: 12px; text-align: center; border-top: 1px solid #e2e8f0;">
-    Email thử nghiệm kết nối từ Hệ thống SCB - DKPharma
+
+  <!-- Footer -->
+  <div style="border-top: 1px solid #f1f5f9; margin-top: 40px; padding-top: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+    Đây là email thử nghiệm tự động từ Hệ thống SCB - DKPharma. Vui lòng không trả lời email này.
   </div>
 </div>
         `
