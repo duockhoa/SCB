@@ -21,6 +21,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi">
+      <head>
+        <link rel="icon" href="/dkpharmalogo.png?v=2" type="image/png" sizes="any" />
+        <link rel="shortcut icon" href="/dkpharmalogo.png?v=2" type="image/png" />
+        <link rel="apple-touch-icon" href="/dkpharmalogo.png?v=2" />
+      </head>
       <body className={inter.className}>
         <QueryProvider>
           <SocketProvider>
