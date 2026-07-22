@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { encryptString, decryptString } from '../common/utils/crypto.util';
+import { getLogoAttachment } from './logo.util';
 import * as nodemailer from 'nodemailer';
 
 import * as path from 'path';
@@ -89,8 +90,8 @@ export class EmailConfigService {
 
   async testSmtpConnection(testEmail: string) {
     const config = await this.prisma.cau_hinh_smtp.findFirst({ where: { is_active: true } });
-    if (!config) {
-      throw new BadRequestException('No active SMTP configuration found in the database');
+    if (!config || !config.pass) {
+      throw new BadRequestException('Chưa có cấu hình SMTP hoặc mật khẩu chưa được thiết lập.');
     }
 
     if (!process.env.EMAIL_CONFIG_SECRET_KEY) {
@@ -123,11 +124,12 @@ export class EmailConfigService {
         to: testEmail,
         subject: '[Hệ thống SCB] Kiểm tra Cấu hình Gửi Email',
         text: 'Nếu bạn nhận được email này, cấu hình SMTP của bạn đã hoạt động bình thường.',
+        attachments: getLogoAttachment(),
         html: `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
   <!-- Logo Section -->
   <div style="text-align: center; margin-bottom: 32px;">
-    <img src="${frontendUrl}/dkpharmalogo.png" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
+    <img src="cid:dkpharmalogo" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
   </div>
 
   <!-- Content Section -->
