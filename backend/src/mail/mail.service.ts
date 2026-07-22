@@ -5,8 +5,6 @@ import { RecipientService } from './recipient.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { decryptString } from '../common/utils/crypto.util';
 import * as nodemailer from 'nodemailer';
-import * as path from 'path';
-import * as fs from 'fs';
 
 @Injectable()
 export class MailService {
@@ -17,26 +15,6 @@ export class MailService {
     private recipientService: RecipientService,
     private prisma: PrismaService
   ) {}
-
-  private getLogoAttachments() {
-    const candidates = [
-      path.join(__dirname, '../assets/dkpharmalogo.png'),
-      path.join(__dirname, '../../src/assets/dkpharmalogo.png'),
-      path.join(process.cwd(), 'src/assets/dkpharmalogo.png'),
-      path.join(process.cwd(), 'dist/assets/dkpharmalogo.png'),
-      path.join(process.cwd(), '../frontend/public/dkpharmalogo.png'),
-    ];
-    for (const p of candidates) {
-      if (fs.existsSync(p)) {
-        return [{
-          filename: 'dkpharmalogo.png',
-          path: p,
-          cid: 'dkpharmalogo'
-        }];
-      }
-    }
-    return [];
-  }
 
   @OnEvent('hoSo.*', { async: true })
   async handleHoSoEvents(data: any) {
@@ -104,14 +82,12 @@ Vui lòng truy cập đường dẫn sau để xem chi tiết hồ sơ:
 ${accessUrl}
 `;
 
-      const attachments = this.getLogoAttachments();
-
-      // Mẫu HTML tinh tế (trắng sạch theo phong cách OTP mail DKPharma)
+      // Mẫu HTML tinh tế (dùng URL logo HTTPS trực tiếp không cần đính kèm file giống OTP mail)
       const htmlContent = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #ffffff;">
   <!-- Logo Section -->
   <div style="text-align: center; margin-bottom: 32px;">
-    <img src="cid:dkpharmalogo" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
+    <img src="${frontendUrl}/dkpharmalogo.png" alt="DKPharma" style="height: 55px; max-width: 220px; display: inline-block;" />
   </div>
 
   <!-- Content Section -->
@@ -198,7 +174,6 @@ ${accessUrl}
             subject: subject,
             text: textContent,
             html: htmlContent,
-            attachments: attachments,
           });
           useDbSmtp = true;
           this.logger.log(`Email sent successfully via DB SMTP to ${emails.length} recipients.`);
