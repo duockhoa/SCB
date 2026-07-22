@@ -31,6 +31,7 @@ export class HoSoService {
       id: hoSo.id,
       ma_ho_so: hoSo.ma_ho_so,
       ten_san_pham: hoSo.ten_san_pham,
+      so_chinh: hoSo.so_chinh,
       action,
       eventName,
       time: new Date(),
@@ -339,7 +340,10 @@ export class HoSoService {
       return updated;
     });
 
-    this.emitHoSoEvent(hoSo, 'CAP_SO', 'HO_SO_UPDATED');
+    this.emitHoSoEvent(result, 'CAP_SO', 'HO_SO_CAP_SO', {
+      so_chinh: data.so_chinh,
+      noi_dung: `Cấp số công bố/đăng ký: ${data.so_chinh}`
+    });
 
     return result;
   }
@@ -386,7 +390,9 @@ export class HoSoService {
       return updated;
     });
 
-    this.emitHoSoEvent(hoSo, 'GIA_HAN', 'HO_SO_GIA_HAN');
+    this.emitHoSoEvent(result, 'GIA_HAN', 'HO_SO_GIA_HAN', {
+      noi_dung: data.noi_dung_thay_doi || `Gia hạn đến ngày: ${new Date(data.ngay_het_han).toLocaleDateString('vi-VN')}`
+    });
 
     return result;
   }
