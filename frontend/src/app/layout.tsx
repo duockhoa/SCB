@@ -11,6 +11,11 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Quản Lý Hồ Sơ CB',
   description: 'Hệ thống quản lý số công bố sản phẩm SCB',
+  icons: {
+    icon: '/dkpharmalogo.png',
+    shortcut: '/dkpharmalogo.png',
+    apple: '/dkpharmalogo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
