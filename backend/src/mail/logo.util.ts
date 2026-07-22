@@ -4,6 +4,7 @@ export function getLogoAttachment() {
   return [{
     filename: 'dkpharmalogo.png',
     content: Buffer.from(DKPHARMA_LOGO_BASE64, 'base64'),
-    cid: 'dkpharmalogo'
+    cid: 'dkpharmalogo',
+    contentDisposition: 'inline' as const
   }];
 }
