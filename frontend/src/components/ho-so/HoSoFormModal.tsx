@@ -57,6 +57,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
 
         form.setFieldsValue({
           ma_ho_so: initialData.ma_ho_so,
+          so_chinh: initialData.so_chinh,
           ten_san_pham: initialData.ten_san_pham,
           loai_ho_so_id: initialData.loai_ho_so_id, 
           tinh_trang_id: initialData.tinh_trang_id,
@@ -159,6 +160,10 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
           <Form.Item name="ma_ho_so" label="Mã hồ sơ" rules={[{ required: true, message: 'Vui lòng nhập mã hồ sơ' }]}>
             <Input placeholder="Nhập mã hồ sơ" />
+          </Form.Item>
+
+          <Form.Item name="so_chinh" label="Số công bố">
+            <Input placeholder="Nhập số công bố" />
           </Form.Item>
           
           <Form.Item name="ten_san_pham" label="Tên sản phẩm" rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}>
