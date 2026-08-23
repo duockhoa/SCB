@@ -46,7 +46,7 @@ axiosInstance.interceptors.response.use(
           });
 
           // Gọi API refresh token của HRM
-          const response = await refreshInstance.post('/auth/refreshtoken', { refreshToken });
+          const response = await refreshInstance.post('/auth/refresh-token', { refreshToken });
           const newAccessToken = response.data.accessToken;
 
           // Lưu token mới
@@ -91,5 +91,4 @@ export const uploadFile = async (file: File): Promise<any> => {
   });
   return response?.data || response;
 };
-
 
