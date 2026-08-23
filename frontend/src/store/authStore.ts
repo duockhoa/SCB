@@ -1,7 +1,16 @@
 import { create } from 'zustand';
 import Cookies from 'js-cookie';
-import { axiosInstance } from '@/services/api';
-import axios from 'axios';
+import { authAxiosInstance, axiosInstance } from '@/services/api';
+
+interface HrmApplication {
+  key: string;
+  is_active: boolean;
+}
+
+interface HrmUser {
+  avatar?: string;
+  [key: string]: unknown;
+}
 
 interface AuthState {
   token: string | null;
@@ -21,7 +30,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   fetchUser: async () => {
     try {
       const token = Cookies.get('accessToken');
-      if (!token) {
+      const refreshToken = Cookies.get('refreshToken');
+      if (!token && !refreshToken) {
         set({ hasScbAccess: false });
         return;
       }
@@ -31,13 +41,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       // 1. Lấy danh sách ứng dụng trước để phân quyền
       let hasScb = false;
       try {
-        const appsResponse = await axios.get(`${hrmApiUrl}/users/me/applications`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        const apps = appsResponse.data || [];
-        hasScb = apps.some((app: any) => app.key === 'scb' && app.is_active);
+        const apps = (await authAxiosInstance.get('/users/me/applications')) as unknown as HrmApplication[];
+        hasScb = apps.some((app) => app.key === 'scb' && app.is_active);
       } catch (err) {
         console.error('Failed to fetch user applications:', err);
       }
@@ -48,12 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       // 2. Lấy thông tin chi tiết (bao gồm cả avatar) từ HRM
-      const hrmResponse = await axios.get(`${hrmApiUrl}/users/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      const hrmUser = hrmResponse.data;
+      const hrmUser = (await authAxiosInstance.get('/users/me')) as unknown as HrmUser;
 
       // 3. Lấy thông tin vai trò cục bộ từ SCB Backend
       const response = await axiosInstance.get('/users/me');
@@ -71,9 +71,9 @@ export const useAuthStore = create<AuthState>((set) => ({
             ? (hrmUser.avatar.startsWith('http') ? hrmUser.avatar : `${hrmApiUrl}${hrmUser.avatar}`)
             : null
         };
-        set({ user: mergedUser, token, hasScbAccess: true });
+        set({ user: mergedUser, token: Cookies.get('accessToken'), hasScbAccess: true });
       } else if (scbUser) {
-        set({ user: scbUser, token, hasScbAccess: true });
+        set({ user: scbUser, token: Cookies.get('accessToken'), hasScbAccess: true });
       } else {
         set({ hasScbAccess: false });
       }

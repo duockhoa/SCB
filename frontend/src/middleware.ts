@@ -13,9 +13,11 @@ export function middleware(request: NextRequest) {
 
   // Lấy token từ cookie
   const token = request.cookies.get('accessToken')?.value;
+  const refreshToken = request.cookies.get('refreshToken')?.value;
 
-  // Nếu không có token và không phải đang ở trang public (như /login)
-  if (!token && !request.nextUrl.pathname.startsWith('/login')) {
+  // Chỉ chuyển về đăng nhập khi đã mất cả hai token. Nếu còn refresh token,
+  // cho phép ứng dụng tải để interceptor phía client lấy access token mới.
+  if (!token && !refreshToken && !request.nextUrl.pathname.startsWith('/login')) {
     // Chuyển hướng người dùng về trang HRM login
     const authUrl = process.env.NEXT_PUBLIC_FRONTEND_ROOT_URL || 'https://hrm.dkpharma.io.vn';
     const redirectUrl = encodeURIComponent(request.url);

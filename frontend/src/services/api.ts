@@ -8,6 +8,13 @@ export const axiosInstance = axios.create({
 });
 
 const domain = process.env.NEXT_PUBLIC_DOMAIN || '.dkpharma.io.vn';
+const authUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'https://server.dkpharma.io.vn';
+const frontendRootUrl = process.env.NEXT_PUBLIC_FRONTEND_ROOT_URL || 'https://hrm.dkpharma.io.vn';
+
+export const authAxiosInstance = axios.create({
+  baseURL: authUrl,
+  timeout: 12000,
+});
 
 const cookieOptions = {
   domain: domain,
@@ -17,67 +24,88 @@ const cookieOptions = {
   expires: 70, // 70 days
 };
 
-axiosInstance.interceptors.request.use((config) => {
-  // Lấy token từ cookie
-  const token = Cookies.get('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+let refreshPromise: Promise<string> | null = null;
+let isRedirectingToLogin = false;
+
+function redirectToLogin() {
+  if (isRedirectingToLogin || typeof window === 'undefined') return;
+
+  isRedirectingToLogin = true;
+  Cookies.remove('accessToken', { domain, path: '/' });
+  Cookies.remove('refreshToken', { domain, path: '/' });
+  Cookies.remove('id', { domain, path: '/' });
+  window.location.href = `${frontendRootUrl}/login`;
+}
+
+function refreshAccessToken(): Promise<string> {
+  const refreshToken = Cookies.get('refreshToken');
+  if (!refreshToken) {
+    return Promise.reject(new Error('Missing refresh token'));
   }
-  return config;
-});
 
-axiosInstance.interceptors.response.use(
-  (response) => response.data,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // Nếu lỗi 401 và chưa thử lại
-    if (error.response?.status === 401 && !originalRequest._retry && typeof window !== 'undefined') {
-      originalRequest._retry = true;
-      const refreshToken = Cookies.get('refreshToken');
-      const authUrl = process.env.NEXT_PUBLIC_AUTH_URL || 'https://server.dkpharma.io.vn';
-      const frontendRootUrl = process.env.NEXT_PUBLIC_FRONTEND_ROOT_URL || 'https://hrm.dkpharma.io.vn';
-      
-      if (refreshToken) {
-        try {
-          const refreshInstance = axios.create({
-            baseURL: authUrl,
-            timeout: 12000,
-          });
-
-          // Gọi API refresh token của HRM
-          const response = await refreshInstance.post('/auth/refresh-token', { refreshToken });
-          const newAccessToken = response.data.accessToken;
-
-          // Lưu token mới
-          Cookies.set('accessToken', newAccessToken, cookieOptions);
-
-          // Cập nhật token và gọi lại request cũ
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          
-          // Vì SCB backend đang bọc response trong cấu trúc response.data,
-          // nên khi axios gọi lại, ta cần lấy data từ response trả về của original request.
-          const retryResponse = await axiosInstance(originalRequest);
-          return retryResponse;
-        } catch (refreshError) {
-          // Xóa hết cookie nếu refresh thất bại
-          Cookies.remove('accessToken', { domain, path: '/' });
-          Cookies.remove('refreshToken', { domain, path: '/' });
-          Cookies.remove('id', { domain, path: '/' });
-          window.location.href = `${frontendRootUrl}/login`;
-          return Promise.reject(refreshError);
+  // Các request cùng nhận 401 sẽ dùng chung một lần refresh, tránh refresh token bị xoay vòng nhiều lần.
+  if (!refreshPromise) {
+    const pendingRefresh = axios
+      .post(`${authUrl}/auth/refresh-token`, { refreshToken }, { timeout: 12000 })
+      .then((response) => {
+        const newAccessToken = response.data?.accessToken;
+        if (!newAccessToken) {
+          throw new Error('Refresh token response does not contain accessToken');
         }
-      } else {
-        // Không có refresh token -> Đăng xuất
-        Cookies.remove('accessToken', { domain, path: '/' });
-        Cookies.remove('refreshToken', { domain, path: '/' });
-        Cookies.remove('id', { domain, path: '/' });
-        window.location.href = `${frontendRootUrl}/login`;
+
+        Cookies.set('accessToken', newAccessToken, cookieOptions);
+        return newAccessToken;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+
+    refreshPromise = pendingRefresh;
+  }
+
+  return refreshPromise;
+}
+
+function addAuthInterceptors(instance: typeof axiosInstance) {
+  instance.interceptors.request.use((config) => {
+    const token = Cookies.get('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+
+  instance.interceptors.response.use(
+    (response) => response.data,
+    async (error) => {
+      const originalRequest = error.config;
+
+      if (
+        error.response?.status !== 401 ||
+        !originalRequest ||
+        originalRequest._retry ||
+        typeof window === 'undefined'
+      ) {
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+
+      try {
+        const newAccessToken = await refreshAccessToken();
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return instance(originalRequest);
+      } catch (refreshError) {
+        redirectToLogin();
+        return Promise.reject(refreshError);
       }
     }
-    return Promise.reject(error);
-  }
-);
+  );
+}
+
+addAuthInterceptors(axiosInstance);
+addAuthInterceptors(authAxiosInstance);
 
 // API Upload file
 export const uploadFile = async (file: File): Promise<any> => {
@@ -91,4 +119,3 @@ export const uploadFile = async (file: File): Promise<any> => {
   });
   return response?.data || response;
 };
-
