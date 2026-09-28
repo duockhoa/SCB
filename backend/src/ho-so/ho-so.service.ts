@@ -8,6 +8,7 @@ import { ThayTheDto } from './dto/thay-the.dto';
 import { ThayDoiDto } from './dto/thay-doi.dto';
 import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { dossierSnapshot } from './ho-so-audit';
 
 @Injectable()
 export class HoSoService {
@@ -167,7 +168,14 @@ export class HoSoService {
         lich_su_thay_doi: true,
         nhat_ky: { 
           orderBy: { created_at: 'desc' },
-          include: { nguoi_thuc_hien: true }
+          select: {
+            id: true,
+            hanh_dong: true,
+            nguoi_thuc_hien_id: true,
+            noi_dung: true,
+            created_at: true,
+            nguoi_thuc_hien: { select: { ho_ten: true } }
+          }
         }
       }
     });
@@ -282,7 +290,7 @@ export class HoSoService {
           hanh_dong: 'UPDATE',
           nguoi_thuc_hien_id: userId || nguoi_thuc_hien_id || null,
           noi_dung: `Cập nhật hồ sơ ${updatedChung.ma_ho_so}`,
-          du_lieu_cu: JSON.stringify(hoSo),
+          du_lieu_cu: JSON.stringify(dossierSnapshot(hoSo)),
           du_lieu_moi: JSON.stringify({ chung: chungData, rieng: thong_tin_rieng })
         }
       });
