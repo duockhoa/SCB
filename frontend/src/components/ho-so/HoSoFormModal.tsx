@@ -99,7 +99,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
     const payload = {
       ...values,
       ngay_cong_bo: values.ngay_cong_bo ? values.ngay_cong_bo.format('YYYY-MM-DD') : undefined,
-      ngay_het_han: values.ngay_het_han ? values.ngay_het_han.format('YYYY-MM-DD') : undefined,
+      ngay_het_han: values.ngay_het_han ? values.ngay_het_han.format('YYYY-MM-DD') : (mode === 'edit' ? null : undefined),
     };
 
     if (mode === 'create') {

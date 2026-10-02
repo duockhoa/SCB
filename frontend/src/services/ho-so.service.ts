@@ -3,6 +3,7 @@ import { ENDPOINTS } from '@/constants/endpoints';
 
 export const hoSoService = {
   getAll: async (params?: any) => axiosInstance.get(ENDPOINTS.HO_SO, { params }),
+  getDashboard: async (params?: any) => axiosInstance.get(`${ENDPOINTS.HO_SO}/dashboard`, { params }),
   getById: async (id: number) => axiosInstance.get(`${ENDPOINTS.HO_SO}/${id}`),
   create: async (data: any) => axiosInstance.post(ENDPOINTS.HO_SO, data),
   update: async (id: number, data: any) => axiosInstance.put(`${ENDPOINTS.HO_SO}/${id}`, data),

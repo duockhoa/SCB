@@ -38,6 +38,12 @@ export class HoSoController {
     return this.hoSoService.findAll(query);
   }
 
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Thống kê và danh sách hồ sơ theo trạng thái' })
+  dashboard(@Query() query: { category?: string; page?: string; limit?: string }) {
+    return this.hoSoService.dashboard(query);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Lấy thông tin chi tiết hồ sơ' })
   findOne(@Param('id', ParseIntPipe) id: number) {

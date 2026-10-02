@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { writeFile } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import * as mariadb from 'mariadb';
 import { compactLegacySnapshot } from '../src/ho-so/ho-so-audit';
 
@@ -10,6 +10,9 @@ const backupPath = backupIndex >= 0 ? process.argv[backupIndex + 1] : undefined;
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error('DATABASE_URL is required');
+  if (apply && (!backupPath || backupPath.startsWith('--'))) {
+    throw new Error('Applying requires --backup <new-json-path>');
+  }
   const url = new URL(databaseUrl);
   const connection = await mariadb.createConnection({
     host: url.hostname,
@@ -18,38 +21,65 @@ async function main() {
     password: decodeURIComponent(url.password),
     database: url.pathname.slice(1),
   });
+  let backup: Awaited<ReturnType<typeof open>> | null = null;
+  let inTransaction = false;
   try {
-    const rows = await connection.query('SELECT id, du_lieu_cu FROM nhat_ky_ho_so WHERE du_lieu_cu IS NOT NULL') as Array<{ id: number; du_lieu_cu: string }>;
-    const result = { checked: 0, changed: 0, unchanged: 0, invalid: 0, unrecognized: 0, bytesSaved: 0 };
-    const updates: Array<{ id: number; value: string; original: string }> = [];
-    for (const row of rows) {
-      result.checked++;
-      const compacted = compactLegacySnapshot(row.du_lieu_cu);
-      if (compacted.status === 'changed') {
-        result.changed++;
-        result.bytesSaved += Buffer.byteLength(row.du_lieu_cu) - Buffer.byteLength(compacted.value);
-        updates.push({ id: row.id, value: compacted.value, original: row.du_lieu_cu });
-      } else result[compacted.status]++;
+    if (apply) {
+      backup = await open(backupPath!, 'wx');
+      await backup.write(JSON.stringify({ createdAt: new Date().toISOString() }).slice(0, -1) + ',"rows":[');
     }
-    if (apply && updates.length) {
-      if (!backupPath) throw new Error('Applying requires --backup <path>');
-      await writeFile(
-        backupPath,
-        JSON.stringify({
-          createdAt: new Date().toISOString(),
-          rows: updates.map(({ id, original }) => ({ id, du_lieu_cu: original })),
-        }),
-        { flag: 'wx' },
-      );
+    const result = { checked: 0, changed: 0, unchanged: 0, invalid: 0, unrecognized: 0, bytesSaved: 0, applied: 0, skippedConcurrent: 0 };
+    let cursor = 0;
+    let firstBackupRow = true;
+    for (;;) {
+      const rows = await connection.query(
+        'SELECT id, du_lieu_cu FROM nhat_ky_ho_so WHERE id > ? AND du_lieu_cu IS NOT NULL ORDER BY id LIMIT 200',
+        [cursor],
+      ) as Array<{ id: number; du_lieu_cu: string }>;
+      if (!rows.length) break;
+      cursor = rows[rows.length - 1].id;
+      const updates: Array<{ id: number; value: string; original: string }> = [];
+      for (const row of rows) {
+        result.checked++;
+        const compacted = compactLegacySnapshot(row.du_lieu_cu);
+        if (compacted.status === 'changed') {
+          result.changed++;
+          result.bytesSaved += Buffer.byteLength(row.du_lieu_cu) - Buffer.byteLength(compacted.value);
+          updates.push({ id: row.id, value: compacted.value, original: row.du_lieu_cu });
+        } else result[compacted.status]++;
+      }
+      if (!backup || !updates.length) continue;
+      const backupRows = updates.map(({ id, original }) => JSON.stringify({ id, du_lieu_cu: original }));
+      await backup.write((firstBackupRow ? '' : ',') + backupRows.join(','));
+      firstBackupRow = false;
+      await backup.sync();
       await connection.beginTransaction();
-      for (const update of updates) await connection.query('UPDATE nhat_ky_ho_so SET du_lieu_cu = ? WHERE id = ?', [update.value, update.id]);
+      inTransaction = true;
+      for (const update of updates) {
+        const response = await connection.query(
+          'UPDATE nhat_ky_ho_so SET du_lieu_cu = ? WHERE id = ? AND du_lieu_cu = ?',
+          [update.value, update.id, update.original],
+        ) as { affectedRows: number };
+        if (response.affectedRows) result.applied++;
+        else result.skippedConcurrent++;
+      }
       await connection.commit();
+      inTransaction = false;
     }
     console.log(JSON.stringify({ mode: apply ? 'apply' : 'dry-run', ...result }));
   } catch (error) {
-    if (apply) await connection.rollback();
+    if (inTransaction) await connection.rollback();
     throw error;
-  } finally { await connection.end(); }
+  } finally {
+    if (backup) {
+      await backup.write(']}');
+      await backup.close();
+    }
+    await connection.end();
+  }
 }
 
-main().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+});

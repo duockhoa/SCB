@@ -8,6 +8,12 @@ export const useHoSoList = (filters?: any) => {
   });
 };
 
+export const useDashboard = (category: string, page: number) => useQuery({
+  queryKey: ['HOSO_DASHBOARD', category, page],
+  queryFn: () => hoSoService.getDashboard({ category, page, limit: 20 }),
+  refetchInterval: 5 * 60 * 1000,
+});
+
 export const useHoSoDetail = (id: number) => {
   return useQuery({
     queryKey: ['HOSO_DETAIL', id],
@@ -20,7 +26,10 @@ export const useCreateHoSo = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: any) => hoSoService.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DASHBOARD'] });
+    },
   });
 };
 
@@ -28,7 +37,10 @@ export const useUpdateHoSo = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => hoSoService.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DASHBOARD'] });
+    },
   });
 };
 
@@ -36,7 +48,10 @@ export const useDeleteHoSo = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => hoSoService.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DASHBOARD'] });
+    },
   });
 };
 
@@ -44,7 +59,10 @@ export const useCapSo = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => hoSoService.capSo(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DASHBOARD'] });
+    },
   });
 };
 
@@ -52,7 +70,10 @@ export const useGiaHan = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => hoSoService.giaHan(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DASHBOARD'] });
+    },
   });
 };
 
@@ -60,7 +81,10 @@ export const useThayThe = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => hoSoService.thayThe(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DASHBOARD'] });
+    },
   });
 };
 
@@ -70,6 +94,7 @@ export const useThayDoi = () => {
     mutationFn: ({ id, data }: { id: number; data: any }) => hoSoService.thayDoi(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DASHBOARD'] });
       queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
     },
   });

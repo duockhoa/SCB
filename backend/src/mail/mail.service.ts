@@ -67,6 +67,10 @@ export class MailService {
         actionTitle = 'Cảnh báo hồ sơ sắp hết hạn';
         subject = `[Hệ thống SCB] Cảnh báo: Hồ sơ sắp hết hạn (${data.ma_ho_so})`;
         eventDescription = `Hồ sơ <strong>${data.ma_ho_so}</strong> - <strong>${data.ten_san_pham}</strong> sắp đến hạn hiệu lực. Vui lòng kiểm tra và tiến hành xử lý/gia hạn.`;
+      } else if (eventName === 'HO_SO_DA_HET_HAN') {
+        actionTitle = 'Cảnh báo hồ sơ đã hết hạn';
+        subject = `[Hệ thống SCB] Cảnh báo: Hồ sơ đã hết hạn (${data.ma_ho_so})`;
+        eventDescription = `Hồ sơ <strong>${data.ma_ho_so}</strong> - <strong>${data.ten_san_pham}</strong> đã hết hiệu lực. Vui lòng kiểm tra và xử lý.`;
       }
 
       const timeStr = new Date(data.time || new Date()).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });

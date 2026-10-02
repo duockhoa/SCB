@@ -8,26 +8,15 @@ import GiaHanModal from '@/components/ho-so/GiaHanModal';
 
 interface Props {
   data: HoSoChung[];
+  total?: number;
+  page?: number;
+  onPageChange?: (page: number) => void;
 }
 
-export default function ExpiryAlertTable({ data }: Props) {
+export default function ExpiryAlertTable({ data, total, page, onPageChange }: Props) {
   const router = useRouter();
   const [openGiaHan, setOpenGiaHan] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  if (!data || data.length === 0) {
-    return (
-      <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description={
-          <span style={{ color: '#52c41a', fontWeight: 'bold', fontSize: '16px' }}>
-            <SmileOutlined style={{ marginRight: 8 }} />
-            Không có hồ sơ cần cảnh báo.
-          </span>
-        }
-      />
-    );
-  }
 
   const columns = [
     {
@@ -105,7 +94,8 @@ export default function ExpiryAlertTable({ data }: Props) {
         columns={columns}
         dataSource={data}
         rowKey="id"
-        pagination={false}
+        pagination={total === undefined ? false : { current: page, pageSize: 20, total, showSizeChanger: false, onChange: onPageChange }}
+        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span><SmileOutlined style={{ marginRight: 8 }} />Không có hồ sơ trong mục này.</span>} /> }}
       />
       {selectedHoSo && (
         <GiaHanModal

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHoSoDto } from './dto/create-ho-so.dto';
 import { UpdateHoSoDto } from './dto/update-ho-so.dto';
@@ -9,6 +9,7 @@ import { ThayDoiDto } from './dto/thay-doi.dto';
 import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { dossierSnapshot } from './ho-so-audit';
+import { dateOnly, expiryStatus, EXPIRY_STATUSES, reminderDate } from './expiry';
 
 @Injectable()
 export class HoSoService {
@@ -16,6 +17,13 @@ export class HoSoService {
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2
   ) {}
+
+  private async expiryStatusId(expiry: Date | null): Promise<number> {
+    const code = expiryStatus(expiry);
+    const status = await this.prisma.dm_tinh_trang.findUnique({ where: { ma_tinh_trang: code } });
+    if (!status) throw new InternalServerErrorException(`Thiếu trạng thái hồ sơ ${code}`);
+    return status.id;
+  }
 
   private async getLoaiThayDoi(ma: string, ten: string) {
     let loaiThayDoi = await this.prisma.dm_loai_thay_doi.findFirst({ where: { ma_loai_thay_doi: ma } });
@@ -147,6 +155,46 @@ export class HoSoService {
     return { total, page: Number(page), limit: Number(limit), data };
   }
 
+  async dashboard(query: { category?: string; page?: string; limit?: string }) {
+    const category = query.category || 'SAP_HET_HAN';
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
+    const [statuses, counts] = await Promise.all([
+      this.prisma.dm_tinh_trang.findMany({ select: { id: true, ma_tinh_trang: true } }),
+      this.prisma.ho_so_chung.groupBy({ by: ['tinh_trang_id'], _count: { _all: true } }),
+    ]);
+    const idByCode = new Map(statuses.map((item) => [item.ma_tinh_trang, item.id]));
+    const countById = new Map(counts.map((item) => [item.tinh_trang_id, item._count._all]));
+    const count = (code: string) => countById.get(idByCode.get(code) ?? -1) ?? 0;
+    const stats = {
+      tongSo: counts.reduce((sum, item) => sum + item._count._all, 0),
+      dangXuLy: count('DANG_XU_LY'),
+      conHieuLuc: count('CON_HIEU_LUC'),
+      sapHetHan: count('SAP_HET_HAN'),
+      daHetHan: count('DA_HET_HAN'),
+      thayThe: count('DA_THAY_THE') + count('DA_BI_THAY_THE'),
+      thuHoi: count('BI_THU_HOI'),
+    };
+    const statusId = idByCode.get(category);
+    const replacedIds = [idByCode.get('DA_THAY_THE'), idByCode.get('DA_BI_THAY_THE')]
+      .filter((id): id is number => id !== undefined);
+    const where: Prisma.ho_so_chungWhereInput = category === 'TOTAL'
+      ? {} : category === 'DA_THAY_THE'
+        ? { tinh_trang_id: { in: replacedIds } }
+        : { tinh_trang_id: statusId ?? -1 };
+    const total = category === 'TOTAL' ? stats.tongSo
+      : category === 'DA_THAY_THE' ? stats.thayThe : count(category);
+    const data = await this.prisma.ho_so_chung.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      include: { loai_ho_so: true, tinh_trang: true },
+      orderBy: category === 'SAP_HET_HAN' || category === 'DA_HET_HAN'
+        ? [{ ngay_het_han: 'asc' }, { id: 'asc' }] : [{ created_at: 'desc' }, { id: 'desc' }],
+    });
+    return { stats, total, page, limit, data };
+  }
+
   async findOne(id: number) {
     const hoSo = await this.prisma.ho_so_chung.findUnique({
       where: { id },
@@ -186,6 +234,12 @@ export class HoSoService {
 
   async create(data: CreateHoSoDto, userId?: number) {
     const { thong_tin_rieng, nguoi_thuc_hien_id, ...chungData } = data;
+    const expiry = dateOnly(chungData.ngay_het_han);
+    const requestedStatus = chungData.tinh_trang_id
+      ? await this.prisma.dm_tinh_trang.findUnique({ where: { id: chungData.tinh_trang_id } }) : null;
+    const statusId = requestedStatus && EXPIRY_STATUSES.includes(requestedStatus.ma_tinh_trang as any)
+      ? await this.expiryStatusId(expiry)
+      : (chungData.tinh_trang_id ?? (expiry ? await this.expiryStatusId(expiry) : undefined));
 
     const exists = await this.prisma.ho_so_chung.findUnique({ where: { ma_ho_so: data.ma_ho_so } });
     if (exists) throw new ConflictException('Mã hồ sơ đã tồn tại');
@@ -198,7 +252,9 @@ export class HoSoService {
         data: {
           ...chungData,
           ngay_cong_bo: chungData.ngay_cong_bo ? new Date(chungData.ngay_cong_bo) : null,
-          ngay_het_han: chungData.ngay_het_han ? new Date(chungData.ngay_het_han) : null,
+          ngay_het_han: expiry,
+          ngay_nhac_han: reminderDate(expiry),
+          tinh_trang_id: statusId,
         }
       });
 
@@ -244,9 +300,39 @@ export class HoSoService {
     return result;
   }
 
+  private async findForUpdate(id: number) {
+    const dossier = await this.prisma.ho_so_chung.findUnique({
+      where: { id },
+      include: {
+        loai_ho_so: true,
+        tinh_trang: true,
+        ho_so_thuoc: true,
+        ho_so_my_pham: true,
+        ho_so_tbyt: true,
+        ho_so_tpbvsk_tu_cong_bo: true,
+        ho_so_tpbvsk_cong_bo: true,
+        ho_so_cfs_cpp: true,
+        nhat_ky: {
+          where: { hanh_dong: 'CREATE' },
+          select: { hanh_dong: true, nguoi_thuc_hien_id: true },
+          take: 1,
+        },
+      },
+    });
+    if (!dossier) throw new NotFoundException('Không tìm thấy hồ sơ');
+    return dossier;
+  }
+
   async update(id: number, data: UpdateHoSoDto, userId?: number) {
-    const hoSo = await this.findOne(id);
+    const hoSo = await this.findForUpdate(id);
     const { thong_tin_rieng, nguoi_thuc_hien_id, ...chungData } = data;
+    const expiry = Object.hasOwn(chungData, 'ngay_het_han')
+      ? dateOnly(chungData.ngay_het_han) : dateOnly(hoSo.ngay_het_han);
+    const requestedStatus = chungData.tinh_trang_id !== undefined
+      ? await this.prisma.dm_tinh_trang.findUnique({ where: { id: chungData.tinh_trang_id } }) : hoSo.tinh_trang;
+    const statusId = requestedStatus && EXPIRY_STATUSES.includes(requestedStatus.ma_tinh_trang as any)
+      ? await this.expiryStatusId(expiry)
+      : (chungData.tinh_trang_id ?? (hoSo.tinh_trang_id == null && expiry ? await this.expiryStatusId(expiry) : undefined));
 
     if (data.ma_ho_so) {
       const exists = await this.prisma.ho_so_chung.findFirst({
@@ -261,7 +347,9 @@ export class HoSoService {
         data: {
           ...chungData,
           ngay_cong_bo: chungData.ngay_cong_bo ? new Date(chungData.ngay_cong_bo) : undefined,
-          ngay_het_han: chungData.ngay_het_han ? new Date(chungData.ngay_het_han) : undefined,
+          ngay_het_han: Object.hasOwn(chungData, 'ngay_het_han') ? expiry : undefined,
+          ngay_nhac_han: reminderDate(expiry),
+          tinh_trang_id: statusId,
         }
       });
 
@@ -306,7 +394,8 @@ export class HoSoService {
 
   async capSo(id: number, data: CapSoDto, userId?: number) {
     const hoSo = await this.findOne(id);
-    const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
+    const expiry = dateOnly(data.ngay_het_han);
+    const statusId = await this.expiryStatusId(expiry);
     
     const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.ho_so_chung.update({
@@ -314,9 +403,9 @@ export class HoSoService {
         data: {
           so_chinh: data.so_chinh,
           ngay_cong_bo: new Date(data.ngay_cong_bo),
-          ngay_het_han: data.ngay_het_han ? new Date(data.ngay_het_han) : null,
-          ngay_nhac_han: data.ngay_nhac_han ? new Date(data.ngay_nhac_han) : null,
-          tinh_trang_id: ttConHieuLuc?.id || hoSo.tinh_trang_id
+          ngay_het_han: expiry,
+          ngay_nhac_han: reminderDate(expiry),
+          tinh_trang_id: statusId
         }
       });
 
@@ -342,7 +431,7 @@ export class HoSoService {
           nguoi_thuc_hien_id: userId || null,
           noi_dung: `Cấp số công bố ${data.so_chinh} cho hồ sơ`,
           du_lieu_cu: JSON.stringify({ so_chinh: hoSo.so_chinh, tinh_trang_id: hoSo.tinh_trang_id }),
-          du_lieu_moi: JSON.stringify({ so_chinh: data.so_chinh, tinh_trang_id: ttConHieuLuc?.id })
+          du_lieu_moi: JSON.stringify({ so_chinh: data.so_chinh, tinh_trang_id: statusId })
         }
       });
       return updated;
@@ -358,15 +447,16 @@ export class HoSoService {
 
   async giaHan(id: number, data: GiaHanDto, userId?: number) {
     const hoSo = await this.findOne(id);
-    const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
+    const expiry = dateOnly(data.ngay_het_han);
+    const statusId = await this.expiryStatusId(expiry);
 
     const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.ho_so_chung.update({
         where: { id },
         data: {
-          ngay_het_han: new Date(data.ngay_het_han),
-          ngay_nhac_han: data.ngay_nhac_han ? new Date(data.ngay_nhac_han) : null,
-          tinh_trang_id: ttConHieuLuc?.id || hoSo.tinh_trang_id
+          ngay_het_han: expiry!,
+          ngay_nhac_han: reminderDate(expiry),
+          tinh_trang_id: statusId
         }
       });
 
@@ -411,7 +501,8 @@ export class HoSoService {
     if (!ttDaThayTheMoi) {
       ttDaThayTheMoi = await this.prisma.dm_tinh_trang.create({ data: { ma_tinh_trang: 'DA_THAY_THE', ten_tinh_trang: 'Đã thay thế' } });
     }
-    const ttConHieuLuc = await this.prisma.dm_tinh_trang.findFirst({ where: { ma_tinh_trang: 'CON_HIEU_LUC' } });
+    const expiry = dateOnly(data.ngay_het_han);
+    const statusId = await this.expiryStatusId(expiry);
 
     const result = await this.prisma.$transaction(async (tx) => {
       // Create new
@@ -427,9 +518,9 @@ export class HoSoService {
           cong_ty_dung_ten_id: hoSoCu.cong_ty_dung_ten_id,
           cong_ty_phan_phoi_id: hoSoCu.cong_ty_phan_phoi_id,
           ngay_cong_bo: new Date(data.ngay_cong_bo),
-          ngay_het_han: data.ngay_het_han ? new Date(data.ngay_het_han) : null,
-          ngay_nhac_han: data.ngay_nhac_han ? new Date(data.ngay_nhac_han) : null,
-          tinh_trang_id: ttConHieuLuc?.id,
+          ngay_het_han: expiry,
+          ngay_nhac_han: reminderDate(expiry),
+          tinh_trang_id: statusId,
           ho_so_cu_id: hoSoCu.id
         }
       });

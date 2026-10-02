@@ -4,6 +4,7 @@ import 'dotenv/config';
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
+import { dateOnly, expiryStatus, EXPIRY_STATUSES, reminderDate } from '../src/ho-so/expiry';
 
 const adapter = new PrismaMariaDb(process.env.DATABASE_URL!);
 const prisma = new PrismaClient({ adapter });
@@ -34,7 +35,7 @@ function parseSafeDate(val: any): Date | null {
   if (!val) return null;
   if (typeof val === 'number') {
     // Excel serial number (days since 1900-01-01)
-    const epoch = new Date(1899, 11, 30);
+    const epoch = new Date(Date.UTC(1899, 11, 30));
     return new Date(epoch.getTime() + val * 86400000);
   }
   if (typeof val === 'string') {
@@ -113,8 +114,16 @@ async function main() {
         if (!loaiHoSo) throw new Error(`Không tìm thấy loại hồ sơ: ${row.loai_ho_so_ma}`);
 
         // Find Tinh Trang
-        const tinhTrang = await tx.dm_tinh_trang.findUnique({ where: { ma_tinh_trang: row.tinh_trang_ma } });
+        let tinhTrang = await tx.dm_tinh_trang.findUnique({ where: { ma_tinh_trang: row.tinh_trang_ma } });
         if (!tinhTrang) throw new Error(`Không tìm thấy tình trạng: ${row.tinh_trang_ma}`);
+        const expiry = dateOnly(parseSafeDate(row.ngay_het_han));
+        const reminder = reminderDate(expiry);
+        if (EXPIRY_STATUSES.includes(tinhTrang.ma_tinh_trang as any)) {
+          const calculated = expiryStatus(expiry);
+          const calculatedStatus = await tx.dm_tinh_trang.findUnique({ where: { ma_tinh_trang: calculated } });
+          if (!calculatedStatus) throw new Error(`Không tìm thấy tình trạng: ${calculated}`);
+          tinhTrang = calculatedStatus;
+        }
 
         // Upsert Công ty
         let congTySoHuuId: number | null = null;
@@ -165,8 +174,8 @@ async function main() {
             cong_ty_so_huu_id: congTySoHuuId,
             cong_ty_dung_ten_id: congTyDungTenId,
             ngay_cong_bo: parseSafeDate(row.ngay_cong_bo),
-            ngay_het_han: parseSafeDate(row.ngay_het_han),
-            ngay_nhac_han: parseSafeDate(row.ngay_nhac_han),
+            ngay_het_han: expiry,
+            ngay_nhac_han: reminder,
             ghi_chu: row.ghi_chu,
             ho_so_luu_url: hoSoLuuUrl,
           },
@@ -179,8 +188,8 @@ async function main() {
             cong_ty_so_huu_id: congTySoHuuId,
             cong_ty_dung_ten_id: congTyDungTenId,
             ngay_cong_bo: parseSafeDate(row.ngay_cong_bo),
-            ngay_het_han: parseSafeDate(row.ngay_het_han),
-            ngay_nhac_han: parseSafeDate(row.ngay_nhac_han),
+            ngay_het_han: expiry,
+            ngay_nhac_han: reminder,
             ghi_chu: row.ghi_chu,
             ho_so_luu_url: hoSoLuuUrl,
           }
