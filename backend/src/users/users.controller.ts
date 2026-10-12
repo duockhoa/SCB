@@ -16,28 +16,28 @@ export class UsersController {
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách người dùng' })
-  @RequirePermissions('USERS_MANAGE', 'ROLES_MANAGE')
+  @RequirePermissions('USERS_VIEW', 'USERS_MANAGE', 'ROLES_VIEW', 'ROLES_MANAGE')
   findAll() {
     return this.usersService.findAll();
   }
 
   @Get('roles')
   @ApiOperation({ summary: 'Lấy danh sách vai trò (kèm danh sách quyền và số lượng người dùng)' })
-  @RequirePermissions('ROLES_MANAGE', 'USERS_MANAGE')
+  @RequirePermissions('ROLES_VIEW', 'ROLES_MANAGE', 'USERS_VIEW', 'USERS_MANAGE')
   getRoles() {
     return this.usersService.getRoles();
   }
 
   @Get('permissions')
   @ApiOperation({ summary: 'Lấy danh mục các quyền hạn (Permission Catalog)' })
-  @RequirePermissions('ROLES_MANAGE', 'USERS_MANAGE')
+  @RequirePermissions('ROLES_VIEW', 'ROLES_MANAGE', 'USERS_VIEW', 'USERS_MANAGE', 'USERS_CUSTOM_PERM')
   getPermissionsCatalog() {
     return this.usersService.getPermissionsCatalog();
   }
 
   @Post('roles')
   @ApiOperation({ summary: 'Tạo vai trò mới' })
-  @RequirePermissions('ROLES_MANAGE')
+  @RequirePermissions('ROLES_CREATE', 'ROLES_MANAGE')
   createRole(
     @Body() body: { ma_vai_tro: string; ten_vai_tro: string; mo_ta?: string; quyen_han?: string[] }
   ) {
@@ -46,7 +46,7 @@ export class UsersController {
 
   @Put('roles/:id')
   @ApiOperation({ summary: 'Cập nhật vai trò và phân quyền chi tiết' })
-  @RequirePermissions('ROLES_MANAGE')
+  @RequirePermissions('ROLES_UPDATE', 'ROLES_MANAGE')
   updateRoleDetail(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { ten_vai_tro?: string; mo_ta?: string; quyen_han?: string[] }
@@ -56,14 +56,14 @@ export class UsersController {
 
   @Delete('roles/:id')
   @ApiOperation({ summary: 'Xóa vai trò' })
-  @RequirePermissions('ROLES_MANAGE')
+  @RequirePermissions('ROLES_DELETE', 'ROLES_MANAGE')
   deleteRole(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.deleteRole(id);
   }
 
   @Put(':id/role')
   @ApiOperation({ summary: 'Cập nhật vai trò người dùng' })
-  @RequirePermissions('USERS_MANAGE', 'ROLES_MANAGE')
+  @RequirePermissions('USERS_ASSIGN_ROLE', 'USERS_MANAGE')
   updateRole(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { roleId: number | null }
@@ -73,7 +73,7 @@ export class UsersController {
 
   @Put(':id/custom-permissions')
   @ApiOperation({ summary: 'Cập nhật quyền riêng biệt ngoại lệ cho từng nhân sự' })
-  @RequirePermissions('USERS_MANAGE', 'ROLES_MANAGE')
+  @RequirePermissions('USERS_CUSTOM_PERM', 'USERS_MANAGE')
   updateCustomPermissions(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { permissions: string[] }

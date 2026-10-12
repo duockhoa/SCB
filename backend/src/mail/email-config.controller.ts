@@ -14,16 +14,24 @@ export class EmailConfigController {
     private readonly prisma: PrismaService
   ) { }
 
-  private checkManagePermission(req: any) {
+  private checkManagePermission(req: any, action: 'view' | 'update' | 'test' = 'view') {
     const user = req.user;
     if (!user) throw new ForbiddenException('Chưa đăng nhập');
     const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
     const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '') || user.role === 'ADMIN' || !!user.isAdmin;
-    const hasPerm = (user.permissions || []).includes('*') || (user.permissions || []).includes('EMAIL_CONFIG');
-    if (!isDeveloper && !hasPerm) {
-      throw new ForbiddenException('Bạn không có quyền quản lý cấu hình Email (Yêu cầu quyền: EMAIL_CONFIG)');
+    const perms = user.permissions || [];
+    const hasWildcard = perms.includes('*');
+    if (isDeveloper || hasWildcard) return true;
+
+    if (action === 'view') {
+      if (perms.includes('EMAIL_VIEW') || perms.includes('EMAIL_CONFIG') || perms.includes('EMAIL_UPDATE')) return true;
+    } else if (action === 'update') {
+      if (perms.includes('EMAIL_UPDATE') || perms.includes('EMAIL_CONFIG')) return true;
+    } else if (action === 'test') {
+      if (perms.includes('EMAIL_TEST') || perms.includes('EMAIL_UPDATE') || perms.includes('EMAIL_CONFIG')) return true;
     }
-    return true;
+
+    throw new ForbiddenException('Bạn không có quyền thực hiện thao tác cấu hình Email này.');
   }
 
   @Get('smtp')
@@ -36,56 +44,56 @@ export class EmailConfigController {
   @Post('smtp')
   @ApiOperation({ summary: 'Lưu hoặc cập nhật cấu hình SMTP' })
   async saveSmtp(@Req() req, @Body() data: any) {
-    this.checkManagePermission(req);
+    this.checkManagePermission(req, 'update');
     return this.emailConfigService.saveSmtpConfig(data);
   }
 
   @Post('smtp/test')
   @ApiOperation({ summary: 'Gửi email test nghiệm thu cấu hình' })
   async testSmtp(@Req() req, @Body() body: { test_email: string }) {
-    this.checkManagePermission(req);
+    this.checkManagePermission(req, 'test');
     return this.emailConfigService.testSmtpConnection(body.test_email);
   }
 
   @Get('recipients')
   @ApiOperation({ summary: 'Lấy danh sách cấu hình nhận mail (simplified)' })
   async getRecipients(@Req() req) {
-    this.checkManagePermission(req);
+    this.checkManagePermission(req, 'view');
     return this.emailConfigService.getRecipients();
   }
 
   @Post('recipients')
   @ApiOperation({ summary: 'Thêm người nhận mail' })
   async addRecipient(@Req() req, @Body() data: any) {
-    this.checkManagePermission(req);
+    this.checkManagePermission(req, 'update');
     return this.emailConfigService.addRecipient(data);
   }
 
   @Put('recipients/:id')
   @ApiOperation({ summary: 'Cập nhật người nhận mail' })
   async updateRecipient(@Req() req, @Param('id') id: string, @Body() data: any) {
-    this.checkManagePermission(req);
+    this.checkManagePermission(req, 'update');
     return this.emailConfigService.updateRecipient(Number(id), data);
   }
 
   @Delete('recipients/:id')
   @ApiOperation({ summary: 'Xóa người nhận mail' })
   async deleteRecipient(@Req() req, @Param('id') id: string) {
-    this.checkManagePermission(req);
+    this.checkManagePermission(req, 'update');
     return this.emailConfigService.deleteRecipient(Number(id));
   }
 
   @Get('events')
   @ApiOperation({ summary: 'Lấy danh sách các sự kiện được bật gửi mail' })
   async getEvents(@Req() req) {
-    this.checkManagePermission(req);
+    this.checkManagePermission(req, 'view');
     return this.emailConfigService.getEvents();
   }
 
   @Post('events')
   @ApiOperation({ summary: 'Lưu cấu hình sự kiện gửi mail' })
   async saveEvents(@Req() req, @Body() data: { events: string[] }) {
-    this.checkManagePermission(req);
+    this.checkManagePermission(req, 'update');
     return this.emailConfigService.saveEvents(data);
   }
 }

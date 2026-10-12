@@ -18,7 +18,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
   const { mutate: updateHoSo } = useUpdateHoSo();
   const { mutate: addTaiLieu, isPending: addingTaiLieu } = useAddTaiLieu();
   const { mutate: deleteTaiLieu } = useDeleteTaiLieu();
-  const { canUpdate, canDelete } = usePermissions();
+  const { canTaiLieuUpload, canTaiLieuReplace, canTaiLieuDelete } = usePermissions();
   
   const queryClient = useQueryClient();
   const [uploadingId, setUploadingId] = useState<number | null>(null);
@@ -294,7 +294,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
             >
               Mở xem
             </Button>
-            {canUpdate && !isExpired && (
+            {canTaiLieuReplace && !isExpired && (
               <Upload 
                 showUploadList={false}
                 beforeUpload={(file) => handleUploadReplace(file, record)}
@@ -307,7 +307,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
                 </Button>
               </Upload>
             )}
-            {canDelete && record.is_dynamic && (
+            {canTaiLieuDelete && record.is_dynamic && (
               <Popconfirm 
                 title={isExpired ? "Xóa bản lưu lịch sử này?" : "Bạn có chắc chắn muốn xóa tài liệu này?"} 
                 onConfirm={() => handleDeleteDocument(record)}
@@ -325,7 +325,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0 }}>Danh sách tài liệu đính kèm</h3>
-        {canUpdate && (
+        {canTaiLieuUpload && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalOpen(true)}>
             Thêm tài liệu khác
           </Button>

@@ -16,33 +16,35 @@ export class CongTyController {
 
   @Post()
   @ApiOperation({ summary: 'Tạo mới công ty' })
-  @RequirePermissions('CONG_TY_MANAGE')
+  @RequirePermissions('CONG_TY_CREATE', 'CONG_TY_MANAGE')
   create(@Body() createCongTyDto: CreateCongTyDto) {
     return this.congTyService.create(createCongTyDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách công ty' })
+  @RequirePermissions('CONG_TY_VIEW', 'CONG_TY_MANAGE')
   findAll() {
     return this.congTyService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Lấy thông tin chi tiết công ty' })
+  @RequirePermissions('CONG_TY_VIEW', 'CONG_TY_MANAGE')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.congTyService.findOne(id);
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Cập nhật công ty' })
-  @RequirePermissions('CONG_TY_MANAGE')
+  @RequirePermissions('CONG_TY_UPDATE', 'CONG_TY_MANAGE')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateCongTyDto: UpdateCongTyDto) {
     return this.congTyService.update(id, updateCongTyDto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Xóa công ty' })
-  @RequirePermissions('CONG_TY_MANAGE')
+  @RequirePermissions('CONG_TY_DELETE', 'CONG_TY_MANAGE')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.congTyService.remove(id);
   }

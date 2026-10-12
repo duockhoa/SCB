@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PERMISSION_MODULES, ALL_PERMISSION_CODES } from './rbac.constants';
+import { PERMISSION_MODULES, ALL_PERMISSION_CODES, expandPermissions } from './rbac.constants';
 
 @Injectable()
 export class UsersService {
@@ -33,11 +33,13 @@ export class UsersService {
           customPerms = [];
         }
       }
+      const expandedRolePerms = expandPermissions(rolePerms);
+      const expandedCustomPerms = expandPermissions(customPerms);
       return {
         ...u,
-        rolePermissions: rolePerms,
-        customPermissions: customPerms,
-        effectivePermissions: Array.from(new Set([...rolePerms, ...customPerms])),
+        rolePermissions: expandedRolePerms,
+        customPermissions: expandedCustomPerms,
+        effectivePermissions: Array.from(new Set([...expandedRolePerms, ...expandedCustomPerms])),
       };
     });
   }
@@ -63,7 +65,7 @@ export class UsersService {
       }
       return {
         ...r,
-        permissions: parsedPerms,
+        permissions: expandPermissions(parsedPerms),
         userCount: r._count?.nguoi_dung || 0
       };
     });

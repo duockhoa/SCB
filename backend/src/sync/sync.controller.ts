@@ -14,7 +14,7 @@ export class SyncController {
 
   @Post('users')
   @ApiOperation({ summary: 'Đồng bộ người dùng từ HRM' })
-  @RequirePermissions('USERS_MANAGE')
+  @RequirePermissions('USERS_SYNC', 'USERS_MANAGE')
   async syncUsers(@Req() req: any) {
     const authHeader = req.headers.authorization;
     return this.syncService.syncUsersFromHRM(authHeader);

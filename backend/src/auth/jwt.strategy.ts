@@ -2,6 +2,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { expandPermissions } from '../users/rbac.constants';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -137,7 +138,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
-    const effectivePermissions = Array.from(new Set([...rolePermissions, ...customPermissions]));
+    const expandedRolePerms = expandPermissions(rolePermissions);
+    const expandedCustomPerms = expandPermissions(customPermissions);
+    const effectivePermissions = Array.from(new Set([...expandedRolePerms, ...expandedCustomPerms]));
 
     return {
       ...payload,
@@ -150,8 +153,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       role: user.vai_tro?.ma_vai_tro || null,
       roleName: user.vai_tro?.ten_vai_tro || null,
       permissions: isAdmin ? ['*'] : effectivePermissions,
-      rolePermissions,
-      customPermissions,
+      rolePermissions: expandedRolePerms,
+      customPermissions: expandedCustomPerms,
       isAdmin,
     };
   }

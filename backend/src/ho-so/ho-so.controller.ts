@@ -34,18 +34,21 @@ export class HoSoController {
   @ApiQuery({ name: 'ngay_het_han_to', required: false })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
+  @RequirePermissions('HOSO_VIEW')
   findAll(@Query() query: any) {
     return this.hoSoService.findAll(query);
   }
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Thống kê và danh sách hồ sơ theo trạng thái' })
+  @RequirePermissions('HOSO_VIEW')
   dashboard(@Query() query: { category?: string; page?: string; limit?: string }) {
     return this.hoSoService.dashboard(query);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Lấy thông tin chi tiết hồ sơ' })
+  @RequirePermissions('HOSO_VIEW')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.hoSoService.findOne(id);
   }
@@ -59,35 +62,35 @@ export class HoSoController {
 
   @Patch(':id/cap-so')
   @ApiOperation({ summary: 'Cấp số công bố cho hồ sơ' })
-  @RequirePermissions('HOSO_CAP_SO')
+  @RequirePermissions('HOSO_CAP_SO', 'HOSO_UPDATE')
   capSo(@Param('id', ParseIntPipe) id: number, @Body() capSoDto: CapSoDto, @Req() req: any) {
     return this.hoSoService.capSo(id, capSoDto, req.user?.userId);
   }
 
   @Post(':id/gia-han')
   @ApiOperation({ summary: 'Gia hạn hồ sơ' })
-  @RequirePermissions('HOSO_GIA_HAN')
+  @RequirePermissions('HOSO_GIA_HAN', 'HOSO_UPDATE')
   giaHan(@Param('id', ParseIntPipe) id: number, @Body() giaHanDto: GiaHanDto, @Req() req: any) {
     return this.hoSoService.giaHan(id, giaHanDto, req.user?.userId);
   }
 
   @Post(':id/thay-the')
   @ApiOperation({ summary: 'Thay thế hồ sơ (Đổi số công bố)' })
-  @RequirePermissions('HOSO_THAY_THE')
+  @RequirePermissions('HOSO_THAY_THE', 'HOSO_UPDATE')
   thayThe(@Param('id', ParseIntPipe) id: number, @Body() thayTheDto: ThayTheDto, @Req() req: any) {
     return this.hoSoService.thayThe(id, thayTheDto, req.user?.userId);
   }
 
   @Post(':id/thay-doi')
   @ApiOperation({ summary: 'Thêm lịch sử thay đổi bổ sung' })
-  @RequirePermissions('HOSO_THAY_DOI')
+  @RequirePermissions('HOSO_THAY_DOI_CREATE', 'HOSO_THAY_DOI')
   thayDoi(@Param('id', ParseIntPipe) id: number, @Body() thayDoiDto: import('./dto/thay-doi.dto').ThayDoiDto, @Req() req: any) {
     return this.hoSoService.thayDoi(id, thayDoiDto, req.user?.userId);
   }
 
   @Patch(':id/lich-su-thay-doi/:lichSuId')
   @ApiOperation({ summary: 'Cập nhật lịch sử thay đổi' })
-  @RequirePermissions('HOSO_THAY_DOI')
+  @RequirePermissions('HOSO_THAY_DOI_UPDATE', 'HOSO_THAY_DOI')
   updateLichSuThayDoi(
     @Param('id', ParseIntPipe) id: number,
     @Param('lichSuId', ParseIntPipe) lichSuId: number,
@@ -99,7 +102,7 @@ export class HoSoController {
 
   @Delete(':id/lich-su-thay-doi/:lichSuId')
   @ApiOperation({ summary: 'Xóa lịch sử thay đổi' })
-  @RequirePermissions('HOSO_THAY_DOI', 'HOSO_DELETE')
+  @RequirePermissions('HOSO_THAY_DOI_DELETE', 'HOSO_THAY_DOI', 'HOSO_DELETE')
   deleteLichSuThayDoi(
     @Param('id', ParseIntPipe) id: number,
     @Param('lichSuId', ParseIntPipe) lichSuId: number,
@@ -117,14 +120,14 @@ export class HoSoController {
 
   @Post(':id/tai-lieu')
   @ApiOperation({ summary: 'Thêm tài liệu đính kèm khác' })
-  @RequirePermissions('HOSO_TAI_LIEU')
+  @RequirePermissions('HOSO_TAI_LIEU_UPLOAD', 'HOSO_TAI_LIEU')
   addTaiLieu(@Param('id', ParseIntPipe) id: number, @Body() data: import('./dto/tai-lieu.dto').TaiLieuDto, @Req() req: any) {
     return this.hoSoService.addTaiLieu(id, data, req.user?.userId);
   }
 
   @Delete(':id/tai-lieu/:taiLieuId')
   @ApiOperation({ summary: 'Xóa tài liệu đính kèm khác' })
-  @RequirePermissions('HOSO_TAI_LIEU', 'HOSO_DELETE')
+  @RequirePermissions('HOSO_TAI_LIEU_DELETE', 'HOSO_TAI_LIEU', 'HOSO_DELETE')
   deleteTaiLieu(
     @Param('id', ParseIntPipe) id: number,
     @Param('taiLieuId', ParseIntPipe) taiLieuId: number,
@@ -135,7 +138,7 @@ export class HoSoController {
 
   @Post(':id/tai-lieu/:taiLieuId/thay-the')
   @ApiOperation({ summary: 'Upload thay thế tài liệu (Giữ lại bản cũ và đánh dấu hết hiệu lực)' })
-  @RequirePermissions('HOSO_TAI_LIEU')
+  @RequirePermissions('HOSO_TAI_LIEU_REPLACE', 'HOSO_TAI_LIEU')
   replaceTaiLieu(
     @Param('id', ParseIntPipe) id: number,
     @Param('taiLieuId', ParseIntPipe) taiLieuId: number,

@@ -7,11 +7,14 @@ import { useCongTyList, useCreateCongTy, useUpdateCongTy, useDeleteCongTy } from
 import { useUiStore } from '@/store/uiStore';
 import dayjs from 'dayjs';
 
+import { usePermissions } from '@/hooks/usePermissions';
+
 export default function CongTyPage() {
   const [form] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const { globalSearch } = useUiStore();
+  const { canCongTyCreate, canCongTyUpdate, canCongTyDelete } = usePermissions();
 
   const { data: result, isLoading } = useCongTyList();
   const allCongTy = Array.isArray(result) ? result : (result?.data || []);
@@ -82,8 +85,12 @@ export default function CongTyPage() {
       width: 120,
       render: (_: any, record: any) => (
         <Space size="middle">
-          <Button type="text" icon={<EditOutlined className="text-blue-500" />} onClick={() => handleOpenModal(record)} />
-          <Button type="text" icon={<DeleteOutlined className="text-red-500" />} onClick={() => handleDelete(record.id)} />
+          {canCongTyUpdate && (
+            <Button type="text" icon={<EditOutlined className="text-blue-500" />} onClick={() => handleOpenModal(record)} />
+          )}
+          {canCongTyDelete && (
+            <Button type="text" icon={<DeleteOutlined className="text-red-500" />} onClick={() => handleDelete(record.id)} />
+          )}
         </Space>
       ),
     },
@@ -97,9 +104,11 @@ export default function CongTyPage() {
         className="flex-1 min-h-0 shadow-sm rounded-xl overflow-hidden flex flex-col"
         styles={{ body: { flex: 1, minHeight: 0, padding: 0, display: 'flex', flexDirection: 'column' } }}
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-500">
-            Thêm mới
-          </Button>
+          canCongTyCreate && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-500">
+              Thêm mới
+            </Button>
+          )
         }
       >
         <div className="flex-1 overflow-auto bg-white min-h-0">

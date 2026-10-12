@@ -6,6 +6,7 @@ import { useUpdateLichSuThayDoi, useDeleteLichSuThayDoi } from '@/hooks/queries/
 import { useLoaiThayDoiList } from '@/hooks/queries/useDanhMuc';
 import MultiUploadOrLinkInput, { parseUrls } from '../common/MultiUploadOrLinkInput';
 import { axiosInstance } from '@/services/api';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface Props {
   lichSuData?: any[];
@@ -17,6 +18,7 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
   const updateMutation = useUpdateLichSuThayDoi();
   const deleteMutation = useDeleteLichSuThayDoi();
   const { data: loaiThayDoiList } = useLoaiThayDoiList();
+  const { canThayDoiUpdate, canThayDoiDelete } = usePermissions();
 
   // Sắp xếp lịch sử theo thời gian giảm dần (mới nhất ở trên)
   const sortedData = [...(lichSuData || [])].sort((a, b) => {
@@ -126,7 +128,9 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
               <div>
                 <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 8 }}>
                   Lần thứ {item.lan_thu}: {item.loai_thay_doi?.ten_loai_thay_doi || 'Thay đổi'}
-                  <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEditClick(item)} title="Cập nhật trạng thái" />
+                  {canThayDoiUpdate && (
+                    <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEditClick(item)} title="Cập nhật trạng thái" />
+                  )}
                 </div>
                 <div>{item.noi_dung_thay_doi}</div>
                 {(item.ma_so_tham_chieu || item.ngay_phe_duyet) && (
@@ -169,24 +173,28 @@ export default function HoSoTimelineTab({ lichSuData }: Props) {
         open={!!editingItem}
         onCancel={handleModalCancel}
         footer={[
-          <Popconfirm
-            key="delete"
-            title="Bạn có chắc chắn muốn xóa thay đổi này?"
-            onConfirm={handleDelete}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
-            <Button danger icon={<DeleteOutlined />} style={{ float: 'left' }} loading={deleteMutation.isPending}>
-              Xóa thay đổi
-            </Button>
-          </Popconfirm>,
+          canThayDoiDelete && (
+            <Popconfirm
+              key="delete"
+              title="Bạn có chắc chắn muốn xóa thay đổi này?"
+              onConfirm={handleDelete}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+            >
+              <Button danger icon={<DeleteOutlined />} style={{ float: 'left' }} loading={deleteMutation.isPending}>
+                Xóa thay đổi
+              </Button>
+            </Popconfirm>
+          ),
           <Button key="cancel" onClick={handleModalCancel}>
             Hủy
           </Button>,
-          <Button key="submit" type="primary" loading={updateMutation.isPending} onClick={handleModalOk}>
-            Cập nhật
-          </Button>,
+          canThayDoiUpdate && (
+            <Button key="submit" type="primary" loading={updateMutation.isPending} onClick={handleModalOk}>
+              Cập nhật
+            </Button>
+          ),
         ]}
       >
         <Form form={form} layout="vertical">

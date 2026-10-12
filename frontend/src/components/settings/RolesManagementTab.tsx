@@ -58,7 +58,7 @@ interface UserSummary {
 }
 
 export default function RolesManagementTab() {
-  const { canManageRoles, isAdmin, isDeveloper } = usePermissions();
+  const { canManageRoles, canRolesCreate, canRolesUpdate, canRolesDelete, isAdmin, isDeveloper } = usePermissions();
   const canAccess = isDeveloper || isAdmin || canManageRoles;
 
   const [roles, setRoles] = useState<RoleItem[]>([]);
@@ -329,9 +329,11 @@ export default function RolesManagementTab() {
             Làm mới
           </Button>
 
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateRole}>
-            Thêm vai trò mới
-          </Button>
+          {canRolesCreate && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateRole}>
+              Thêm vai trò mới
+            </Button>
+          )}
         </div>
       </div>
 
@@ -477,6 +479,7 @@ export default function RolesManagementTab() {
                                   </Tooltip>
                                 ) : (
                                   <Checkbox
+                                    disabled={!canRolesUpdate}
                                     checked={isChecked}
                                     onChange={(e) => handleTogglePermInMatrix(r.id, perm.code, e.target.checked)}
                                   />
@@ -549,13 +552,15 @@ export default function RolesManagementTab() {
                   <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-500">
                     <span>Quyền hạn: <strong>{permsCount}</strong></span>
                     <Space size="small">
-                      <Button 
-                        type="text" 
-                        size="small" 
-                        icon={<EditOutlined />} 
-                        onClick={(e) => { e.stopPropagation(); handleOpenEditRole(r); }} 
-                      />
-                      {r.ma_vai_tro !== 'ADMIN' && r.userCount === 0 && (
+                      {canRolesUpdate && (
+                        <Button 
+                          type="text" 
+                          size="small" 
+                          icon={<EditOutlined />} 
+                          onClick={(e) => { e.stopPropagation(); handleOpenEditRole(r); }} 
+                        />
+                      )}
+                      {canRolesDelete && r.ma_vai_tro !== 'ADMIN' && r.userCount === 0 && (
                         <Popconfirm 
                           title="Xóa vai trò này?" 
                           onConfirm={(e) => { e?.stopPropagation(); handleDeleteRole(r.id); }}

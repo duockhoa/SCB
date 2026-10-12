@@ -19,7 +19,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 const { Title, Text } = Typography;
 
 export default function UserSettingsTab() {
-  const { isDeveloper, isAdmin, canManageUsers } = usePermissions();
+  const { isDeveloper, isAdmin, canManageUsers, canUsersSync, canUsersAssignRole, canUsersCustomPerm } = usePermissions();
   const canAccess = isDeveloper || isAdmin || canManageUsers;
 
   const [users, setUsers] = useState<any[]>([]);
@@ -154,6 +154,7 @@ export default function UserSettingsTab() {
           <Space>
             <Select
               style={{ width: 220 }}
+              disabled={!canUsersAssignRole}
               value={currentValue}
               onChange={(val) => {
                 setChangedRoles(prev => ({
@@ -169,7 +170,7 @@ export default function UserSettingsTab() {
                 })),
               ]}
             />
-            {isChanged && (
+            {isChanged && canUsersAssignRole && (
               <Button 
                 type="primary" 
                 size="small" 
@@ -202,6 +203,7 @@ export default function UserSettingsTab() {
               type={customCount > 0 ? 'primary' : 'default'}
               ghost={customCount > 0}
               icon={<KeyOutlined className={customCount > 0 ? 'text-amber-500' : 'text-blue-500'} />}
+              disabled={!canUsersCustomPerm}
               onClick={() => handleOpenPermsModal(record)}
             >
               Phân quyền riêng
@@ -249,9 +251,11 @@ export default function UserSettingsTab() {
           </Text>
         </div>
         <Space>
-          <Button icon={<SyncOutlined />} type="primary" loading={syncing} onClick={handleSyncUsers}>
-            Đồng bộ từ HRM
-          </Button>
+          {canUsersSync && (
+            <Button icon={<SyncOutlined />} type="primary" loading={syncing} onClick={handleSyncUsers}>
+              Đồng bộ từ HRM
+            </Button>
+          )}
           <Button icon={<ReloadOutlined />} onClick={fetchData}>
             Làm mới
           </Button>
