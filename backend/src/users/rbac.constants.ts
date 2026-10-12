@@ -130,11 +130,12 @@ export function expandPermissions(perms: string[]): string[] {
   if (perms.includes('*')) return ['*'];
   const result = new Set<string>();
   for (const p of perms) {
-    result.add(p);
     if (LEGACY_PERMISSION_MAP[p]) {
       for (const expanded of LEGACY_PERMISSION_MAP[p]) {
         result.add(expanded);
       }
+    } else {
+      result.add(p);
     }
   }
   return Array.from(result);

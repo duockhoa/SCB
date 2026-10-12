@@ -165,40 +165,73 @@ export default function RolesManagementTab() {
 
   const selectedRole = roles.find((r) => r.id === selectedRoleId) || roles[0];
 
-  // Helper đổi quyền trong ma trận
-  const handleTogglePermInMatrix = (roleId: number, permCode: string, checked: boolean) => {
+  // Helper đổi quyền trong ma trận - Tự động lưu tức thì vào CSDL
+  const handleTogglePermInMatrix = async (roleId: number, permCode: string, checked: boolean) => {
     const role = roles.find((r) => r.id === roleId);
     if (role?.ma_vai_tro === 'ADMIN') return; // Admin luôn có full quyền
 
-    setMatrixState((prev) => {
-      const currentList = prev[roleId] || [];
-      const nextList = checked
-        ? Array.from(new Set([...currentList, permCode]))
-        : currentList.filter((c) => c !== permCode);
+    const currentList = matrixState[roleId] || [];
+    const nextList = checked
+      ? Array.from(new Set([...currentList, permCode]))
+      : currentList.filter((c) => c !== permCode);
 
-      return {
+    // Optimistic UI update
+    setMatrixState((prev) => ({
+      ...prev,
+      [roleId]: nextList,
+    }));
+
+    try {
+      await axiosInstance.put(`/users/roles/${roleId}`, {
+        quyen_han: nextList,
+      });
+      message.success({
+        content: `Đã ${checked ? 'cấp' : 'thu hồi'} quyền thành công cho vai trò ${role?.ten_vai_tro || ''}`,
+        key: `matrix-save-${roleId}`,
+        duration: 1.5,
+      });
+      setRoles((prev) =>
+        prev.map((r) => (r.id === roleId ? { ...r, permissions: nextList } : r))
+      );
+    } catch (error: any) {
+      console.error(error);
+      message.error(error.response?.data?.message || 'Lỗi khi cập nhật quyền');
+      // Rollback nếu lỗi
+      setMatrixState((prev) => ({
         ...prev,
-        [roleId]: nextList,
-      };
-    });
-
-    if (!dirtyRoleIds.includes(roleId)) {
-      setDirtyRoleIds((prev) => [...prev, roleId]);
+        [roleId]: currentList,
+      }));
     }
   };
 
-  const handleToggleAllForRole = (roleId: number, checkAll: boolean) => {
+  const handleToggleAllForRole = async (roleId: number, checkAll: boolean) => {
     const role = roles.find((r) => r.id === roleId);
     if (role?.ma_vai_tro === 'ADMIN') return;
 
     const allCodes = permissionModules.flatMap((m) => m.permissions.map((p) => p.code));
+    const nextList = checkAll ? allCodes : [];
+
     setMatrixState((prev) => ({
       ...prev,
-      [roleId]: checkAll ? allCodes : [],
+      [roleId]: nextList,
     }));
 
-    if (!dirtyRoleIds.includes(roleId)) {
-      setDirtyRoleIds((prev) => [...prev, roleId]);
+    try {
+      await axiosInstance.put(`/users/roles/${roleId}`, {
+        quyen_han: nextList,
+      });
+      message.success({
+        content: `Đã ${checkAll ? 'cấp tất cả' : 'xóa hết'} quyền cho vai trò ${role?.ten_vai_tro || ''}`,
+        key: `matrix-save-${roleId}`,
+        duration: 2,
+      });
+      setRoles((prev) =>
+        prev.map((r) => (r.id === roleId ? { ...r, permissions: nextList } : r))
+      );
+    } catch (error: any) {
+      console.error(error);
+      message.error(error.response?.data?.message || 'Lỗi khi cập nhật quyền');
+      fetchRoles();
     }
   };
 
