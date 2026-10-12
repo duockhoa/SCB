@@ -71,6 +71,16 @@ export class UsersController {
     return this.usersService.updateRole(id, body.roleId);
   }
 
+  @Put(':id/custom-permissions')
+  @ApiOperation({ summary: 'Cập nhật quyền riêng biệt ngoại lệ cho từng nhân sự' })
+  @RequirePermissions('USERS_MANAGE', 'ROLES_MANAGE')
+  updateCustomPermissions(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { permissions: string[] }
+  ) {
+    return this.usersService.updateCustomPermissions(id, body.permissions || []);
+  }
+
   @Get('me')
   @ApiOperation({ summary: 'Lấy thông tin tài khoản hiện tại kèm vai trò & quyền hạn từ DB' })
   getMe(@Req() req: any) {

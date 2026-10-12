@@ -87,6 +87,7 @@ model nguoi_dung {
   email           String?       @unique @db.VarChar(200)
   mat_khau_hash   String?       @db.VarChar(255)
   vai_tro_id      Int?
+  quyen_rieng     String?       @db.Text
   phong_ban       String?       @db.VarChar(200)
   chuc_vu         String?       @db.VarChar(200)
   trang_thai      Boolean       @default(true)

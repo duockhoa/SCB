@@ -98,7 +98,12 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
           nhom_tai_lieu: 'Tài liệu khác',
           url: getFullUrl(tl.duong_dan_url),
           is_dynamic: true,
-          ghi_chu: tl.ghi_chu
+          ghi_chu: tl.ghi_chu,
+          so_phien_ban: tl.so_phien_ban || 1,
+          tai_lieu_hien_hanh: tl.tai_lieu_hien_hanh !== false,
+          ngay_tai_len: tl.ngay_tai_len,
+          ngay_hieu_luc: tl.ngay_hieu_luc,
+          ngay_het_hieu_luc: tl.ngay_het_hieu_luc,
         });
       });
     }
@@ -109,34 +114,45 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
   const dataSource = buildTaiLieuData();
 
   const handleUploadReplace = async (file: File, record: any) => {
-    if (record.is_dynamic) return false;
     setUploadingId(record.id);
     try {
       const response = await uploadFile(file);
       if (response && response.url) {
-        let updateData: any = {};
-        if (record.nhom_tai_lieu === 'Tài liệu chung') {
-          updateData[record.field_key] = response.url;
+        if (record.is_dynamic) {
+          // Upload thay thế tài liệu khác: đánh dấu bản cũ hết hiệu lực và tạo bản mới với version tăng
+          await axiosInstance.post(`/ho-so/${hoSo.id}/tai-lieu/${record.real_id}/thay-the`, {
+            duong_dan_url: response.url,
+            ten_tai_lieu: record.ten_tai_lieu,
+            ghi_chu: `Bản thay thế cho phiên bản v${record.so_phien_ban || 1}`,
+          });
+          message.success(`Đã thay thế tài liệu thành công (Tạo phiên bản v${(record.so_phien_ban || 1) + 1}, bản cũ đã đánh dấu hết hiệu lực)!`);
+          queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
         } else {
-          updateData['thong_tin_rieng'] = {
-            ...thongTinRieng,
-            [record.field_key]: response.url
-          };
-        }
-
-        updateHoSo({ id: hoSo.id, data: updateData }, {
-          onSuccess: () => {
-            message.success('Tải và thay thế file thành công!');
-            queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
-          },
-          onError: () => {
-            message.error('Lỗi khi cập nhật hồ sơ');
+          // Tài liệu chung hoặc tài liệu đặc thù
+          let updateData: any = {};
+          if (record.nhom_tai_lieu === 'Tài liệu chung') {
+            updateData[record.field_key] = response.url;
+          } else {
+            updateData['thong_tin_rieng'] = {
+              ...thongTinRieng,
+              [record.field_key]: response.url
+            };
           }
-        });
+
+          updateHoSo({ id: hoSo.id, data: updateData }, {
+            onSuccess: () => {
+              message.success('Tải và thay thế file thành công!');
+              queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+            },
+            onError: () => {
+              message.error('Lỗi khi cập nhật hồ sơ');
+            }
+          });
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      message.error('Lỗi khi tải file lên');
+      message.error(error.response?.data?.message || 'Lỗi khi tải file lên thay thế');
     } finally {
       setUploadingId(null);
     }
@@ -214,20 +230,44 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
       title: 'Tên tài liệu',
       dataIndex: 'ten_tai_lieu',
       key: 'ten_tai_lieu',
-      render: (text: string, record: any) => (
-        <Space orientation="vertical" size="small">
-          <a onClick={() => handleViewFile(record)}>
-            {record.nhom_tai_lieu === 'Tài liệu chung' ? <FolderOpenOutlined style={{ marginRight: 8 }} /> : null}
-            {text}
-          </a>
-          {record.ghi_chu && <span style={{ fontSize: '12px', color: '#888' }}>({record.ghi_chu})</span>}
-        </Space>
-      ),
+      render: (text: string, record: any) => {
+        const isExpired = record.is_dynamic && record.tai_lieu_hien_hanh === false;
+        return (
+          <Space direction="vertical" size={2}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <a 
+                onClick={() => handleViewFile(record)}
+                className={`font-medium ${isExpired ? 'text-gray-400 line-through' : 'text-blue-600 hover:underline'}`}
+              >
+                {record.nhom_tai_lieu === 'Tài liệu chung' ? <FolderOpenOutlined className="mr-1" /> : null}
+                {text}
+              </a>
+              {record.is_dynamic && (
+                record.tai_lieu_hien_hanh ? (
+                  <Tag color="success" className="text-xs">
+                    Hiệu lực (v{record.so_phien_ban})
+                  </Tag>
+                ) : (
+                  <Tag color="default" className="text-xs bg-gray-100 text-gray-500 border-gray-300">
+                    Hết hiệu lực (v{record.so_phien_ban})
+                  </Tag>
+                )
+              )}
+            </div>
+            {record.ghi_chu && (
+              <span className="text-xs text-gray-400 italic">
+                {record.ghi_chu}
+              </span>
+            )}
+          </Space>
+        );
+      },
     },
     {
       title: 'Nhóm tài liệu',
       dataIndex: 'nhom_tai_lieu',
       key: 'nhom_tai_lieu',
+      width: 150,
       render: (text: string) => {
         let color = 'default';
         if (text === 'Tài liệu chung') color = 'blue';
@@ -239,37 +279,45 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     {
       title: 'Hành động',
       key: 'action',
-      render: (record: any) => (
-        <Space size="middle">
-          <Button 
-            type="primary" 
-            ghost
-            icon={<EyeOutlined />} 
-            onClick={() => handleViewFile(record)}
-            loading={viewingRecordId === record.id}
-          >
-            Mở xem
-          </Button>
-          {canUpdate && !record.is_dynamic && (
-            <Upload 
-              showUploadList={false}
-              beforeUpload={(file) => handleUploadReplace(file, record)}
+      width: 250,
+      render: (record: any) => {
+        const isExpired = record.is_dynamic && record.tai_lieu_hien_hanh === false;
+
+        return (
+          <Space size="middle">
+            <Button 
+              type="primary" 
+              ghost
+              icon={<EyeOutlined />} 
+              onClick={() => handleViewFile(record)}
+              loading={viewingRecordId === record.id}
             >
-              <Button 
-                icon={<UploadOutlined />} 
-                loading={uploadingId === record.id}
+              Mở xem
+            </Button>
+            {canUpdate && !isExpired && (
+              <Upload 
+                showUploadList={false}
+                beforeUpload={(file) => handleUploadReplace(file, record)}
               >
-                Upload thay thế
-              </Button>
-            </Upload>
-          )}
-          {canDelete && record.is_dynamic && (
-            <Popconfirm title="Bạn có chắc chắn muốn xóa tài liệu này?" onConfirm={() => handleDeleteDocument(record)}>
-              <Button danger icon={<DeleteOutlined />}>Xóa</Button>
-            </Popconfirm>
-          )}
-        </Space>
-      ),
+                <Button 
+                  icon={<UploadOutlined />} 
+                  loading={uploadingId === record.id}
+                >
+                  Upload thay thế
+                </Button>
+              </Upload>
+            )}
+            {canDelete && record.is_dynamic && (
+              <Popconfirm 
+                title={isExpired ? "Xóa bản lưu lịch sử này?" : "Bạn có chắc chắn muốn xóa tài liệu này?"} 
+                onConfirm={() => handleDeleteDocument(record)}
+              >
+                <Button danger icon={<DeleteOutlined />}>Xóa</Button>
+              </Popconfirm>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 

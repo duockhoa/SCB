@@ -7,13 +7,38 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.nguoi_dung.findMany({
+    const users = await this.prisma.nguoi_dung.findMany({
       include: {
         vai_tro: true,
       },
       orderBy: {
         id: 'asc',
       },
+    });
+
+    return users.map((u) => {
+      let rolePerms: string[] = [];
+      if (u.vai_tro?.quyen_han) {
+        try {
+          rolePerms = JSON.parse(u.vai_tro.quyen_han);
+        } catch {
+          rolePerms = [];
+        }
+      }
+      let customPerms: string[] = [];
+      if (u.quyen_rieng) {
+        try {
+          customPerms = JSON.parse(u.quyen_rieng);
+        } catch {
+          customPerms = [];
+        }
+      }
+      return {
+        ...u,
+        rolePermissions: rolePerms,
+        customPermissions: customPerms,
+        effectivePermissions: Array.from(new Set([...rolePerms, ...customPerms])),
+      };
     });
   }
 
@@ -120,5 +145,52 @@ export class UsersService {
         vai_tro: true,
       },
     });
+  }
+
+  async updateCustomPermissions(userId: number, permissions: string[]) {
+    const user = await this.prisma.nguoi_dung.findUnique({
+      where: { id: userId },
+      include: { vai_tro: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+
+    const permsJson = permissions && permissions.length > 0 ? JSON.stringify(permissions) : null;
+
+    const updated = await this.prisma.nguoi_dung.update({
+      where: { id: userId },
+      data: {
+        quyen_rieng: permsJson,
+      },
+      include: {
+        vai_tro: true,
+      },
+    });
+
+    let rolePerms: string[] = [];
+    if (updated.vai_tro?.quyen_han) {
+      try {
+        rolePerms = JSON.parse(updated.vai_tro.quyen_han);
+      } catch {
+        rolePerms = [];
+      }
+    }
+    let customPerms: string[] = [];
+    if (updated.quyen_rieng) {
+      try {
+        customPerms = JSON.parse(updated.quyen_rieng);
+      } catch {
+        customPerms = [];
+      }
+    }
+
+    return {
+      ...updated,
+      rolePermissions: rolePerms,
+      customPermissions: customPerms,
+      effectivePermissions: Array.from(new Set([...rolePerms, ...customPerms])),
+    };
   }
 }

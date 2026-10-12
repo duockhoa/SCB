@@ -211,7 +211,11 @@ export class HoSoService {
         ho_so_tpbvsk_cong_bo: true,
         ho_so_cfs_cpp: true,
         tai_lieu: {
-          orderBy: { ngay_tai_len: 'desc' }
+          orderBy: [
+            { tai_lieu_hien_hanh: 'desc' },
+            { so_phien_ban: 'desc' },
+            { ngay_tai_len: 'desc' },
+          ],
         },
         lich_su_thay_doi: true,
         nhat_ky: { 
@@ -745,6 +749,65 @@ export class HoSoService {
       });
 
       return { message: 'Xóa tài liệu thành công' };
+    });
+  }
+
+  async replaceTaiLieu(
+    hoSoId: number, 
+    taiLieuId: number, 
+    data: { duong_dan_url: string; ghi_chu?: string; ten_tai_lieu?: string }, 
+    userId?: number
+  ) {
+    const hoSo = await this.findOne(hoSoId);
+    const oldDoc = await this.prisma.tai_lieu_ho_so.findUnique({
+      where: { id: taiLieuId },
+    });
+
+    if (!oldDoc || oldDoc.ho_so_chung_id !== hoSoId) {
+      throw new NotFoundException('Không tìm thấy tài liệu trong hồ sơ này');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Đánh dấu bản cũ là không còn hiệu lực
+      const updatedOldDoc = await tx.tai_lieu_ho_so.update({
+        where: { id: taiLieuId },
+        data: {
+          tai_lieu_hien_hanh: false,
+          ngay_het_hieu_luc: new Date(),
+          ghi_chu: oldDoc.ghi_chu 
+            ? `${oldDoc.ghi_chu} (Đã thay thế bởi phiên bản v${oldDoc.so_phien_ban + 1})` 
+            : `Đã thay thế bởi phiên bản v${oldDoc.so_phien_ban + 1}`,
+        },
+      });
+
+      // 2. Tạo bản mới với số phiên bản tăng lên và đang có hiệu lực
+      const newDoc = await tx.tai_lieu_ho_so.create({
+        data: {
+          ho_so_chung_id: hoSoId,
+          loai_tai_lieu_id: oldDoc.loai_tai_lieu_id,
+          ten_tai_lieu: data.ten_tai_lieu || oldDoc.ten_tai_lieu,
+          duong_dan_url: data.duong_dan_url,
+          so_phien_ban: oldDoc.so_phien_ban + 1,
+          tai_lieu_hien_hanh: true,
+          ngay_hieu_luc: new Date(),
+          ghi_chu: data.ghi_chu || `Bản thay thế cho phiên bản v${oldDoc.so_phien_ban}`,
+          nguoi_tai_len_id: userId || null,
+        },
+      });
+
+      // 3. Ghi nhật ký kiểm toán hệ thống
+      await tx.nhat_ky_ho_so.create({
+        data: {
+          ho_so_chung_id: hoSoId,
+          hanh_dong: 'UPDATE',
+          nguoi_thuc_hien_id: userId || null,
+          noi_dung: `Đã upload thay thế tài liệu '${oldDoc.ten_tai_lieu}' (v${oldDoc.so_phien_ban} -> v${newDoc.so_phien_ban})`,
+          du_lieu_cu: JSON.stringify(oldDoc),
+          du_lieu_moi: JSON.stringify(newDoc),
+        },
+      });
+
+      return { oldDoc: updatedOldDoc, newDoc };
     });
   }
 }

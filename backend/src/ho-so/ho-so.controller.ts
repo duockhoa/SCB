@@ -132,4 +132,16 @@ export class HoSoController {
   ) {
     return this.hoSoService.deleteTaiLieu(id, taiLieuId, req.user?.userId);
   }
+
+  @Post(':id/tai-lieu/:taiLieuId/thay-the')
+  @ApiOperation({ summary: 'Upload thay thế tài liệu (Giữ lại bản cũ và đánh dấu hết hiệu lực)' })
+  @RequirePermissions('HOSO_TAI_LIEU')
+  replaceTaiLieu(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('taiLieuId', ParseIntPipe) taiLieuId: number,
+    @Body() data: { duong_dan_url: string; ghi_chu?: string; ten_tai_lieu?: string },
+    @Req() req: any
+  ) {
+    return this.hoSoService.replaceTaiLieu(id, taiLieuId, data, req.user?.userId);
+  }
 }

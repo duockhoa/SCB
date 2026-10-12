@@ -119,14 +119,25 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
-    let permissions: string[] = [];
+    let rolePermissions: string[] = [];
     if (user.vai_tro?.quyen_han) {
       try {
-        permissions = JSON.parse(user.vai_tro.quyen_han);
+        rolePermissions = JSON.parse(user.vai_tro.quyen_han);
       } catch {
-        permissions = [];
+        rolePermissions = [];
       }
     }
+
+    let customPermissions: string[] = [];
+    if (user.quyen_rieng) {
+      try {
+        customPermissions = JSON.parse(user.quyen_rieng);
+      } catch {
+        customPermissions = [];
+      }
+    }
+
+    const effectivePermissions = Array.from(new Set([...rolePermissions, ...customPermissions]));
 
     return {
       ...payload,
@@ -138,7 +149,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       position: user.chuc_vu || chuc_vu,
       role: user.vai_tro?.ma_vai_tro || null,
       roleName: user.vai_tro?.ten_vai_tro || null,
-      permissions: isAdmin ? ['*'] : permissions,
+      permissions: isAdmin ? ['*'] : effectivePermissions,
+      rolePermissions,
+      customPermissions,
       isAdmin,
     };
   }

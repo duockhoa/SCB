@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Table, Typography, Select, Button, Space, message, Card, Input, Modal, Tag, Divider, Empty, Descriptions } from 'antd';
+import { Table, Typography, Select, Button, Space, message, Card, Input, Modal, Tag, Divider, Empty, Descriptions, Switch } from 'antd';
 import { 
   SyncOutlined, 
   ReloadOutlined, 
@@ -9,7 +9,9 @@ import {
   SafetyCertificateOutlined, 
   CheckCircleOutlined,
   CloseCircleOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  KeyOutlined,
+  SaveOutlined
 } from '@ant-design/icons';
 import { axiosInstance } from '@/services/api';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -28,6 +30,8 @@ export default function UserSettingsTab() {
   const [searchText, setSearchText] = useState('');
   const [changedRoles, setChangedRoles] = useState<Record<number, number | null>>({});
   const [selectedUserForPerms, setSelectedUserForPerms] = useState<any | null>(null);
+  const [customPerms, setCustomPerms] = useState<string[]>([]);
+  const [savingCustomPerms, setSavingCustomPerms] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -71,6 +75,29 @@ export default function UserSettingsTab() {
     } catch (error: any) {
       console.error(error);
       message.error(error.response?.data?.message || 'Không thể cập nhật vai trò');
+    }
+  };
+
+  const handleOpenPermsModal = (record: any) => {
+    setSelectedUserForPerms(record);
+    setCustomPerms(record.customPermissions || []);
+  };
+
+  const handleSaveCustomPermissions = async () => {
+    if (!selectedUserForPerms) return;
+    setSavingCustomPerms(true);
+    try {
+      await axiosInstance.put(`/users/${selectedUserForPerms.id}/custom-permissions`, {
+        permissions: customPerms,
+      });
+      message.success(`Đã cập nhật phân quyền riêng cho nhân sự ${selectedUserForPerms.ho_ten} thành công!`);
+      setSelectedUserForPerms(null);
+      fetchData();
+    } catch (error: any) {
+      console.error(error);
+      message.error(error.response?.data?.message || 'Lỗi khi cập nhật quyền riêng');
+    } finally {
+      setSavingCustomPerms(false);
     }
   };
 
@@ -163,18 +190,30 @@ export default function UserSettingsTab() {
       },
     },
     {
-      title: 'Thao tác',
+      title: 'Thao tác & Đặc quyền',
       key: 'actions',
-      width: 130,
-      render: (_: any, record: any) => (
-        <Button
-          size="small"
-          icon={<SafetyCertificateOutlined className="text-blue-500" />}
-          onClick={() => setSelectedUserForPerms(record)}
-        >
-          Xem quyền
-        </Button>
-      ),
+      width: 180,
+      render: (_: any, record: any) => {
+        const customCount = record.customPermissions?.length || 0;
+        return (
+          <Space>
+            <Button
+              size="small"
+              type={customCount > 0 ? 'primary' : 'default'}
+              ghost={customCount > 0}
+              icon={<KeyOutlined className={customCount > 0 ? 'text-amber-500' : 'text-blue-500'} />}
+              onClick={() => handleOpenPermsModal(record)}
+            >
+              Phân quyền riêng
+            </Button>
+            {customCount > 0 && (
+              <Tag color="gold" className="!mr-0 font-medium">
+                +{customCount}
+              </Tag>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -242,28 +281,46 @@ export default function UserSettingsTab() {
         scroll={{ x: 1000 }}
       />
 
-      {/* Modal Chi tiết quyền hạn của người dùng */}
+      {/* Modal Chi tiết & Cấp quyền riêng cho người dùng */}
       <Modal
         title={
           <div className="flex items-center gap-2 text-base text-gray-800">
-            <SafetyCertificateOutlined className="text-blue-600" />
-            Chi tiết quyền hạn nhân sự
+            <KeyOutlined className="text-amber-500" />
+            Cấu hình quyền riêng biệt cho nhân sự
           </div>
         }
         open={!!selectedUserForPerms}
         onCancel={() => setSelectedUserForPerms(null)}
+        width={750}
         footer={[
-          <Button key="close" type="primary" onClick={() => setSelectedUserForPerms(null)}>
-            Đóng
+          <Button key="cancel" onClick={() => setSelectedUserForPerms(null)}>
+            Hủy
+          </Button>,
+          customPerms.length > 0 && (
+            <Button
+              key="clear"
+              danger
+              onClick={() => setCustomPerms([])}
+            >
+              Bỏ toàn bộ quyền riêng
+            </Button>
+          ),
+          <Button
+            key="save"
+            type="primary"
+            icon={<SaveOutlined />}
+            loading={savingCustomPerms}
+            onClick={handleSaveCustomPermissions}
+          >
+            Lưu quyền riêng
           </Button>,
         ]}
-        width={700}
       >
         {selectedUserForPerms && (() => {
           const userRoleId = selectedUserForPerms.vai_tro_id || selectedUserForPerms.vai_tro?.id;
           const assignedRole = roles.find((r) => r.id === userRoleId);
-          const userPerms: string[] = assignedRole?.permissions || [];
-          const hasWildcard = userPerms.includes('*');
+          const rolePerms: string[] = assignedRole?.permissions || [];
+          const hasWildcard = rolePerms.includes('*');
 
           return (
             <div className="py-2 space-y-4">
@@ -294,75 +351,92 @@ export default function UserSettingsTab() {
                 </Descriptions.Item>
               </Descriptions>
 
-              <Divider className="my-2" />
+              <div className="bg-amber-50/80 p-3 rounded-lg border border-amber-200 text-amber-900 text-xs flex items-start gap-2">
+                <InfoCircleOutlined className="text-amber-600 mt-0.5 text-sm shrink-0" />
+                <div>
+                  <span className="font-semibold">Cơ chế phân quyền kết hợp:</span> Quyền thực tế của nhân sự bao gồm các quyền mặc định từ vai trò cộng thêm các quyền được cấp riêng biệt dưới đây. Các quyền đã có theo vai trò sẽ luôn được bật.
+                </div>
+              </div>
 
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <Text strong className="text-sm text-gray-800">
-                    Danh sách quyền truy cập & thao tác thực tế:
+                    Cấu hình quyền riêng lẻ theo phân hệ:
                   </Text>
                   {hasWildcard && (
                     <Tag color="gold" className="font-bold">
-                      QUYỀN QUẢN TRỊ TỐI CAO (*)
+                      VAI TRÒ CÓ TOÀN QUYỀN (*)
                     </Tag>
                   )}
                 </div>
 
-                {!assignedRole ? (
-                  <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 text-amber-800 text-sm flex items-start gap-2">
-                    <InfoCircleOutlined className="mt-0.5" />
-                    <div>
-                      <div className="font-semibold">Nhân sự này chưa được gán vai trò RBAC cụ thể.</div>
-                      <div className="text-xs text-amber-700 mt-1">
-                        Hệ thống đang áp dụng cơ chế phân quyền kế thừa theo Phòng ban ({selectedUserForPerms.phong_ban || 'N/A'}) và Chức vụ ({selectedUserForPerms.chuc_vu || 'N/A'}).
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4 max-h-[380px] overflow-y-auto pr-2">
-                    {permissionModules.map((mod: any) => {
-                      return (
-                        <div key={mod.module} className="border border-gray-200 rounded-lg p-3 bg-gray-50/50">
-                          <div className="font-medium text-gray-800 text-xs uppercase tracking-wider mb-2 flex items-center justify-between">
-                            <span>{mod.module} - {mod.description}</span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {mod.permissions.map((p: any) => {
-                              const isGranted = hasWildcard || userPerms.includes(p.code);
-                              return (
-                                <div
-                                  key={p.code}
-                                  className={`p-2 rounded border text-xs flex items-start gap-2 ${
-                                    isGranted
-                                      ? 'bg-blue-50/60 border-blue-200 text-gray-800'
-                                      : 'bg-white border-gray-100 text-gray-400 opacity-60'
-                                  }`}
-                                >
-                                  {isGranted ? (
-                                    <CheckCircleOutlined className="text-emerald-500 mt-0.5 text-sm shrink-0" />
-                                  ) : (
-                                    <CloseCircleOutlined className="text-gray-300 mt-0.5 text-sm shrink-0" />
-                                  )}
-                                  <div className="min-w-0">
-                                    <div className="font-semibold flex items-center gap-1">
-                                      {p.name}
-                                      {p.isDangerous && isGranted && (
-                                        <Tag color="error" className="!text-[10px] !px-1 !py-0 !leading-tight">
-                                          Nhạy cảm
-                                        </Tag>
-                                      )}
-                                    </div>
-                                    <div className="text-[11px] text-gray-500 truncate">{p.description}</div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
+                <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
+                  {permissionModules.map((mod: any) => {
+                    return (
+                      <div key={mod.module} className="border border-gray-200 rounded-lg p-3 bg-gray-50/50">
+                        <div className="font-semibold text-gray-800 text-xs uppercase tracking-wider mb-2 flex items-center justify-between">
+                          <span>{mod.module} - {mod.description}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {mod.permissions.map((p: any) => {
+                            const isInherited = hasWildcard || rolePerms.includes(p.code);
+                            const isCustomGranted = customPerms.includes(p.code);
+                            const isChecked = isInherited || isCustomGranted;
+
+                            return (
+                              <div
+                                key={p.code}
+                                className={`p-2.5 rounded-lg border text-xs flex items-start justify-between gap-2 transition-colors ${
+                                  isInherited
+                                    ? 'bg-blue-50/60 border-blue-200 text-gray-800'
+                                    : isCustomGranted
+                                    ? 'bg-amber-50/60 border-amber-200 text-gray-800'
+                                    : 'bg-white border-gray-100 text-gray-500'
+                                }`}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-semibold flex items-center gap-1.5 flex-wrap">
+                                    <span>{p.name}</span>
+                                    {isInherited && (
+                                      <Tag color="blue" className="!text-[10px] !px-1 !py-0 !leading-tight !mr-0">
+                                        Theo vai trò
+                                      </Tag>
+                                    )}
+                                    {!isInherited && isCustomGranted && (
+                                      <Tag color="gold" className="!text-[10px] !px-1 !py-0 !leading-tight !mr-0 font-medium">
+                                        Cấp riêng
+                                      </Tag>
+                                    )}
+                                    {p.isDangerous && isChecked && (
+                                      <Tag color="error" className="!text-[10px] !px-1 !py-0 !leading-tight !mr-0">
+                                        Nhạy cảm
+                                      </Tag>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-gray-500 mt-0.5">{p.description}</div>
+                                </div>
+
+                                <Switch
+                                  size="small"
+                                  disabled={isInherited}
+                                  checked={isChecked}
+                                  onChange={(checked) => {
+                                    if (checked) {
+                                      setCustomPerms((prev) => [...prev, p.code]);
+                                    } else {
+                                      setCustomPerms((prev) => prev.filter((c) => c !== p.code));
+                                    }
+                                  }}
+                                  className={!isInherited && isCustomGranted ? 'bg-amber-500' : undefined}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           );
