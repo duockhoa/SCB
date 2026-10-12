@@ -37,6 +37,23 @@ export class SyncService {
         const ma_nguoi_dung = user.username || user.id?.toString();
         if (!ma_nguoi_dung) continue;
 
+        const existing = await this.prisma.nguoi_dung.findUnique({
+          where: { ma_nguoi_dung },
+          select: { id: true, vai_tro_id: true }
+        });
+
+        let defaultRoleId: number | null = null;
+        if (!existing || !existing.vai_tro_id) {
+          const dept = (user.department || '').toLowerCase();
+          const pos = (user.position || '').toLowerCase();
+          let targetRoleCode = 'VIEWER';
+          if (dept.includes('đăng ký')) {
+            targetRoleCode = (pos.includes('tp') || pos.includes('trưởng phòng')) ? 'TRUONG_PHONG' : 'NV_DANG_KY';
+          }
+          const role = await this.prisma.vai_tro.findUnique({ where: { ma_vai_tro: targetRoleCode } });
+          if (role) defaultRoleId = role.id;
+        }
+
         await this.prisma.nguoi_dung.upsert({
           where: { ma_nguoi_dung },
           update: {
@@ -44,6 +61,7 @@ export class SyncService {
             email: user.email || null,
             phong_ban: user.department || null,
             chuc_vu: user.position || null,
+            ...(existing?.vai_tro_id ? {} : (defaultRoleId ? { vai_tro_id: defaultRoleId } : {}))
           },
           create: {
             ma_nguoi_dung,
@@ -51,6 +69,7 @@ export class SyncService {
             email: user.email || null,
             phong_ban: user.department || null,
             chuc_vu: user.position || null,
+            vai_tro_id: defaultRoleId
           }
         });
         synced++;

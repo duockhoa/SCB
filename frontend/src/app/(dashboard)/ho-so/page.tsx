@@ -86,7 +86,15 @@ function HoSoMasterDetailContent() {
   const { data: result, isLoading } = useHoSoList({ limit: 1000, search: debouncedSearch });
   const allHoSo: HoSoChung[] = result?.data?.data || [];
   
-  const { canCreate, canUpdate, canManage } = usePermissions();
+  const { 
+    canCreate, 
+    canUpdate, 
+    canDelete, 
+    canCapSo, 
+    canGiaHan, 
+    canThayThe, 
+    canThayDoi 
+  } = usePermissions();
 
   // Lọc theo loại hồ sơ (frontend chỉ lọc loại, search nhường backend)
   const dsHoSo = allHoSo.filter((hs) => {
@@ -233,7 +241,7 @@ function HoSoMasterDetailContent() {
   };
 
   const renderItemMenu = (item: HoSoChung) => {
-    if (!canUpdate && !canManage) return null;
+    if (!canUpdate && !canDelete) return null;
 
     const menuItems: MenuProps['items'] = [];
 
@@ -246,7 +254,7 @@ function HoSoMasterDetailContent() {
       });
     }
 
-    if (canManage) {
+    if (canDelete) {
       menuItems.push({
         key: 'delete',
         icon: <DeleteOutlined className="text-red-500" />,
@@ -421,7 +429,7 @@ function HoSoMasterDetailContent() {
                   </h1>
                   
                   <div className="flex flex-wrap justify-center gap-8 mb-4">
-                    {canUpdate && isDangXuLy && (
+                    {canCapSo && isDangXuLy && (
                       <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => setCapSoOpen(true)}>
                         <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center text-xl shadow-md group-hover:-translate-y-1 transition-transform">
                           <PlusCircleOutlined />
@@ -430,7 +438,7 @@ function HoSoMasterDetailContent() {
                       </div>
                     )}
 
-                    {canUpdate && isConHieuLuc && (
+                    {canGiaHan && isConHieuLuc && (
                       <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => setGiaHanOpen(true)}>
                         <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center text-xl shadow-md group-hover:-translate-y-1 transition-transform">
                           <SyncOutlined />
@@ -439,7 +447,7 @@ function HoSoMasterDetailContent() {
                       </div>
                     )}
 
-                    {canManage && (
+                    {canThayThe && (
                       <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => setThayTheOpen(true)}>
                         <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center text-xl shadow-md group-hover:-translate-y-1 transition-transform">
                           <SwapOutlined />
@@ -448,7 +456,7 @@ function HoSoMasterDetailContent() {
                       </div>
                     )}
 
-                    {canUpdate && (
+                    {canThayDoi && (
                       <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => setThayDoiOpen(true)}>
                         <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center text-xl shadow-md group-hover:-translate-y-1 transition-transform">
                           <FileAddOutlined />
@@ -457,7 +465,7 @@ function HoSoMasterDetailContent() {
                       </div>
                     )}
 
-                    {canManage && (
+                    {canDelete && (
                       <div className="flex flex-col items-center gap-2 cursor-pointer group">
                         <div className="w-12 h-12 rounded-full bg-gray-400 text-white flex items-center justify-center text-xl shadow-md group-hover:-translate-y-1 transition-transform">
                           <StopOutlined />
@@ -552,7 +560,7 @@ function HoSoMasterDetailContent() {
         mode={formMode} 
         open={formOpen} 
         onCancel={() => setFormOpen(false)} 
-        initialData={formMode === 'edit' ? selectedItem : undefined} 
+        initialData={formMode === 'edit' ? (currentData || selectedItem) : undefined} 
       />
     </div>
   );

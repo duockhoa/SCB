@@ -102,6 +102,11 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
       ngay_het_han: values.ngay_het_han ? values.ngay_het_han.format('YYYY-MM-DD') : (mode === 'edit' ? null : undefined),
     };
 
+    if (payload.thong_tin_rieng && typeof payload.thong_tin_rieng === 'object') {
+      const { id: _id, ho_so_chung_id: _cid, ...cleanRieng } = payload.thong_tin_rieng;
+      payload.thong_tin_rieng = cleanRieng;
+    }
+
     if (mode === 'create') {
       createHoSo(payload, {
         onSuccess: () => {
@@ -110,7 +115,10 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           onCancel();
         },
         onError: (err: any) => {
-          message.error(err.response?.data?.message || 'Lỗi khi tạo mới');
+          const errMsg = Array.isArray(err.response?.data?.message)
+            ? err.response.data.message.join(', ')
+            : (err.response?.data?.message || err.message || 'Lỗi khi tạo mới');
+          message.error(errMsg);
         }
       });
     } else {
@@ -121,7 +129,10 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           onCancel();
         },
         onError: (err: any) => {
-          message.error(err.response?.data?.message || 'Lỗi khi cập nhật');
+          const errMsg = Array.isArray(err.response?.data?.message)
+            ? err.response.data.message.join(', ')
+            : (err.response?.data?.message || err.message || 'Lỗi khi cập nhật');
+          message.error(errMsg);
         }
       });
     }

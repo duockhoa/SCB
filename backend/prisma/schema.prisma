@@ -75,6 +75,7 @@ model vai_tro {
   ma_vai_tro  String        @unique @db.VarChar(50)
   ten_vai_tro String        @db.VarChar(200)
   mo_ta       String?       @db.Text
+  quyen_han   String?       @db.Text
 
   nguoi_dung  nguoi_dung[]
 }

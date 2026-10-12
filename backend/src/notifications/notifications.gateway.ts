@@ -59,9 +59,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
       const ma_nguoi_dung = payload.username || payload.sub?.toString() || payload.id?.toString();
       let userRole = payload.role || payload.roleName || payload.position;
       let userDept = payload.department;
+      let dbUser: any = null;
 
       if (ma_nguoi_dung) {
-        const dbUser = await this.prisma.nguoi_dung.findUnique({
+        dbUser = await this.prisma.nguoi_dung.findUnique({
           where: { ma_nguoi_dung },
           include: { vai_tro: true }
         });
@@ -80,12 +81,23 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         this.logger.log(`Client ${client.id} joined room role_ADMIN`);
       }
 
-      // Đưa user vào phòng ban của họ (nếu có phòng ban đồng bộ từ DB/HRM)
-      if (userDept) {
-        // Chuẩn hóa tên phòng ban viết liền không dấu hoặc giữ nguyên để làm tên room
-        const deptRoom = `dept_${userDept.toString().replace(/\s+/g, '')}`;
-        client.join(deptRoom);
-        this.logger.log(`Client ${client.id} joined room ${deptRoom}`);
+      // Nếu user có quyền thao tác/xem hồ sơ (RBAC), đưa vào room_ho_so
+      let perms: string[] = [];
+      if (dbUser?.vai_tro?.quyen_han) {
+        try {
+          perms = JSON.parse(dbUser.vai_tro.quyen_han);
+        } catch {
+          perms = [];
+        }
+      }
+      if (isDeveloper || perms.includes('*') || perms.includes('HOSO_VIEW')) {
+        client.join('room_ho_so');
+        this.logger.log(`Client ${client.id} joined room room_ho_so`);
+      }
+
+      if (userRole) {
+        client.join(`role_${userRole}`);
+        this.logger.log(`Client ${client.id} joined room role_${userRole}`);
       }
 
       this.logger.log(`Client connected: ${client.id} - User ID: ${userId}`);
@@ -107,12 +119,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     if (ownerId) {
       this.server.to(`user_${ownerId}`).emit('profileUpdated', data);
     }
-    // 2. Phát cho tất cả Admin/Manager
+    // 2. Phát cho tất cả Admin
     this.server.to('role_ADMIN').emit('profileUpdated', data);
 
-    // 3. Phát cho phòng ban Đăng ký (Phòng chuyên môn quản lý hồ sơ)
-    // Lấy biến môi trường phòng Đăng ký hoặc mặc định là 'Đăng ký'
-    const deptRegistration = (process.env.DEPT_REGISTRATION || 'Đăng ký').replace(/\s+/g, '');
-    this.server.to(`dept_${deptRegistration}`).emit('profileUpdated', data);
+    // 3. Phát cho tất cả người dùng có quyền xem/thao tác hồ sơ (room_ho_so)
+    this.server.to('room_ho_so').emit('profileUpdated', data);
   }
 }

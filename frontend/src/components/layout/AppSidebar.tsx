@@ -1,7 +1,12 @@
 'use client';
 
 import { Layout, Menu } from 'antd';
-import { DashboardOutlined, FileTextOutlined, AppstoreOutlined, SettingOutlined, HistoryOutlined, FileProtectOutlined } from '@ant-design/icons';
+import { 
+  DashboardOutlined, 
+  FileTextOutlined, 
+  AppstoreOutlined, 
+  SettingOutlined 
+} from '@ant-design/icons';
 import { useUiStore } from '@/store/uiStore';
 import { useRouter, usePathname } from 'next/navigation';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -13,7 +18,7 @@ export default function AppSidebar() {
   const { setGlobalSearch } = useUiStore();
   const router = useRouter();
   const pathname = usePathname();
-  const { canConfigEmail, canViewSystemLogs, canViewDanhMuc, isDeveloper } = usePermissions();
+  const { canConfigEmail, canViewSystemLogs, canViewDanhMuc, isDeveloper, isAdmin } = usePermissions();
 
   const menuItems: any[] = [
     { key: '/', icon: <DashboardOutlined />, label: 'Dashboard' },
@@ -21,32 +26,23 @@ export default function AppSidebar() {
     { key: '/cong-ty', icon: <AppstoreOutlined />, label: 'Quản lý Công ty' },
   ];
 
-  if (canViewDanhMuc) {
+  // Nếu người dùng có bất kỳ quyền cấu hình nào thì hiển thị menu "Cài đặt hệ thống"
+  const canAccessSettings = isDeveloper || isAdmin || canConfigEmail || canViewSystemLogs || canViewDanhMuc;
+  if (canAccessSettings) {
     menuItems.push({
-      key: '/danh-muc',
+      key: '/settings',
       icon: <SettingOutlined />,
-      label: 'Danh mục',
+      label: 'Cài đặt hệ thống',
     });
-  }
-
-
-
-  if (isDeveloper) {
-    menuItems.push({ key: '/settings/users', icon: <SettingOutlined />, label: 'Quản lý Người dùng' });
-  }
-
-  if (canConfigEmail) {
-    menuItems.push({ key: '/settings/email', icon: <SettingOutlined />, label: 'Cấu hình Email' });
-  }
-
-  if (canViewSystemLogs) {
-    menuItems.push({ key: '/settings/logs', icon: <HistoryOutlined />, label: 'Nhật ký Hệ thống' });
   }
 
   const handleMenuClick = ({ key }: { key: string }) => {
     setGlobalSearch('');
     router.push(key);
   };
+
+  // Nếu đang ở bất kỳ trang con nào của /settings thì highlight mục /settings
+  const selectedKey = pathname.startsWith('/settings') ? '/settings' : pathname;
 
   return (
     <Sider 
@@ -60,7 +56,7 @@ export default function AppSidebar() {
       <Menu
         theme="light"
         mode="inline"
-        selectedKeys={[pathname]}
+        selectedKeys={[selectedKey]}
         items={menuItems}
         onClick={handleMenuClick}
         className="mt-4 border-r-0 font-medium"

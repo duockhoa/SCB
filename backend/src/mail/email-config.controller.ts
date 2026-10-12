@@ -14,11 +14,15 @@ export class EmailConfigController {
     private readonly prisma: PrismaService
   ) { }
 
-  // Tạm thời bỏ qua check quyền chặt ở Backend để không chặn tiến độ test
-  // (Do Frontend không gửi kèm Cookie chứa position sang Backend).
-  // Frontend đã có sẵn logic ẩn menu Cấu hình Email với người không có quyền.
   private checkManagePermission(req: any) {
-    if (!req.user) throw new ForbiddenException('Chưa đăng nhập');
+    const user = req.user;
+    if (!user) throw new ForbiddenException('Chưa đăng nhập');
+    const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
+    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '') || user.role === 'ADMIN' || !!user.isAdmin;
+    const hasPerm = (user.permissions || []).includes('*') || (user.permissions || []).includes('EMAIL_CONFIG');
+    if (!isDeveloper && !hasPerm) {
+      throw new ForbiddenException('Bạn không có quyền quản lý cấu hình Email (Yêu cầu quyền: EMAIL_CONFIG)');
+    }
     return true;
   }
 

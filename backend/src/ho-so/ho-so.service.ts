@@ -269,7 +269,8 @@ export class HoSoService {
         };
         const delegate = delegateMap[loaiHoSo.ma_loai];
         if (delegate) {
-          await delegate.create({ data: { ho_so_chung_id: hoSoChung.id, ...thong_tin_rieng } });
+          const { id: _id, ho_so_chung_id: _cid, ...cleanThongTinRieng } = thong_tin_rieng;
+          await delegate.create({ data: { ho_so_chung_id: hoSoChung.id, ...cleanThongTinRieng } });
         }
       }
 
@@ -364,10 +365,11 @@ export class HoSoService {
         };
         const delegate = delegateMap[hoSo.loai_ho_so.ma_loai];
         if (delegate) {
+          const { id: _id, ho_so_chung_id: _cid, ...cleanThongTinRieng } = thong_tin_rieng;
           await delegate.upsert({
             where: { ho_so_chung_id: id },
-            update: thong_tin_rieng,
-            create: { ho_so_chung_id: id, ...thong_tin_rieng }
+            update: cleanThongTinRieng,
+            create: { ho_so_chung_id: id, ...cleanThongTinRieng }
           });
         }
       }

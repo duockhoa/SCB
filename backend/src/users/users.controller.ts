@@ -1,51 +1,78 @@
-import { Controller, Get, Put, Body, Param, ParseIntPipe, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import { 
+  Controller, Get, Post, Put, Delete, Body, Param, ParseIntPipe, UseGuards, Req 
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { RequirePermissions } from '../auth/decorators/roles.decorator';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
-@ApiTags('Users Management')
+@ApiTags('Users & RBAC Management')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  private checkDeveloper(req: any) {
-    const user = req.user;
-    const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
-    const isDeveloper = DEVELOPER_USERNAMES.includes(user.username?.toLowerCase() || '');
-    if (!isDeveloper) {
-      throw new ForbiddenException('Bạn không có quyền thực hiện hành động này');
-    }
-  }
-
   @Get()
   @ApiOperation({ summary: 'Lấy danh sách người dùng' })
-  findAll(@Req() req: any) {
-    this.checkDeveloper(req);
+  @RequirePermissions('USERS_MANAGE', 'ROLES_MANAGE')
+  findAll() {
     return this.usersService.findAll();
   }
 
   @Get('roles')
-  @ApiOperation({ summary: 'Lấy danh sách vai trò' })
-  getRoles(@Req() req: any) {
-    this.checkDeveloper(req);
+  @ApiOperation({ summary: 'Lấy danh sách vai trò (kèm danh sách quyền và số lượng người dùng)' })
+  @RequirePermissions('ROLES_MANAGE', 'USERS_MANAGE')
+  getRoles() {
     return this.usersService.getRoles();
+  }
+
+  @Get('permissions')
+  @ApiOperation({ summary: 'Lấy danh mục các quyền hạn (Permission Catalog)' })
+  @RequirePermissions('ROLES_MANAGE', 'USERS_MANAGE')
+  getPermissionsCatalog() {
+    return this.usersService.getPermissionsCatalog();
+  }
+
+  @Post('roles')
+  @ApiOperation({ summary: 'Tạo vai trò mới' })
+  @RequirePermissions('ROLES_MANAGE')
+  createRole(
+    @Body() body: { ma_vai_tro: string; ten_vai_tro: string; mo_ta?: string; quyen_han?: string[] }
+  ) {
+    return this.usersService.createRole(body);
+  }
+
+  @Put('roles/:id')
+  @ApiOperation({ summary: 'Cập nhật vai trò và phân quyền chi tiết' })
+  @RequirePermissions('ROLES_MANAGE')
+  updateRoleDetail(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { ten_vai_tro?: string; mo_ta?: string; quyen_han?: string[] }
+  ) {
+    return this.usersService.updateRoleDetail(id, body);
+  }
+
+  @Delete('roles/:id')
+  @ApiOperation({ summary: 'Xóa vai trò' })
+  @RequirePermissions('ROLES_MANAGE')
+  deleteRole(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.deleteRole(id);
   }
 
   @Put(':id/role')
   @ApiOperation({ summary: 'Cập nhật vai trò người dùng' })
+  @RequirePermissions('USERS_MANAGE', 'ROLES_MANAGE')
   updateRole(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { roleId: number | null },
-    @Req() req: any
+    @Body() body: { roleId: number | null }
   ) {
-    this.checkDeveloper(req);
     return this.usersService.updateRole(id, body.roleId);
   }
 
   @Get('me')
-  @ApiOperation({ summary: 'Lấy thông tin tài khoản hiện tại kèm vai trò từ DB' })
+  @ApiOperation({ summary: 'Lấy thông tin tài khoản hiện tại kèm vai trò & quyền hạn từ DB' })
   getMe(@Req() req: any) {
     return req.user;
   }

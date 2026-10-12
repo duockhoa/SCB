@@ -64,6 +64,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         const mergedUser = {
           ...hrmUser,
           role: scbUser.role,
+          roleName: scbUser.roleName,
+          permissions: scbUser.permissions || [],
+          isAdmin: scbUser.isAdmin,
           vai_tro: scbUser.vai_tro,
           userId: scbUser.userId || scbUser.id,
           // Nếu HRM lưu avatar ở đường dẫn tương đối, ghép với hrmApiUrl

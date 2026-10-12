@@ -8,7 +8,7 @@ import { ThayTheDto } from './dto/thay-the.dto';
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { RequireRole } from '../auth/decorators/roles.decorator';
+import { RequirePermissions } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Hồ Sơ')
 @ApiBearerAuth()
@@ -19,7 +19,7 @@ export class HoSoController {
 
   @Post()
   @ApiOperation({ summary: 'Tạo mới hồ sơ' })
-  @RequireRole({ department: 'Đăng ký' })
+  @RequirePermissions('HOSO_CREATE')
   create(@Body() createHoSoDto: CreateHoSoDto, @Req() req: any) {
     return this.hoSoService.create(createHoSoDto, req.user?.userId);
   }
@@ -52,42 +52,42 @@ export class HoSoController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Cập nhật hồ sơ' })
-  @RequireRole({ department: 'Đăng ký', position: 'TP' })
+  @RequirePermissions('HOSO_UPDATE')
   update(@Param('id', ParseIntPipe) id: number, @Body() updateHoSoDto: UpdateHoSoDto, @Req() req: any) {
     return this.hoSoService.update(id, updateHoSoDto, req.user?.userId);
   }
 
   @Patch(':id/cap-so')
   @ApiOperation({ summary: 'Cấp số công bố cho hồ sơ' })
-  @RequireRole({ department: 'Đăng ký' })
+  @RequirePermissions('HOSO_CAP_SO')
   capSo(@Param('id', ParseIntPipe) id: number, @Body() capSoDto: CapSoDto, @Req() req: any) {
     return this.hoSoService.capSo(id, capSoDto, req.user?.userId);
   }
 
   @Post(':id/gia-han')
   @ApiOperation({ summary: 'Gia hạn hồ sơ' })
-  @RequireRole({ department: 'Đăng ký' })
+  @RequirePermissions('HOSO_GIA_HAN')
   giaHan(@Param('id', ParseIntPipe) id: number, @Body() giaHanDto: GiaHanDto, @Req() req: any) {
     return this.hoSoService.giaHan(id, giaHanDto, req.user?.userId);
   }
 
   @Post(':id/thay-the')
   @ApiOperation({ summary: 'Thay thế hồ sơ (Đổi số công bố)' })
-  @RequireRole({ department: 'Đăng ký', position: 'TP' })
+  @RequirePermissions('HOSO_THAY_THE')
   thayThe(@Param('id', ParseIntPipe) id: number, @Body() thayTheDto: ThayTheDto, @Req() req: any) {
     return this.hoSoService.thayThe(id, thayTheDto, req.user?.userId);
   }
 
   @Post(':id/thay-doi')
   @ApiOperation({ summary: 'Thêm lịch sử thay đổi bổ sung' })
-  @RequireRole({ department: 'Đăng ký' })
+  @RequirePermissions('HOSO_THAY_DOI')
   thayDoi(@Param('id', ParseIntPipe) id: number, @Body() thayDoiDto: import('./dto/thay-doi.dto').ThayDoiDto, @Req() req: any) {
     return this.hoSoService.thayDoi(id, thayDoiDto, req.user?.userId);
   }
 
   @Patch(':id/lich-su-thay-doi/:lichSuId')
   @ApiOperation({ summary: 'Cập nhật lịch sử thay đổi' })
-  @RequireRole({ department: 'Đăng ký' })
+  @RequirePermissions('HOSO_THAY_DOI')
   updateLichSuThayDoi(
     @Param('id', ParseIntPipe) id: number,
     @Param('lichSuId', ParseIntPipe) lichSuId: number,
@@ -99,7 +99,7 @@ export class HoSoController {
 
   @Delete(':id/lich-su-thay-doi/:lichSuId')
   @ApiOperation({ summary: 'Xóa lịch sử thay đổi' })
-  @RequireRole({ department: 'Đăng ký', position: 'TP' })
+  @RequirePermissions('HOSO_THAY_DOI', 'HOSO_DELETE')
   deleteLichSuThayDoi(
     @Param('id', ParseIntPipe) id: number,
     @Param('lichSuId', ParseIntPipe) lichSuId: number,
@@ -110,21 +110,21 @@ export class HoSoController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Xóa hồ sơ' })
-  @RequireRole({ department: 'Đăng ký', position: 'TP' })
+  @RequirePermissions('HOSO_DELETE')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.hoSoService.remove(id);
   }
 
   @Post(':id/tai-lieu')
   @ApiOperation({ summary: 'Thêm tài liệu đính kèm khác' })
-  @RequireRole({ department: 'Đăng ký' })
+  @RequirePermissions('HOSO_TAI_LIEU')
   addTaiLieu(@Param('id', ParseIntPipe) id: number, @Body() data: import('./dto/tai-lieu.dto').TaiLieuDto, @Req() req: any) {
     return this.hoSoService.addTaiLieu(id, data, req.user?.userId);
   }
 
   @Delete(':id/tai-lieu/:taiLieuId')
   @ApiOperation({ summary: 'Xóa tài liệu đính kèm khác' })
-  @RequireRole({ department: 'Đăng ký', position: 'TP' })
+  @RequirePermissions('HOSO_TAI_LIEU', 'HOSO_DELETE')
   deleteTaiLieu(
     @Param('id', ParseIntPipe) id: number,
     @Param('taiLieuId', ParseIntPipe) taiLieuId: number,

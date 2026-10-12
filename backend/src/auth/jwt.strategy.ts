@@ -86,15 +86,60 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
+    const DEVELOPER_USERNAMES = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
+    const isDeveloper = DEVELOPER_USERNAMES.includes(ma_nguoi_dung?.toLowerCase());
+    const isAdmin = isDeveloper || user.vai_tro?.ma_vai_tro === 'ADMIN';
+
+    // Nếu người dùng chưa có vai trò RBAC trong DB, tự động gán vai trò khởi tạo để có thể quản lý trực tiếp trên app
+    if (!user.vai_tro_id) {
+      let defaultRoleCode = 'VIEWER';
+      const deptNormalized = (user.phong_ban || phong_ban || '').toLowerCase();
+      const posNormalized = (user.chuc_vu || chuc_vu || '').toLowerCase();
+
+      if (isAdmin) {
+        defaultRoleCode = 'ADMIN';
+      } else if (deptNormalized.includes('đăng ký')) {
+        if (posNormalized.includes('tp') || posNormalized.includes('trưởng phòng')) {
+          defaultRoleCode = 'TRUONG_PHONG';
+        } else {
+          defaultRoleCode = 'NV_DANG_KY';
+        }
+      }
+
+      const defaultRole = await this.prisma.vai_tro.findUnique({
+        where: { ma_vai_tro: defaultRoleCode }
+      });
+
+      if (defaultRole) {
+        user = await this.prisma.nguoi_dung.update({
+          where: { id: user.id },
+          data: { vai_tro_id: defaultRole.id },
+          include: { vai_tro: true }
+        });
+      }
+    }
+
+    let permissions: string[] = [];
+    if (user.vai_tro?.quyen_han) {
+      try {
+        permissions = JSON.parse(user.vai_tro.quyen_han);
+      } catch {
+        permissions = [];
+      }
+    }
+
     return {
       ...payload,
       userId: user.id, // ID cục bộ trong SCB
       hrmId: payload.id || payload.sub,
       username: ma_nguoi_dung,
       name: user.ho_ten || ho_ten,
-      department: user.phong_ban || phong_ban,  // Ưu tiên lấy từ DB
-      position: user.chuc_vu || chuc_vu,        // Ưu tiên lấy từ DB
-      role: user.vai_tro?.ma_vai_tro || null,    // Vai trò lấy từ DB
+      department: user.phong_ban || phong_ban,
+      position: user.chuc_vu || chuc_vu,
+      role: user.vai_tro?.ma_vai_tro || null,
+      roleName: user.vai_tro?.ten_vai_tro || null,
+      permissions: isAdmin ? ['*'] : permissions,
+      isAdmin,
     };
   }
 }
