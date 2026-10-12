@@ -387,11 +387,11 @@ export default function RolesManagementTab() {
             </Text>
           </div>
 
-          <div className="border border-gray-200 rounded-xl overflow-x-auto shadow-2xs bg-white">
+          <div className="border border-gray-200 rounded-xl overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)] shadow-2xs bg-white">
             <table className="w-full border-collapse text-left text-sm">
-              <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-700">
-                  <th className="py-3.5 px-4 font-semibold min-w-[320px] sticky left-0 bg-gray-50 z-10 border-r border-gray-200">
+              <thead className="sticky top-0 z-20 bg-gray-50 shadow-xs">
+                <tr className="bg-gray-50 border-b border-gray-200 text-gray-700">
+                  <th className="py-3.5 px-4 font-semibold min-w-[320px] sticky left-0 top-0 bg-gray-50 z-30 border-r border-gray-200">
                     Danh mục Quyền hạn theo Module
                   </th>
                   {roles.map((r) => {
@@ -400,7 +400,7 @@ export default function RolesManagementTab() {
                     const isAll = currentPerms.length === allPermsCount;
 
                     return (
-                      <th key={r.id} className="py-3 px-3 font-semibold min-w-[170px] text-center border-r border-gray-100 last:border-r-0">
+                      <th key={r.id} className="py-3 px-3 font-semibold min-w-[170px] text-center border-r border-gray-100 last:border-r-0 bg-gray-50">
                         <div className="flex flex-col items-center gap-1">
                           <Tag color={getRoleBadgeColor(r.ma_vai_tro)} className="m-0 font-semibold px-2 py-0.5">
                             {r.ma_vai_tro}
@@ -441,8 +441,8 @@ export default function RolesManagementTab() {
                 {filteredModules.map((module) => (
                   <React.Fragment key={module.module}>
                     {/* Hàng phân cách Module */}
-                    <tr className="bg-blue-50/40 font-semibold text-blue-900 border-t border-b border-blue-100">
-                      <td colSpan={roles.length + 1} className="py-2 px-4 text-xs tracking-wide uppercase">
+                    <tr className="bg-blue-50/90 font-semibold text-blue-900 border-t border-b border-blue-100">
+                      <td colSpan={roles.length + 1} className="py-2.5 px-4 text-xs tracking-wide uppercase sticky left-0 z-10 bg-blue-50/90">
                         📂 {module.module} - <span className="font-normal text-blue-700/80 normal-case">{module.description}</span>
                       </td>
                     </tr>

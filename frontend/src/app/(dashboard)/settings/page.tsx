@@ -114,28 +114,29 @@ function SettingsContent() {
   };
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto min-h-screen">
-      {/* Tiêu đề trang */}
-      <div className="mb-6 pb-4 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
-            <SettingOutlined className="text-xl" />
-          </div>
-          <div>
-            <Title level={3} className="!m-0 text-gray-800 font-bold flex items-center gap-2">
-              Cài đặt & Cấu hình hệ thống
-            </Title>
-            <Text type="secondary" className="text-sm">
-              Quản lý danh mục cơ sở, cấu hình email thông báo và phân quyền người dùng.
-            </Text>
+    <div className="h-full w-full overflow-y-auto bg-[#f0f2f5]">
+      <div className="p-6 max-w-[1600px] mx-auto pb-16">
+        {/* Tiêu đề trang */}
+        <div className="mb-6 pb-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
+              <SettingOutlined className="text-xl" />
+            </div>
+            <div>
+              <Title level={3} className="!m-0 text-gray-800 font-bold flex items-center gap-2">
+                Cài đặt & Cấu hình hệ thống
+              </Title>
+              <Text type="secondary" className="text-sm">
+                Quản lý danh mục cơ sở, cấu hình email thông báo và phân quyền người dùng.
+              </Text>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Bố cục 2 cột giống giao diện mẫu */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Cột trái: Danh sách các mục cấu hình */}
-        <div className="w-full lg:w-80 shrink-0 bg-white rounded-xl border border-gray-200 shadow-sm p-3">
+        {/* Bố cục 2 cột giống giao diện mẫu */}
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          {/* Cột trái: Danh sách các mục cấu hình */}
+          <div className="w-full lg:w-80 shrink-0 bg-white rounded-xl border border-gray-200 shadow-sm p-3 lg:sticky lg:top-4">
           {groups.map((group, gIdx) => {
             const visibleItems = group.items.filter((i) => i.visible);
             if (visibleItems.length === 0) return null;
@@ -196,6 +197,7 @@ function SettingsContent() {
           {activeTab === 'danh-muc' && <DanhMucSettingsTab />}
         </div>
       </div>
+    </div>
     </div>
   );
 }
