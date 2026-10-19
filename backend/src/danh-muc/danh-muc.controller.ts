@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, ParseIntPipe } from '@nestjs/common';
 import { DanhMucService } from './danh-muc.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
@@ -11,6 +11,15 @@ export class DanhMucController {
   @ApiOperation({ summary: 'Lấy danh mục loại hồ sơ' })
   getLoaiHoSo() {
     return this.danhMucService.getLoaiHoSo();
+  }
+
+  @Patch('loai-ho-so/:id/canh-bao-han')
+  @ApiOperation({ summary: 'Cập nhật cấu hình cảnh báo hạn cho loại hồ sơ' })
+  updateLoaiHoSoExpiry(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { thoi_gian_canh_bao: number; don_vi_canh_bao?: string; dong_bo_tat_ca?: boolean },
+  ) {
+    return this.danhMucService.updateLoaiHoSoExpiry(id, body);
   }
 
   @Get('tinh-trang')

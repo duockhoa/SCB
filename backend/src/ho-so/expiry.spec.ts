@@ -22,4 +22,16 @@ describe('dossier expiry rules', () => {
     expect(reminderDate(null)).toBeNull();
     expect(expiryStatus(null, dateOnly('2026-10-01')!)).toBe('CON_HIEU_LUC');
   });
+
+  it('supports dynamic expiry config by months or days', () => {
+    // Cấu hình 3 tháng
+    expect(reminderDate('2027-04-01', { value: 3, unit: 'THANG' })?.toISOString().slice(0, 10)).toBe('2027-01-01');
+    expect(expiryStatus('2027-04-01', { value: 3, unit: 'THANG' }, dateOnly('2026-12-31')!)).toBe('CON_HIEU_LUC');
+    expect(expiryStatus('2027-04-01', { value: 3, unit: 'THANG' }, dateOnly('2027-01-01')!)).toBe('SAP_HET_HAN');
+
+    // Cấu hình 45 ngày
+    expect(reminderDate('2027-04-01', { value: 45, unit: 'NGAY' })?.toISOString().slice(0, 10)).toBe('2027-02-15');
+    expect(expiryStatus('2027-04-01', { value: 45, unit: 'NGAY' }, dateOnly('2027-02-14')!)).toBe('CON_HIEU_LUC');
+    expect(expiryStatus('2027-04-01', { value: 45, unit: 'NGAY' }, dateOnly('2027-02-15')!)).toBe('SAP_HET_HAN');
+  });
 });

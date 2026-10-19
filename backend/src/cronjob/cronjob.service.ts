@@ -2,7 +2,7 @@ import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
-import { EXPIRY_STATUSES, expiryStatus, reminderDate, todayInVietnam } from '../ho-so/expiry';
+import { EXPIRY_STATUSES, expiryStatus, reminderDate, todayInVietnam, ExpiryConfig, DEFAULT_EXPIRY_CONFIG } from '../ho-so/expiry';
 
 @Injectable()
 export class CronjobService {
@@ -24,6 +24,13 @@ export class CronjobService {
       if (!ids.has(code)) throw new InternalServerErrorException(`Thiếu trạng thái hồ sơ ${code}`);
     }
 
+    const loaiHoSoList = await this.prisma.dm_loai_ho_so.findMany({
+      select: { id: true, thoi_gian_canh_bao: true, don_vi_canh_bao: true },
+    });
+    const typeConfigMap = new Map<number, ExpiryConfig>(
+      loaiHoSoList.map((l) => [l.id, { value: l.thoi_gian_canh_bao ?? 6, unit: l.don_vi_canh_bao ?? 'THANG' }])
+    );
+
     let cursor = 0;
     let changed = 0;
     for (;;) {
@@ -31,7 +38,7 @@ export class CronjobService {
         where: { id: { gt: cursor }, tinh_trang_id: { in: [...ids.values()] } },
         select: {
           id: true, ma_ho_so: true, ten_san_pham: true, so_chinh: true,
-          ngay_het_han: true, ngay_nhac_han: true, tinh_trang_id: true,
+          ngay_het_han: true, ngay_nhac_han: true, tinh_trang_id: true, loai_ho_so_id: true,
         },
         orderBy: { id: 'asc' },
         take: 200,
@@ -41,9 +48,10 @@ export class CronjobService {
 
       for (const dossier of dossiers) {
         if (!dossier.ngay_het_han) continue;
-        const code = expiryStatus(dossier.ngay_het_han, today);
+        const config = typeConfigMap.get(dossier.loai_ho_so_id) || DEFAULT_EXPIRY_CONFIG;
+        const code = expiryStatus(dossier.ngay_het_han, config, today);
         const nextId = ids.get(code)!;
-        const nextReminder = reminderDate(dossier.ngay_het_han);
+        const nextReminder = reminderDate(dossier.ngay_het_han, config);
         if (dossier.tinh_trang_id === nextId &&
           dossier.ngay_nhac_han?.getTime() === nextReminder?.getTime()) continue;
 

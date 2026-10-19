@@ -11,12 +11,14 @@ datasource db {
 // ==========================================
 
 model dm_loai_ho_so {
-  id          Int           @id @default(autoincrement())
-  ma_loai     String        @unique @db.VarChar(50)
-  ten_loai    String        @db.VarChar(200)
-  mo_ta       String?       @db.VarChar(500)
-  thu_tu      Int           @default(0)
-  trang_thai  Boolean       @default(true)
+  id                 Int           @id @default(autoincrement())
+  ma_loai            String        @unique @db.VarChar(50)
+  ten_loai           String        @db.VarChar(200)
+  mo_ta              String?       @db.VarChar(500)
+  thu_tu             Int           @default(0)
+  trang_thai         Boolean       @default(true)
+  thoi_gian_canh_bao Int           @default(6)
+  don_vi_canh_bao    String        @default("THANG") @db.VarChar(20)
   
   ho_so_chung ho_so_chung[]
 }

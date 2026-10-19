@@ -22,6 +22,9 @@ describe('expiry reconciliation', () => {
         { ma_tinh_trang: 'SAP_HET_HAN', id: 2 },
         { ma_tinh_trang: 'DA_HET_HAN', id: 3 },
       ]) },
+      dm_loai_ho_so: { findMany: jest.fn().mockResolvedValue([
+        { id: 1, thoi_gian_canh_bao: 6, don_vi_canh_bao: 'THANG' },
+      ]) },
       ho_so_chung: { findMany: jest.fn().mockResolvedValueOnce([row]).mockResolvedValueOnce([]) },
       $transaction: jest.fn((callback) => callback(tx)),
     };
@@ -44,7 +47,7 @@ describe('expiry reconciliation', () => {
     const row = {
       id: 7, ma_ho_so: 'HS-7', ten_san_pham: 'Sản phẩm', so_chinh: '123',
       ngay_het_han: new Date('2027-04-01T00:00:00Z'),
-      ngay_nhac_han: null, tinh_trang_id: 1,
+      ngay_nhac_han: null, tinh_trang_id: 1, loai_ho_so_id: 1,
     };
     const tx = {
       ho_so_chung: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
@@ -55,6 +58,9 @@ describe('expiry reconciliation', () => {
         { ma_tinh_trang: 'CON_HIEU_LUC', id: 1 },
         { ma_tinh_trang: 'SAP_HET_HAN', id: 2 },
         { ma_tinh_trang: 'DA_HET_HAN', id: 3 },
+      ]) },
+      dm_loai_ho_so: { findMany: jest.fn().mockResolvedValue([
+        { id: 1, thoi_gian_canh_bao: 6, don_vi_canh_bao: 'THANG' },
       ]) },
       ho_so_chung: { findMany: jest.fn().mockResolvedValueOnce([row]).mockResolvedValueOnce([]) },
       $transaction: jest.fn((callback) => callback(tx)),
