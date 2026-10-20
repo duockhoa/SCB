@@ -65,13 +65,23 @@ export class DanhMucService {
           ngay_het_han: { not: null },
           tinh_trang_id: { in: [...ids.values()] },
         },
-        select: { id: true, ngay_het_han: true, tinh_trang_id: true, ngay_nhac_han: true },
+        select: {
+          id: true,
+          ngay_het_han: true,
+          tinh_trang_id: true,
+          ngay_nhac_han: true,
+          ap_dung_quy_dinh_tam_thoi: true,
+          ngay_het_han_quy_dinh: true,
+        },
       });
 
       for (const d of dossiers) {
-        const nextCode = expiryStatus(d.ngay_het_han, config, today);
+        const effective = (d.ap_dung_quy_dinh_tam_thoi && d.ngay_het_han_quy_dinh)
+          ? d.ngay_het_han_quy_dinh
+          : d.ngay_het_han;
+        const nextCode = expiryStatus(effective, config, today);
         const nextId = ids.get(nextCode);
-        const nextReminder = reminderDate(d.ngay_het_han, config);
+        const nextReminder = reminderDate(effective, config);
 
         if (d.tinh_trang_id !== nextId || d.ngay_nhac_han?.getTime() !== nextReminder?.getTime()) {
           await this.prisma.ho_so_chung.update({

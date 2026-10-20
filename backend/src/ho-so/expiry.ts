@@ -26,6 +26,17 @@ export function dateOnly(value: Date | string | null | undefined): Date | null {
   return date;
 }
 
+export function effectiveExpiryDate(
+  expiry: Date | string | null | undefined,
+  apDungQuyDinh?: boolean | null,
+  expiryQuyDinh?: Date | string | null,
+): Date | null {
+  if (apDungQuyDinh && expiryQuyDinh) {
+    return dateOnly(expiryQuyDinh);
+  }
+  return dateOnly(expiry);
+}
+
 export function todayInVietnam(now = new Date()): Date {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: EXPIRY_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',

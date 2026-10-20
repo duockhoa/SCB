@@ -59,6 +59,25 @@ export class CreateHoSoDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  ap_dung_quy_dinh_tam_thoi?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  ngay_het_han_quy_dinh?: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  can_cu_quy_dinh?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  tai_lieu_quy_dinh_url?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsInt()
   tinh_trang_id?: number;
 

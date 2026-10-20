@@ -140,6 +140,10 @@ model ho_so_chung {
   ngay_cong_bo              DateTime? @db.Date
   ngay_het_han              DateTime? @db.Date
   ngay_nhac_han             DateTime? @db.Date
+  ap_dung_quy_dinh_tam_thoi Boolean   @default(false)
+  ngay_het_han_quy_dinh     DateTime? @db.Date
+  can_cu_quy_dinh           String?   @db.VarChar(500)
+  tai_lieu_quy_dinh_url     String?   @db.VarChar(2000)
   tinh_trang_id             Int?
   ho_so_luu_url             String?   @db.VarChar(2000)
   ghi_chu                   String?   @db.Text

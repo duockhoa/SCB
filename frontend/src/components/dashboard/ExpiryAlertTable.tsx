@@ -42,9 +42,21 @@ export default function ExpiryAlertTable({ data, total, page, onPageChange }: Pr
     },
     {
       title: 'Ngày hết hạn',
-      dataIndex: 'ngay_het_han',
       key: 'ngay_het_han',
-      render: (text: string) => <span style={{ fontWeight: 'bold' }}>{text ? dayjs(text).format('DD/MM/YYYY') : 'N/A'}</span>,
+      render: (record: HoSoChung) => (
+        <div>
+          <span style={{ fontWeight: 'bold' }}>
+            {record.ngay_het_han ? dayjs(record.ngay_het_han).format('DD/MM/YYYY') : 'N/A'}
+          </span>
+          {record.ap_dung_quy_dinh_tam_thoi && (
+            <div style={{ marginTop: '2px' }}>
+              <Tag color="purple" style={{ fontSize: '11px', margin: 0 }}>
+                Hiệu lực QĐ: {record.ngay_het_han_quy_dinh ? dayjs(record.ngay_het_han_quy_dinh).format('DD/MM/YYYY') : 'N/A'}
+              </Tag>
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: 'Trạng thái',

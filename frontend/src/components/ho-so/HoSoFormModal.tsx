@@ -1,4 +1,4 @@
-import { Modal, Form, Input, Select, message, Divider, DatePicker } from 'antd';
+import { Modal, Form, Input, Select, message, Divider, DatePicker, Switch } from 'antd';
 import { useEffect } from 'react';
 import dayjs from 'dayjs';
 import { useCreateHoSo, useUpdateHoSo } from '@/hooks/queries/useHoSo';
@@ -37,6 +37,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
   const tinhTrangList = tinhTrangResult?.data || [];
 
   const currentLoaiHoSo = Form.useWatch('loai_ho_so_id', form);
+  const isApDungQuyDinhWatch = Form.useWatch('ap_dung_quy_dinh_tam_thoi', form);
   const currentMaLoai = loaiHoSoList.find((l: any) => l.id === currentLoaiHoSo)?.ma_loai;
 
   useEffect(() => {
@@ -64,6 +65,10 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           cong_ty_so_huu_id: initialData.cong_ty_so_huu_id,
           ngay_cong_bo: initialData.ngay_cong_bo ? dayjs(initialData.ngay_cong_bo) : undefined,
           ngay_het_han: initialData.ngay_het_han ? dayjs(initialData.ngay_het_han) : undefined,
+          ap_dung_quy_dinh_tam_thoi: initialData.ap_dung_quy_dinh_tam_thoi ?? false,
+          ngay_het_han_quy_dinh: initialData.ngay_het_han_quy_dinh ? dayjs(initialData.ngay_het_han_quy_dinh) : undefined,
+          can_cu_quy_dinh: initialData.can_cu_quy_dinh || '',
+          tai_lieu_quy_dinh_url: initialData.tai_lieu_quy_dinh_url || '',
           ghi_chu: initialData.ghi_chu || '',
           ho_so_luu_url: initialData.ho_so_luu_url || '',
           thong_tin_rieng, // Đổ dữ liệu riêng vào form
@@ -100,6 +105,12 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
       ...values,
       ngay_cong_bo: values.ngay_cong_bo ? values.ngay_cong_bo.format('YYYY-MM-DD') : undefined,
       ngay_het_han: values.ngay_het_han ? values.ngay_het_han.format('YYYY-MM-DD') : (mode === 'edit' ? null : undefined),
+      ap_dung_quy_dinh_tam_thoi: values.ap_dung_quy_dinh_tam_thoi ?? false,
+      ngay_het_han_quy_dinh: values.ap_dung_quy_dinh_tam_thoi && values.ngay_het_han_quy_dinh
+        ? values.ngay_het_han_quy_dinh.format('YYYY-MM-DD')
+        : null,
+      can_cu_quy_dinh: values.ap_dung_quy_dinh_tam_thoi ? values.can_cu_quy_dinh : null,
+      tai_lieu_quy_dinh_url: values.ap_dung_quy_dinh_tam_thoi ? values.tai_lieu_quy_dinh_url : null,
     };
 
     if (payload.thong_tin_rieng && typeof payload.thong_tin_rieng === 'object') {
@@ -216,6 +227,48 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
               options={dsCongTy.map((ct: any) => ({ value: ct.id, label: ct.ten_cong_ty }))}
             />
           </Form.Item>
+        </div>
+
+        <div className="mb-4 p-3 rounded-lg border border-indigo-100 bg-indigo-50/40">
+          <Form.Item 
+            name="ap_dung_quy_dinh_tam_thoi" 
+            label={<span className="font-semibold text-indigo-900">Áp dụng quy định cho phép tiếp tục sử dụng số công bố</span>}
+            valuePropName="checked"
+            style={{ marginBottom: isApDungQuyDinhWatch ? 12 : 0 }}
+            extra="Bật khi hồ sơ có hạn in trên giấy phép gốc không đổi nhưng vẫn còn hiệu lực theo Nghị quyết, Nghị định gia hạn tạm thời"
+          >
+            <Switch checkedChildren="Đang áp dụng" unCheckedChildren="Tắt" />
+          </Form.Item>
+
+          {isApDungQuyDinhWatch && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px', marginTop: 12 }}>
+              <Form.Item 
+                name="can_cu_quy_dinh" 
+                label="Căn cứ pháp lý quy định" 
+                rules={[{ required: true, message: 'Nhập căn cứ văn bản (VD: NQ 80/2023, NĐ 07/2023)' }]}
+              >
+                <Input placeholder="VD: Nghị quyết 80/2023/QH15" />
+              </Form.Item>
+
+              <Form.Item 
+                name="ngay_het_han_quy_dinh" 
+                label="Hạn sử dụng theo quy định" 
+                rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn theo quy định' }]}
+              >
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày" />
+              </Form.Item>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <Form.Item 
+                  name="tai_lieu_quy_dinh_url" 
+                  label="Tài liệu / Công văn quy định đính kèm (Link hoặc tải file lên)"
+                  extra="Có thể dán link ngoài (Google Drive, văn bản...) hoặc bấm Upload để tải file trực tiếp từ máy tính"
+                >
+                  <UploadOrLinkInput placeholder="Dán link hoặc tải file công văn/văn bản quy định lên..." />
+                </Form.Item>
+              </div>
+            </div>
+          )}
         </div>
 
         <Form.Item name="ghi_chu" label="Ghi chú">

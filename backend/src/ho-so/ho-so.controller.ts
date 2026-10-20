@@ -5,6 +5,7 @@ import { UpdateHoSoDto } from './dto/update-ho-so.dto';
 import { CapSoDto } from './dto/cap-so.dto';
 import { GiaHanDto } from './dto/gia-han.dto';
 import { ThayTheDto } from './dto/thay-the.dto';
+import { QuyDinhTamThoiDto } from './dto/quy-dinh-tam-thoi.dto';
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -72,6 +73,17 @@ export class HoSoController {
   @RequirePermissions('HOSO_GIA_HAN', 'HOSO_UPDATE')
   giaHan(@Param('id', ParseIntPipe) id: number, @Body() giaHanDto: GiaHanDto, @Req() req: any) {
     return this.hoSoService.giaHan(id, giaHanDto, req.user?.userId);
+  }
+
+  @Patch(':id/quy-dinh-tam-thoi')
+  @ApiOperation({ summary: 'Áp dụng / hủy quy định tạm thời duy trì hiệu lực hồ sơ' })
+  @RequirePermissions('HOSO_UPDATE')
+  apDungQuyDinh(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() quyDinhDto: QuyDinhTamThoiDto,
+    @Req() req: any
+  ) {
+    return this.hoSoService.apDungQuyDinh(id, quyDinhDto, req.user?.userId);
   }
 
   @Post(':id/thay-the')

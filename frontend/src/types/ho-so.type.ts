@@ -21,6 +21,10 @@ export interface HoSoChung {
   ngay_cong_bo?: string;
   ngay_het_han?: string;
   ngay_nhac_han?: string;
+  ap_dung_quy_dinh_tam_thoi?: boolean;
+  ngay_het_han_quy_dinh?: string;
+  can_cu_quy_dinh?: string;
+  tai_lieu_quy_dinh_url?: string;
   tinh_trang_id?: number;
   tinh_trang?: TinhTrang;
   ghi_chu?: string;

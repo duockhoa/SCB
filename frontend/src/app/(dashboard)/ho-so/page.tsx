@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Breadcrumb, Button, Skeleton, Dropdown, MenuProps, Popconfirm, message, Input, Descriptions, Empty, Timeline } from 'antd';
-import { CloseOutlined, PlusCircleOutlined, SyncOutlined, SwapOutlined, StopOutlined, EditOutlined, DeleteOutlined, MoreOutlined, PlusOutlined, SearchOutlined, ClockCircleOutlined, FileAddOutlined } from '@ant-design/icons';
+import { Breadcrumb, Button, Skeleton, Dropdown, MenuProps, Popconfirm, message, Input, Descriptions, Empty, Timeline, Card, Tag } from 'antd';
+import { CloseOutlined, PlusCircleOutlined, SyncOutlined, SwapOutlined, StopOutlined, EditOutlined, DeleteOutlined, MoreOutlined, PlusOutlined, SearchOutlined, ClockCircleOutlined, FileAddOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useHoSoList, useHoSoDetail, useDeleteHoSo } from '@/hooks/queries/useHoSo';
 import type { HoSoChung } from '@/types/ho-so.type';
 import dayjs from 'dayjs';
@@ -14,12 +14,13 @@ import CapSoModal from '@/components/ho-so/CapSoModal';
 import GiaHanModal from '@/components/ho-so/GiaHanModal';
 import ThayTheModal from '@/components/ho-so/ThayTheModal';
 import ThayDoiModal from '@/components/ho-so/ThayDoiModal';
+import QuyDinhTamThoiModal from '@/components/ho-so/QuyDinhTamThoiModal';
 import HoSoFormModal from '@/components/ho-so/HoSoFormModal';
 import HoSoTaiLieuTab from '@/components/ho-so/HoSoTaiLieuTab';
 import HoSoTimelineTab from '@/components/ho-so/HoSoTimelineTab';
 import HoSoNhatKyTab from '@/components/ho-so/HoSoNhatKyTab';
-import { Card } from 'antd';
 import { usePermissions } from '@/hooks/usePermissions';
+import { openDocumentUrl } from '@/utils/file-viewer';
 
 import { Suspense } from 'react';
 
@@ -34,6 +35,7 @@ function HoSoMasterDetailContent() {
   const [giaHanOpen, setGiaHanOpen] = useState(false);
   const [thayTheOpen, setThayTheOpen] = useState(false);
   const [thayDoiOpen, setThayDoiOpen] = useState(false);
+  const [quyDinhOpen, setQuyDinhOpen] = useState(false);
   
   // Form CRUD states
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
@@ -388,9 +390,16 @@ function HoSoMasterDetailContent() {
                 </div>
                 <div className="flex justify-between items-center mt-1.5">
                   <span className="text-gray-500 text-sm">{item.ma_ho_so}</span>
-                  <span className={`text-xs font-semibold ${getStatusColor(item.tinh_trang?.ten_tinh_trang)}`}>
-                    {item.tinh_trang?.ten_tinh_trang || 'Chưa rõ'}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className={`text-xs font-semibold ${getStatusColor(item.tinh_trang?.ten_tinh_trang)}`}>
+                      {item.tinh_trang?.ten_tinh_trang || 'Chưa rõ'}
+                    </span>
+                    {item.ap_dung_quy_dinh_tam_thoi && (
+                      <span className="text-[10px] text-purple-600 font-medium">
+                        QĐ: đến {item.ngay_het_han_quy_dinh ? dayjs(item.ngay_het_han_quy_dinh).format('DD/MM/YY') : ''}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -465,6 +474,15 @@ function HoSoMasterDetailContent() {
                       </div>
                     )}
 
+                    {canUpdate && (
+                      <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => setQuyDinhOpen(true)}>
+                        <div className="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center text-xl shadow-md group-hover:-translate-y-1 transition-transform">
+                          <SafetyCertificateOutlined />
+                        </div>
+                        <span className="text-xs font-medium text-gray-700 text-center w-20 leading-tight">QĐ Tạm Thời</span>
+                      </div>
+                    )}
+
                     {canDelete && (
                       <div className="flex flex-col items-center gap-2 cursor-pointer group">
                         <div className="w-12 h-12 rounded-full bg-gray-400 text-white flex items-center justify-center text-xl shadow-md group-hover:-translate-y-1 transition-transform">
@@ -508,7 +526,25 @@ function HoSoMasterDetailContent() {
                   </div>
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Ngày hết hạn</div>
-                    <div className="col-span-9 text-gray-800">{currentData?.ngay_het_han ? dayjs(currentData.ngay_het_han).format('DD/MM/YYYY') : '-'}</div>
+                    <div className="col-span-9 text-gray-800">
+                      <div>{currentData?.ngay_het_han ? dayjs(currentData.ngay_het_han).format('DD/MM/YYYY') : '-'}</div>
+                      {currentData?.ap_dung_quy_dinh_tam_thoi && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <Tag color="purple" className="m-0 font-medium">
+                            Áp dụng QĐ: {currentData.can_cu_quy_dinh || 'Theo quy định'} - Hiệu lực đến {currentData.ngay_het_han_quy_dinh ? dayjs(currentData.ngay_het_han_quy_dinh).format('DD/MM/YYYY') : 'N/A'}
+                          </Tag>
+                          {currentData.tai_lieu_quy_dinh_url && (
+                            <button 
+                              type="button"
+                              onClick={() => openDocumentUrl(currentData.tai_lieu_quy_dinh_url)} 
+                              className="text-xs text-blue-600 hover:underline cursor-pointer bg-transparent border-0 p-0"
+                            >
+                              [Xem văn bản]
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Ghi chú</div>
@@ -550,6 +586,7 @@ function HoSoMasterDetailContent() {
         <>
           <CapSoModal open={capSoOpen} onCancel={() => setCapSoOpen(false)} hoSo={selectedItem} />
           <GiaHanModal open={giaHanOpen} onCancel={() => setGiaHanOpen(false)} hoSo={selectedItem} />
+          <QuyDinhTamThoiModal open={quyDinhOpen} onCancel={() => setQuyDinhOpen(false)} hoSo={selectedItem} />
           <ThayTheModal open={thayTheOpen} onCancel={() => setThayTheOpen(false)} hoSo={selectedItem} />
           <ThayDoiModal open={thayDoiOpen} onCancel={() => setThayDoiOpen(false)} hoSo={selectedItem} />
         </>

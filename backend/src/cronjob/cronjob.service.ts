@@ -2,7 +2,7 @@ import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
-import { EXPIRY_STATUSES, expiryStatus, reminderDate, todayInVietnam, ExpiryConfig, DEFAULT_EXPIRY_CONFIG } from '../ho-so/expiry';
+import { EXPIRY_STATUSES, expiryStatus, reminderDate, todayInVietnam, ExpiryConfig, DEFAULT_EXPIRY_CONFIG, effectiveExpiryDate } from '../ho-so/expiry';
 
 @Injectable()
 export class CronjobService {
@@ -39,6 +39,7 @@ export class CronjobService {
         select: {
           id: true, ma_ho_so: true, ten_san_pham: true, so_chinh: true,
           ngay_het_han: true, ngay_nhac_han: true, tinh_trang_id: true, loai_ho_so_id: true,
+          ap_dung_quy_dinh_tam_thoi: true, ngay_het_han_quy_dinh: true, can_cu_quy_dinh: true,
         },
         orderBy: { id: 'asc' },
         take: 200,
@@ -47,11 +48,16 @@ export class CronjobService {
       cursor = dossiers[dossiers.length - 1].id;
 
       for (const dossier of dossiers) {
-        if (!dossier.ngay_het_han) continue;
+        const effectiveExpiry = effectiveExpiryDate(
+          dossier.ngay_het_han,
+          dossier.ap_dung_quy_dinh_tam_thoi,
+          dossier.ngay_het_han_quy_dinh
+        );
+        if (!effectiveExpiry) continue;
         const config = typeConfigMap.get(dossier.loai_ho_so_id) || DEFAULT_EXPIRY_CONFIG;
-        const code = expiryStatus(dossier.ngay_het_han, config, today);
+        const code = expiryStatus(effectiveExpiry, config, today);
         const nextId = ids.get(code)!;
-        const nextReminder = reminderDate(dossier.ngay_het_han, config);
+        const nextReminder = reminderDate(effectiveExpiry, config);
         if (dossier.tinh_trang_id === nextId &&
           dossier.ngay_nhac_han?.getTime() === nextReminder?.getTime()) continue;
 
@@ -66,12 +72,15 @@ export class CronjobService {
             data: { tinh_trang_id: nextId, ngay_nhac_han: nextReminder },
           });
           if (result.count && transitioned && code === 'SAP_HET_HAN') {
+            const extraNote = dossier.ap_dung_quy_dinh_tam_thoi
+              ? ` theo quy định tạm thời (${dossier.can_cu_quy_dinh || 'Quy định'})`
+              : '';
             await tx.nhac_han_ho_so.create({
               data: {
                 ho_so_chung_id: dossier.id,
                 loai_nhac: 'SAP_HET_HAN',
                 ngay_nhac: today,
-                noi_dung: `Hồ sơ ${dossier.ma_ho_so} sắp hết hạn vào ${dossier.ngay_het_han?.toISOString().slice(0, 10)}.`,
+                noi_dung: `Hồ sơ ${dossier.ma_ho_so} sắp hết hạn${extraNote} vào ${effectiveExpiry?.toISOString().slice(0, 10)}.`,
               },
             });
           }

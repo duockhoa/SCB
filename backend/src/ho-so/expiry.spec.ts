@@ -34,4 +34,17 @@ describe('dossier expiry rules', () => {
     expect(expiryStatus('2027-04-01', { value: 45, unit: 'NGAY' }, dateOnly('2027-02-14')!)).toBe('CON_HIEU_LUC');
     expect(expiryStatus('2027-04-01', { value: 45, unit: 'NGAY' }, dateOnly('2027-02-15')!)).toBe('SAP_HET_HAN');
   });
+
+  it('keeps dossier valid under temporary regulation even if original expiry date has passed', () => {
+    const originalExpiry = '2023-12-31';
+    const regulationExpiry = '2026-12-31';
+    const checkDate = dateOnly('2026-06-01')!;
+
+    // Nếu không áp dụng quy định: đã hết hạn
+    expect(expiryStatus(originalExpiry, checkDate)).toBe('DA_HET_HAN');
+
+    // Khi áp dụng quy định tạm thời: hiệu lực được tính theo ngày quy định
+    const effective = regulationExpiry;
+    expect(expiryStatus(effective, checkDate)).toBe('CON_HIEU_LUC');
+  });
 });

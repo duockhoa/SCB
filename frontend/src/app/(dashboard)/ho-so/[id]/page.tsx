@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useHoSoDetail } from '@/hooks/queries/useHoSo';
 import { Button, Spin, Tag, Tabs, Descriptions, Empty, Space, Breadcrumb, Card } from 'antd';
-import { ArrowLeftOutlined, EditOutlined, FileAddOutlined, ClockCircleOutlined, SwapOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EditOutlined, FileAddOutlined, ClockCircleOutlined, SwapOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { LOAI_HO_SO_CODE } from '@/constants/loai-ho-so';
 
@@ -17,6 +17,8 @@ import CapSoModal from '@/components/ho-so/CapSoModal';
 import GiaHanModal from '@/components/ho-so/GiaHanModal';
 import ThayTheModal from '@/components/ho-so/ThayTheModal';
 import ThayDoiModal from '@/components/ho-so/ThayDoiModal';
+import QuyDinhTamThoiModal from '@/components/ho-so/QuyDinhTamThoiModal';
+import { openDocumentUrl } from '@/utils/file-viewer';
 
 export default function HoSoDetailPage() {
   const params = useParams();
@@ -31,6 +33,7 @@ export default function HoSoDetailPage() {
   const [openGiaHanModal, setOpenGiaHanModal] = useState(false);
   const [openThayTheModal, setOpenThayTheModal] = useState(false);
   const [openThayDoiModal, setOpenThayDoiModal] = useState(false);
+  const [openQuyDinhModal, setOpenQuyDinhModal] = useState(false);
 
   if (isLoading) {
     return <div style={{ textAlign: 'center', padding: '50px' }}><Spin size="large" /></div>;
@@ -148,7 +151,25 @@ export default function HoSoDetailPage() {
               {hoSoData.ngay_cong_bo ? dayjs(hoSoData.ngay_cong_bo).format('DD/MM/YYYY') : 'N/A'}
             </Descriptions.Item>
             <Descriptions.Item label="Ngày hết hạn">
-              {hoSoData.ngay_het_han ? dayjs(hoSoData.ngay_het_han).format('DD/MM/YYYY') : 'N/A'}
+              <div>
+                <span>{hoSoData.ngay_het_han ? dayjs(hoSoData.ngay_het_han).format('DD/MM/YYYY') : 'N/A'}</span>
+                {hoSoData.ap_dung_quy_dinh_tam_thoi && (
+                  <div style={{ marginTop: '4px' }}>
+                    <Tag color="purple">
+                      Áp dụng QĐ: {hoSoData.can_cu_quy_dinh || 'Theo quy định'} - Hiệu lực đến {hoSoData.ngay_het_han_quy_dinh ? dayjs(hoSoData.ngay_het_han_quy_dinh).format('DD/MM/YYYY') : 'N/A'}
+                    </Tag>
+                    {hoSoData.tai_lieu_quy_dinh_url && (
+                      <button 
+                        type="button"
+                        onClick={() => openDocumentUrl(hoSoData.tai_lieu_quy_dinh_url)} 
+                        style={{ fontSize: '12px', color: '#1890ff', marginLeft: '4px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        [Xem văn bản]
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </Descriptions.Item>
             <Descriptions.Item label="Ngày nhắc hạn" span={2}>
               {hoSoData.ngay_nhac_han ? dayjs(hoSoData.ngay_nhac_han).format('DD/MM/YYYY') : 'N/A'}
@@ -243,6 +264,14 @@ export default function HoSoDetailPage() {
             </>
           )}
           
+          <Button 
+            style={{ borderColor: '#722ed1', color: '#722ed1' }} 
+            icon={<SafetyCertificateOutlined />} 
+            onClick={() => setOpenQuyDinhModal(true)}
+          >
+            QĐ Tạm Thời
+          </Button>
+          
           <Button icon={<FileAddOutlined />} onClick={() => setOpenThayDoiModal(true)}>Thêm thay đổi</Button>
         </Space>
       </div>
@@ -276,6 +305,14 @@ export default function HoSoDetailPage() {
         hoSo={hoSoData}
         onCancel={() => {
           setOpenGiaHanModal(false);
+          refetch();
+        }}
+      />
+      <QuyDinhTamThoiModal
+        open={openQuyDinhModal}
+        hoSo={hoSoData}
+        onCancel={() => {
+          setOpenQuyDinhModal(false);
           refetch();
         }}
       />

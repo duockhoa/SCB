@@ -6,10 +6,11 @@ import { CapSoDto } from './dto/cap-so.dto';
 import { GiaHanDto } from './dto/gia-han.dto';
 import { ThayTheDto } from './dto/thay-the.dto';
 import { ThayDoiDto } from './dto/thay-doi.dto';
+import { QuyDinhTamThoiDto } from './dto/quy-dinh-tam-thoi.dto';
 import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { dossierSnapshot } from './ho-so-audit';
-import { dateOnly, expiryStatus, EXPIRY_STATUSES, reminderDate, ExpiryConfig, DEFAULT_EXPIRY_CONFIG } from './expiry';
+import { dateOnly, expiryStatus, EXPIRY_STATUSES, reminderDate, ExpiryConfig, DEFAULT_EXPIRY_CONFIG, effectiveExpiryDate } from './expiry';
 
 @Injectable()
 export class HoSoService {
@@ -252,12 +253,14 @@ export class HoSoService {
   async create(data: CreateHoSoDto, userId?: number) {
     const { thong_tin_rieng, nguoi_thuc_hien_id, ...chungData } = data;
     const expiry = dateOnly(chungData.ngay_het_han);
+    const expiryQuyDinh = dateOnly(chungData.ngay_het_han_quy_dinh);
+    const effectiveExpiry = effectiveExpiryDate(expiry, chungData.ap_dung_quy_dinh_tam_thoi, expiryQuyDinh);
     const expiryConfig = await this.getLoaiHoSoExpiryConfig(data.loai_ho_so_id);
     const requestedStatus = chungData.tinh_trang_id
       ? await this.prisma.dm_tinh_trang.findUnique({ where: { id: chungData.tinh_trang_id } }) : null;
     const statusId = requestedStatus && EXPIRY_STATUSES.includes(requestedStatus.ma_tinh_trang as any)
-      ? await this.expiryStatusId(expiry, expiryConfig)
-      : (chungData.tinh_trang_id ?? (expiry ? await this.expiryStatusId(expiry, expiryConfig) : undefined));
+      ? await this.expiryStatusId(effectiveExpiry, expiryConfig)
+      : (chungData.tinh_trang_id ?? (effectiveExpiry ? await this.expiryStatusId(effectiveExpiry, expiryConfig) : undefined));
 
     const exists = await this.prisma.ho_so_chung.findUnique({ where: { ma_ho_so: data.ma_ho_so } });
     if (exists) throw new ConflictException('Mã hồ sơ đã tồn tại');
@@ -271,7 +274,11 @@ export class HoSoService {
           ...chungData,
           ngay_cong_bo: chungData.ngay_cong_bo ? new Date(chungData.ngay_cong_bo) : null,
           ngay_het_han: expiry,
-          ngay_nhac_han: reminderDate(expiry, expiryConfig),
+          ap_dung_quy_dinh_tam_thoi: chungData.ap_dung_quy_dinh_tam_thoi ?? false,
+          ngay_het_han_quy_dinh: expiryQuyDinh,
+          can_cu_quy_dinh: chungData.can_cu_quy_dinh,
+          tai_lieu_quy_dinh_url: chungData.tai_lieu_quy_dinh_url,
+          ngay_nhac_han: reminderDate(effectiveExpiry, expiryConfig),
           tinh_trang_id: statusId,
         }
       });
@@ -347,13 +354,19 @@ export class HoSoService {
     const { thong_tin_rieng, nguoi_thuc_hien_id, ...chungData } = data;
     const expiry = Object.hasOwn(chungData, 'ngay_het_han')
       ? dateOnly(chungData.ngay_het_han) : dateOnly(hoSo.ngay_het_han);
+    const apDung = Object.hasOwn(chungData, 'ap_dung_quy_dinh_tam_thoi')
+      ? Boolean(chungData.ap_dung_quy_dinh_tam_thoi) : Boolean(hoSo.ap_dung_quy_dinh_tam_thoi);
+    const expiryQuyDinh = Object.hasOwn(chungData, 'ngay_het_han_quy_dinh')
+      ? dateOnly(chungData.ngay_het_han_quy_dinh) : dateOnly(hoSo.ngay_het_han_quy_dinh);
+    const effectiveExpiry = effectiveExpiryDate(expiry, apDung, expiryQuyDinh);
+
     const loaiHoSoId = chungData.loai_ho_so_id || hoSo.loai_ho_so_id;
     const expiryConfig = await this.getLoaiHoSoExpiryConfig(loaiHoSoId);
     const requestedStatus = chungData.tinh_trang_id !== undefined
       ? await this.prisma.dm_tinh_trang.findUnique({ where: { id: chungData.tinh_trang_id } }) : hoSo.tinh_trang;
     const statusId = requestedStatus && EXPIRY_STATUSES.includes(requestedStatus.ma_tinh_trang as any)
-      ? await this.expiryStatusId(expiry, expiryConfig)
-      : (chungData.tinh_trang_id ?? (hoSo.tinh_trang_id == null && expiry ? await this.expiryStatusId(expiry, expiryConfig) : undefined));
+      ? await this.expiryStatusId(effectiveExpiry, expiryConfig)
+      : (chungData.tinh_trang_id ?? (hoSo.tinh_trang_id == null && effectiveExpiry ? await this.expiryStatusId(effectiveExpiry, expiryConfig) : undefined));
 
     if (data.ma_ho_so) {
       const exists = await this.prisma.ho_so_chung.findFirst({
@@ -369,7 +382,11 @@ export class HoSoService {
           ...chungData,
           ngay_cong_bo: chungData.ngay_cong_bo ? new Date(chungData.ngay_cong_bo) : undefined,
           ngay_het_han: Object.hasOwn(chungData, 'ngay_het_han') ? expiry : undefined,
-          ngay_nhac_han: reminderDate(expiry, expiryConfig),
+          ap_dung_quy_dinh_tam_thoi: chungData.ap_dung_quy_dinh_tam_thoi,
+          ngay_het_han_quy_dinh: Object.hasOwn(chungData, 'ngay_het_han_quy_dinh') ? expiryQuyDinh : undefined,
+          can_cu_quy_dinh: chungData.can_cu_quy_dinh,
+          tai_lieu_quy_dinh_url: chungData.tai_lieu_quy_dinh_url,
+          ngay_nhac_han: reminderDate(effectiveExpiry, expiryConfig),
           tinh_trang_id: statusId,
         }
       });
@@ -514,6 +531,83 @@ export class HoSoService {
 
     this.emitHoSoEvent(result, 'GIA_HAN', 'HO_SO_GIA_HAN', {
       noi_dung: data.noi_dung_thay_doi || `Gia hạn đến ngày: ${new Date(data.ngay_het_han).toLocaleDateString('vi-VN')}`
+    });
+
+    return result;
+  }
+
+  async apDungQuyDinh(id: number, data: QuyDinhTamThoiDto, userId?: number) {
+    const hoSo = await this.findOne(id);
+    const expiry = dateOnly(hoSo.ngay_het_han);
+    const expiryQuyDinh = dateOnly(data.ngay_het_han_quy_dinh);
+    const effectiveExpiry = effectiveExpiryDate(expiry, data.ap_dung_quy_dinh_tam_thoi, expiryQuyDinh);
+    const expiryConfig = await this.getLoaiHoSoExpiryConfig(hoSo.loai_ho_so_id);
+    const statusId = await this.expiryStatusId(effectiveExpiry, expiryConfig);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.ho_so_chung.update({
+        where: { id },
+        data: {
+          ap_dung_quy_dinh_tam_thoi: data.ap_dung_quy_dinh_tam_thoi,
+          ngay_het_han_quy_dinh: expiryQuyDinh,
+          can_cu_quy_dinh: data.can_cu_quy_dinh,
+          tai_lieu_quy_dinh_url: data.tai_lieu_quy_dinh_url,
+          ngay_nhac_han: reminderDate(effectiveExpiry, expiryConfig),
+          tinh_trang_id: statusId,
+        }
+      });
+
+      const loaiThayDoi = await this.getLoaiThayDoi(
+        'QUY_DINH_TAM_THOI',
+        'Áp dụng quy định tạm thời'
+      );
+
+      const noiDung = data.ap_dung_quy_dinh_tam_thoi
+        ? `Áp dụng quy định tạm thời (${data.can_cu_quy_dinh || 'Theo quy định'}): Duy trì hiệu lực đến ${data.ngay_het_han_quy_dinh ? new Date(data.ngay_het_han_quy_dinh).toLocaleDateString('vi-VN') : 'không xác định'}`
+        : 'Hủy áp dụng quy định tạm thời, áp dụng hạn sử dụng gốc';
+
+      await tx.lich_su_thay_doi_ho_so.create({
+        data: {
+          ho_so_chung_id: id,
+          lan_thu: (hoSo.lich_su_thay_doi?.length || 0) + 1,
+          loai_thay_doi_id: loaiThayDoi.id,
+          noi_dung_thay_doi: noiDung,
+          ma_so_tham_chieu: data.can_cu_quy_dinh,
+          ngay_thay_doi: new Date(),
+          tinh_trang: 'DA_PHE_DUYET',
+          cong_van_url: data.tai_lieu_quy_dinh_url,
+          ghi_chu: data.ghi_chu || `Hạn gốc: ${hoSo.ngay_het_han ? new Date(hoSo.ngay_het_han).toLocaleDateString('vi-VN') : 'Không có'}`
+        }
+      });
+
+      await tx.nhat_ky_ho_so.create({
+        data: {
+          ho_so_chung_id: id,
+          hanh_dong: 'QUY_DINH_TAM_THOI',
+          nguoi_thuc_hien_id: userId || null,
+          noi_dung: noiDung,
+          du_lieu_cu: JSON.stringify({
+            ap_dung_quy_dinh_tam_thoi: hoSo.ap_dung_quy_dinh_tam_thoi,
+            ngay_het_han_quy_dinh: hoSo.ngay_het_han_quy_dinh,
+            can_cu_quy_dinh: hoSo.can_cu_quy_dinh,
+            tinh_trang_id: hoSo.tinh_trang_id,
+          }),
+          du_lieu_moi: JSON.stringify({
+            ap_dung_quy_dinh_tam_thoi: data.ap_dung_quy_dinh_tam_thoi,
+            ngay_het_han_quy_dinh: data.ngay_het_han_quy_dinh,
+            can_cu_quy_dinh: data.can_cu_quy_dinh,
+            tinh_trang_id: statusId,
+          })
+        }
+      });
+
+      return updated;
+    });
+
+    this.emitHoSoEvent(result, 'QUY_DINH_TAM_THOI', 'HO_SO_QUY_DINH_TAM_THOI', {
+      noi_dung: data.ap_dung_quy_dinh_tam_thoi
+        ? `Áp dụng quy định tạm thời (${data.can_cu_quy_dinh}) đến ${data.ngay_het_han_quy_dinh}`
+        : 'Hủy áp dụng quy định tạm thời'
     });
 
     return result;

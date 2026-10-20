@@ -139,3 +139,16 @@ export const useDeleteTaiLieu = () => {
     },
   });
 };
+
+export const useApDungQuyDinh = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => hoSoService.apDungQuyDinh(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_LIST'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DASHBOARD'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};
+
