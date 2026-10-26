@@ -31,8 +31,8 @@ export function effectiveExpiryDate(
   apDungQuyDinh?: boolean | null,
   expiryQuyDinh?: Date | string | null,
 ): Date | null {
-  if (apDungQuyDinh && expiryQuyDinh) {
-    return dateOnly(expiryQuyDinh);
+  if (apDungQuyDinh) {
+    return expiryQuyDinh ? dateOnly(expiryQuyDinh) : null;
   }
   return dateOnly(expiry);
 }

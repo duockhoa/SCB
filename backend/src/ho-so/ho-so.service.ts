@@ -563,7 +563,7 @@ export class HoSoService {
       );
 
       const noiDung = data.ap_dung_quy_dinh_tam_thoi
-        ? `Áp dụng quy định tạm thời (${data.can_cu_quy_dinh || 'Theo quy định'}): Duy trì hiệu lực đến ${data.ngay_het_han_quy_dinh ? new Date(data.ngay_het_han_quy_dinh).toLocaleDateString('vi-VN') : 'không xác định'}`
+        ? `Áp dụng quy định tạm thời (${data.can_cu_quy_dinh || 'Theo quy định'}): ${data.ngay_het_han_quy_dinh ? `Duy trì hiệu lực đến ${new Date(data.ngay_het_han_quy_dinh).toLocaleDateString('vi-VN')}` : 'Duy trì hiệu lực'}`
         : 'Hủy áp dụng quy định tạm thời, áp dụng hạn sử dụng gốc';
 
       await tx.lich_su_thay_doi_ho_so.create({

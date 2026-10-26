@@ -119,11 +119,10 @@ export default function QuyDinhTamThoiModal({ open, onCancel, hoSo }: Props) {
 
             <Form.Item
               name="ngay_het_han_quy_dinh"
-              label="Hạn hiệu lực được phép sử dụng theo quy định"
-              rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn theo quy định' }]}
-              extra="Hệ thống sẽ duy trì trạng thái hiệu lực và chỉ cảnh báo sắp hết hạn khi đến gần mốc ngày này"
+              label="Hạn hiệu lực được phép sử dụng theo quy định (Không bắt buộc)"
+              extra="Nếu không chọn, hồ sơ sẽ duy trì trạng thái hiệu lực theo quy định này"
             >
-              <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày hết hạn theo quy định" />
+              <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày hết hạn theo quy định (nếu có)" allowClear />
             </Form.Item>
 
             <Form.Item

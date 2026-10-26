@@ -219,7 +219,7 @@ function HoSoMasterDetailContent() {
         {items.map((item) => (
           <div key={item.key} className="grid grid-cols-12 gap-4">
             <div className="col-span-4 text-gray-500">{item.label}</div>
-            <div className="col-span-8 font-medium text-gray-800">{item.value}</div>
+            <div className="col-span-8 font-medium text-gray-800 break-words min-w-0">{item.value}</div>
           </div>
         ))}
       </div>
@@ -395,8 +395,8 @@ function HoSoMasterDetailContent() {
                       {item.tinh_trang?.ten_tinh_trang || 'Chưa rõ'}
                     </span>
                     {item.ap_dung_quy_dinh_tam_thoi && (
-                      <span className="text-[10px] text-purple-600 font-medium">
-                        QĐ: đến {item.ngay_het_han_quy_dinh ? dayjs(item.ngay_het_han_quy_dinh).format('DD/MM/YY') : ''}
+                      <span className="text-[10px] text-purple-600 font-medium line-clamp-1 max-w-[130px] text-right" title={item.can_cu_quy_dinh || 'Áp dụng QĐ tạm thời'}>
+                        {item.ngay_het_han_quy_dinh ? `QĐ: đến ${dayjs(item.ngay_het_han_quy_dinh).format('DD/MM/YY')}` : 'QĐ tạm thời'}
                       </span>
                     )}
                   </div>
@@ -419,7 +419,7 @@ function HoSoMasterDetailContent() {
 
       {/* Detail Pane (Right) */}
       {selectedId && selectedItem ? (
-        <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-y-auto min-w-0">
+        <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-y-auto overflow-x-hidden min-w-0">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
             <Breadcrumb items={[{ title: 'Hồ sơ công bố' }, { title: `${selectedItem.ma_ho_so}` }]} />
             <Button type="text" icon={<CloseOutlined />} onClick={() => {
@@ -433,7 +433,7 @@ function HoSoMasterDetailContent() {
             <div style={{ marginBottom: 24 }}>
               <Card style={{ border: '1px solid #e5e7eb', borderRadius: 8 }}>
                 <div className="text-center pt-2">
-                  <h1 className="text-2xl font-bold text-blue-600 mb-6">
+                  <h1 className="text-2xl font-bold text-blue-600 mb-6 break-words">
                     {selectedItem.ten_san_pham} - {selectedItem.ma_ho_so}
                   </h1>
                   
@@ -502,42 +502,47 @@ function HoSoMasterDetailContent() {
                 <div className="flex flex-col gap-y-5 text-sm px-4">
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Mã hồ sơ</div>
-                    <div className="col-span-9 text-gray-800">{currentData?.ma_ho_so}</div>
+                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.ma_ho_so}</div>
                   </div>
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Số công bố</div>
-                    <div className="col-span-9 text-gray-800">{currentData?.so_chinh || 'Chưa cấp'}</div>
+                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.so_chinh || 'Chưa cấp'}</div>
                   </div>
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Tên sản phẩm</div>
-                    <div className="col-span-9 text-gray-800">{currentData?.ten_san_pham}</div>
+                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.ten_san_pham}</div>
                   </div>
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Loại sản phẩm</div>
-                    <div className="col-span-9 text-gray-800">{currentData?.loai_ho_so?.ten_loai || 'N/A'}</div>
+                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.loai_ho_so?.ten_loai || 'N/A'}</div>
                   </div>
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Trạng thái</div>
-                    <div className="col-span-9 text-gray-800">{currentData?.tinh_trang?.ten_tinh_trang || 'Chưa rõ'}</div>
+                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.tinh_trang?.ten_tinh_trang || 'Chưa rõ'}</div>
                   </div>
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Ngày công bố/cấp</div>
-                    <div className="col-span-9 text-gray-800">{currentData?.ngay_cong_bo ? dayjs(currentData.ngay_cong_bo).format('DD/MM/YYYY') : '-'}</div>
+                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.ngay_cong_bo ? dayjs(currentData.ngay_cong_bo).format('DD/MM/YYYY') : '-'}</div>
                   </div>
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Ngày hết hạn</div>
-                    <div className="col-span-9 text-gray-800">
+                    <div className="col-span-9 text-gray-800 break-words min-w-0">
                       <div>{currentData?.ngay_het_han ? dayjs(currentData.ngay_het_han).format('DD/MM/YYYY') : '-'}</div>
                       {currentData?.ap_dung_quy_dinh_tam_thoi && (
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                          <Tag color="purple" className="m-0 font-medium">
-                            Áp dụng QĐ: {currentData.can_cu_quy_dinh || 'Theo quy định'} - Hiệu lực đến {currentData.ngay_het_han_quy_dinh ? dayjs(currentData.ngay_het_han_quy_dinh).format('DD/MM/YYYY') : 'N/A'}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 max-w-full">
+                          <Tag 
+                            color="purple" 
+                            className="m-0 font-medium max-w-full"
+                            style={{ whiteSpace: 'normal', wordBreak: 'break-word', height: 'auto', lineHeight: '1.5', padding: '4px 8px' }}
+                            title={currentData.ngay_het_han_quy_dinh ? `Hạn hiệu lực QĐ: ${dayjs(currentData.ngay_het_han_quy_dinh).format('DD/MM/YYYY')}` : undefined}
+                          >
+                            {currentData.can_cu_quy_dinh || 'Áp dụng quy định tạm thời'}
                           </Tag>
                           {currentData.tai_lieu_quy_dinh_url && (
                             <button 
                               type="button"
                               onClick={() => openDocumentUrl(currentData.tai_lieu_quy_dinh_url)} 
-                              className="text-xs text-blue-600 hover:underline cursor-pointer bg-transparent border-0 p-0"
+                              className="text-xs text-blue-600 hover:underline cursor-pointer bg-transparent border-0 p-0 shrink-0"
                             >
                               [Xem văn bản]
                             </button>
@@ -548,7 +553,7 @@ function HoSoMasterDetailContent() {
                   </div>
                   <div className="grid grid-cols-12 gap-4">
                     <div className="col-span-3 text-gray-500">Ghi chú</div>
-                    <div className="col-span-9 text-gray-800">{currentData?.ghi_chu || '-'}</div>
+                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.ghi_chu || '-'}</div>
                   </div>
                 </div>
               </Card>

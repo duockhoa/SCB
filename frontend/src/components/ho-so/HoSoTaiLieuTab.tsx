@@ -340,6 +340,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
           dataSource={dataSource} 
           rowKey="id" 
           pagination={false} 
+          scroll={{ x: 'max-content' }}
         />
       )}
 

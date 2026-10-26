@@ -252,10 +252,9 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
 
               <Form.Item 
                 name="ngay_het_han_quy_dinh" 
-                label="Hạn sử dụng theo quy định" 
-                rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn theo quy định' }]}
+                label="Hạn sử dụng theo quy định (Không bắt buộc)" 
               >
-                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày" />
+                <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày (nếu có)" allowClear />
               </Form.Item>
 
               <div style={{ gridColumn: 'span 2' }}>

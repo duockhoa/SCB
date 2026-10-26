@@ -53,6 +53,7 @@ export default function HoSoNhatKyTab({ nhatKyData }: Props) {
       dataSource={nhatKyData} 
       rowKey="id" 
       pagination={{ pageSize: 10 }} 
+      scroll={{ x: 'max-content' }}
     />
   );
 }

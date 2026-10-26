@@ -154,9 +154,13 @@ export default function HoSoDetailPage() {
               <div>
                 <span>{hoSoData.ngay_het_han ? dayjs(hoSoData.ngay_het_han).format('DD/MM/YYYY') : 'N/A'}</span>
                 {hoSoData.ap_dung_quy_dinh_tam_thoi && (
-                  <div style={{ marginTop: '4px' }}>
-                    <Tag color="purple">
-                      Áp dụng QĐ: {hoSoData.can_cu_quy_dinh || 'Theo quy định'} - Hiệu lực đến {hoSoData.ngay_het_han_quy_dinh ? dayjs(hoSoData.ngay_het_han_quy_dinh).format('DD/MM/YYYY') : 'N/A'}
+                  <div style={{ marginTop: '4px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px' }}>
+                    <Tag 
+                      color="purple"
+                      style={{ whiteSpace: 'normal', wordBreak: 'break-word', height: 'auto', lineHeight: '1.5', padding: '4px 8px' }}
+                      title={hoSoData.ngay_het_han_quy_dinh ? `Hạn hiệu lực QĐ: ${dayjs(hoSoData.ngay_het_han_quy_dinh).format('DD/MM/YYYY')}` : undefined}
+                    >
+                      {hoSoData.can_cu_quy_dinh || 'Áp dụng quy định tạm thời'}
                     </Tag>
                     {hoSoData.tai_lieu_quy_dinh_url && (
                       <button 
