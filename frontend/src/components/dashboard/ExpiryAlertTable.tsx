@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 import type { HoSoChung } from '@/types/ho-so.type';
 import GiaHanModal from '@/components/ho-so/GiaHanModal';
+import { getLoaiHoSoAntdColor } from '@/utils/loai-ho-so';
 
 interface Props {
   data: HoSoChung[];
@@ -27,7 +28,7 @@ export default function ExpiryAlertTable({ data, total, page, onPageChange }: Pr
           <div style={{ fontWeight: 'bold', color: '#1890ff' }}>{record.ma_ho_so}</div>
           <div>{record.ten_san_pham}</div>
           {record.loai_ho_so && (
-            <Tag color="blue" style={{ marginTop: '4px' }}>
+            <Tag color={getLoaiHoSoAntdColor(record.loai_ho_so.ma_loai, record.loai_ho_so.mau_sac)} style={{ marginTop: '4px' }}>
               {record.loai_ho_so.ten_loai}
             </Tag>
           )}

@@ -6,7 +6,7 @@ import { useHoSoDetail } from '@/hooks/queries/useHoSo';
 import { Button, Spin, Tag, Tabs, Descriptions, Empty, Space, Breadcrumb, Card } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, FileAddOutlined, ClockCircleOutlined, SwapOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { LOAI_HO_SO_CODE } from '@/constants/loai-ho-so';
+import { extractThongTinRieng, findFieldConfig, getFieldLabel, getLoaiHoSoAntdColor, isFileFieldKey } from '@/utils/loai-ho-so';
 
 import HoSoTaiLieuTab from '@/components/ho-so/HoSoTaiLieuTab';
 import HoSoTimelineTab from '@/components/ho-so/HoSoTimelineTab';
@@ -46,76 +46,7 @@ export default function HoSoDetailPage() {
   const ttMa = hoSoData.tinh_trang?.ma_tinh_trang || '';
 
   // Xác định thông tin đặc thù
-  let thong_tin_rieng: any = null;
-  const dacThuKey = Object.keys(hoSoData).find(key => 
-    key.startsWith('ho_so_') && 
-    hoSoData[key] && 
-    typeof hoSoData[key] === 'object' && 
-    key !== 'ho_so_chung' && 
-    key !== 'ho_so_cu'
-  );
-  if (dacThuKey) {
-    thong_tin_rieng = hoSoData[dacThuKey];
-  }
-
-  const formatLabelFromKey = (key: string) => {
-    // Từ điển ánh xạ key database -> Tiếng Việt có dấu chuẩn
-    const dictionary: Record<string, string> = {
-      // Dùng chung
-      id: 'ID',
-      ho_so_chung_id: 'ID hồ sơ chung',
-      
-      // Hồ sơ Thuốc (ho_so_thuoc)
-      hoat_chat_ham_luong: 'Hoạt chất hàm lượng',
-      bao_che: 'Bào chế',
-      quy_cach_dong_goi: 'Quy cách đóng gói',
-      dot_cap_so: 'Đợt cấp số',
-      gia_han: 'Gia hạn',
-      quyet_dinh_cap_sdk_url: 'Quyết định cấp SĐK',
-      ke_khai_gia_url: 'Kê khai giá',
-      quang_cao_url: 'Quảng cáo',
-      
-      // Hồ sơ Mỹ phẩm (ho_so_my_pham)
-      nhan_hang: 'Nhãn hàng',
-      dang_my_pham: 'Dạng mỹ phẩm',
-      phieu_cong_bo_url: 'Phiếu công bố',
-      hs_thay_the_ghi_chu: 'Hồ sơ thay thế / Ghi chú',
-      xn_quang_cao_url: 'Xác nhận quảng cáo',
-      
-      // Hồ sơ Trang thiết bị y tế (ho_so_tbyt)
-      ten_thuong_mai: 'Tên thương mại',
-      ten_tbyt_chung_loai: 'Tên TBYT chủng loại',
-      phan_loai: 'Phân loại',
-      chu_so_huu: 'Chủ sở hữu',
-      phieu_tiep_nhan_url: 'Phiếu tiếp nhận',
-      tai_lieu_mo_ta_kt_url: 'Tài liệu mô tả kỹ thuật',
-      tieu_chuan_co_so_url: 'Tiêu chuẩn cơ sở',
-      nhan_url: 'Nhãn',
-      hdsd_url: 'Hướng dẫn sử dụng',
-      
-      // Hồ sơ TPBVSK Tự công bố (ho_so_tpbvsk_tu_cong_bo)
-      co_so_dung_ten: 'Cơ sở đứng tên',
-      dang_san_pham: 'Dạng sản phẩm',
-      
-      // Hồ sơ TPBVSK Công bố (ho_so_tpbvsk_cong_bo)
-      thanh_phan: 'Thành phần',
-      
-      // Hồ sơ CFS/CPP (ho_so_cfs_cpp)
-      loai_hinh: 'Loại hình',
-      nuoc_xuat_khau: 'Nước xuất khẩu',
-      cong_van_cap_url: 'Công văn cấp',
-    };
-
-    if (dictionary[key]) {
-      return dictionary[key];
-    }
-
-    // Fallback nếu không có trong từ điển
-    const words = key.split('_');
-    if (words.length === 0) return key;
-    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1);
-    return [first, ...words.slice(1)].join(' ');
-  };
+  const thong_tin_rieng = extractThongTinRieng(hoSoData);
 
   // Render động Tab Đặc thù dựa theo loại hồ sơ
   const renderThongTinDacThu = () => {
@@ -123,12 +54,31 @@ export default function HoSoDetailPage() {
 
     const items = Object.entries(thong_tin_rieng)
       .filter(([k, v]) => k !== 'id' && k !== 'ho_so_chung_id' && v !== null && v !== undefined && v !== '')
-      .map(([k, v], idx) => ({
-        key: idx.toString(),
-        label: formatLabelFromKey(k),
-        children: String(v),
-      }));
+      .map(([k, v], idx) => {
+        const fieldCfg = findFieldConfig(k, hoSoData.loai_ho_so);
+        const isFile = isFileFieldKey(k, hoSoData.loai_ho_so);
+        let children: React.ReactNode = String(v);
+        if (isFile) {
+          children = (
+            <button
+              type="button"
+              onClick={() => openDocumentUrl(String(v))}
+              style={{ color: '#1890ff', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              [Xem tài liệu]
+            </button>
+          );
+        } else if (fieldCfg?.type === 'date' && dayjs(String(v)).isValid()) {
+          children = dayjs(String(v)).format('DD/MM/YYYY');
+        }
+        return {
+          key: idx.toString(),
+          label: getFieldLabel(k, hoSoData.loai_ho_so),
+          children,
+        };
+      });
 
+    if (items.length === 0) return <Empty description="Không có thông tin đặc thù" />;
     return <Descriptions bordered column={1} items={items} />;
   };
 
@@ -250,7 +200,7 @@ export default function HoSoDetailPage() {
             </Tag>
           </div>
           <div style={{ color: '#666', marginLeft: '48px' }}>
-            Mã HS: <strong>{hoSoData.ma_ho_so}</strong> | Số công bố: <strong>{hoSoData.so_chinh || 'Chưa có'}</strong> | Loại SP: <Tag color="blue" style={{ marginLeft: '4px' }}>{hoSoData.loai_ho_so?.ten_loai || 'N/A'}</Tag>
+            Mã HS: <strong>{hoSoData.ma_ho_so}</strong> | Số công bố: <strong>{hoSoData.so_chinh || 'Chưa có'}</strong> | Loại SP: <Tag color={getLoaiHoSoAntdColor(hoSoData.loai_ho_so?.ma_loai, hoSoData.loai_ho_so?.mau_sac)} style={{ marginLeft: '4px' }}>{hoSoData.loai_ho_so?.ten_loai || 'N/A'}</Tag>
           </div>
         </div>
 

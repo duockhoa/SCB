@@ -8,6 +8,7 @@ import { useState } from 'react';
 import UploadOrLinkInput from '../common/UploadOrLinkInput';
 import { axiosInstance } from '@/services/api';
 import { usePermissions } from '@/hooks/usePermissions';
+import { getFieldLabel, isFileFieldKey } from '@/utils/loai-ho-so';
 
 interface Props {
   hoSo: HoSoChung;
@@ -57,32 +58,15 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     }
 
     if (thongTinRieng) {
-      // Mapping các trường _url đặc thù thành mảng
-      const urlMapping: Record<string, string> = {
-        quyet_dinh_cap_sdk_url: 'Quyết định cấp SĐK',
-        ke_khai_gia_url: 'Kê khai/Công bố Giá',
-        quang_cao_url: 'Hồ sơ Quảng cáo',
-        phieu_cong_bo_url: 'Phiếu công bố',
-        xn_quang_cao_url: 'Xác nhận Quảng cáo',
-        ban_tu_cong_bo_url: 'Bản tự công bố',
-        nhan_san_pham_url: 'Nhãn sản phẩm',
-        phieu_tiep_nhan_url: 'Phiếu tiếp nhận',
-        tai_lieu_mo_ta_kt_url: 'Tài liệu mô tả kỹ thuật',
-        tieu_chuan_co_so_url: 'Tiêu chuẩn cơ sở',
-        nhan_url: 'Mẫu nhãn',
-        hdsd_url: 'Hướng dẫn sử dụng',
-        cong_van_cap_url: 'Công văn cấp',
-      };
-
-      Object.keys(thongTinRieng).forEach(key => {
-        if (key.endsWith('_url') && thongTinRieng[key]) {
+      Object.keys(thongTinRieng).forEach((key) => {
+        if (key !== 'id' && key !== 'ho_so_chung_id' && isFileFieldKey(key, hoSo.loai_ho_so) && thongTinRieng[key]) {
           data.push({
             id: idCounter++,
-            ten_tai_lieu: urlMapping[key] || key,
+            ten_tai_lieu: getFieldLabel(key, hoSo.loai_ho_so),
             nhom_tai_lieu: 'Tài liệu đặc thù',
             url: getFullUrl(thongTinRieng[key]),
             field_key: key,
-            is_dynamic: false
+            is_dynamic: false,
           });
         }
       });

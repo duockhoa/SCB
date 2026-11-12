@@ -15,10 +15,12 @@ model dm_loai_ho_so {
   ma_loai            String        @unique @db.VarChar(50)
   ten_loai           String        @db.VarChar(200)
   mo_ta              String?       @db.VarChar(500)
+  mau_sac            String?       @db.VarChar(30)
   thu_tu             Int           @default(0)
   trang_thai         Boolean       @default(true)
   thoi_gian_canh_bao Int           @default(6)
   don_vi_canh_bao    String        @default("THANG") @db.VarChar(20)
+  cau_hinh_truong    Json?
   
   ho_so_chung ho_so_chung[]
 }
@@ -147,6 +149,7 @@ model ho_so_chung {
   tinh_trang_id             Int?
   ho_so_luu_url             String?   @db.VarChar(2000)
   ghi_chu                   String?   @db.Text
+  du_lieu_dac_thu           Json?
   ho_so_cu_id               Int?
   created_at                DateTime  @default(now())
   updated_at                DateTime  @updatedAt

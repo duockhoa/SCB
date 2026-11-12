@@ -1,7 +1,28 @@
+export type CustomFieldType = 'text' | 'textarea' | 'number' | 'date' | 'select' | 'file';
+
+export interface CustomFieldConfig {
+  key: string;
+  label: string;
+  type: CustomFieldType;
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+  colSpan?: 12 | 24;
+}
+
 export interface LoaiHoSo {
   id: number;
   ma_loai: string;
   ten_loai: string;
+  mo_ta?: string | null;
+  mau_sac?: string | null;
+  thu_tu?: number;
+  trang_thai?: boolean;
+  thoi_gian_canh_bao?: number;
+  don_vi_canh_bao?: 'THANG' | 'NGAY' | string;
+  cau_hinh_truong?: CustomFieldConfig[] | null;
+  is_system?: boolean;
+  so_luong_ho_so?: number;
 }
 
 export interface TinhTrang {
@@ -34,12 +55,13 @@ export interface HoSoChung {
   cong_ty_so_huu_id?: number;
   cong_ty_dung_ten_id?: number;
   cong_ty_phan_phoi_id?: number;
-  
+  du_lieu_dac_thu?: Record<string, any> | null;
+
   lich_su_thay_doi?: any[];
   nhat_ky?: any[];
   tai_lieu?: any[];
-  
-  // Dynamic relations
+
+  // Dynamic relations (6 loại hệ thống)
   ho_so_thuoc?: any;
   ho_so_my_pham?: any;
   ho_so_tbyt?: any;

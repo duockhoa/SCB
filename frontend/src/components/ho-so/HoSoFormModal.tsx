@@ -1,11 +1,12 @@
 import { Modal, Form, Input, Select, message, Divider, DatePicker, Switch } from 'antd';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { useCreateHoSo, useUpdateHoSo } from '@/hooks/queries/useHoSo';
 import { useCongTyList } from '@/hooks/queries/useCongTy';
 import { useLoaiHoSoList, useTinhTrangList } from '@/hooks/queries/useDanhMuc';
-import type { HoSoChung } from '@/types/ho-so.type';
+import type { HoSoChung, LoaiHoSo } from '@/types/ho-so.type';
 import { LOAI_HO_SO_CODE } from '@/constants/loai-ho-so';
+import { extractThongTinRieng, getCustomFields } from '@/utils/loai-ho-so';
 
 import FormThuoc from './forms/FormThuoc';
 import FormMyPham from './forms/FormMyPham';
@@ -13,6 +14,7 @@ import FormTbyt from './forms/FormTbyt';
 import FormTpbvskCongBo from './forms/FormTpbvskCongBo';
 import FormTpbvskTuCongBo from './forms/FormTpbvskTuCongBo';
 import FormCfsCpp from './forms/FormCfsCpp';
+import DynamicFieldsForm from './forms/DynamicFieldsForm';
 import UploadOrLinkInput from '../common/UploadOrLinkInput';
 
 interface Props {
@@ -22,6 +24,8 @@ interface Props {
   initialData?: HoSoChung;
 }
 
+const LEGACY_CODES = new Set(Object.values(LOAI_HO_SO_CODE));
+
 export default function HoSoFormModal({ mode, open, onCancel, initialData }: Props) {
   const [form] = Form.useForm();
   const { mutate: createHoSo, isPending: creating } = useCreateHoSo();
@@ -30,37 +34,56 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
   const { data: congTyResult, isLoading: loadingCongTy } = useCongTyList({ limit: 1000 });
   const dsCongTy = congTyResult?.data || [];
 
-  const { data: loaiHoSoResult, isLoading: loadingLoaiHoSo } = useLoaiHoSoList();
-  const loaiHoSoList = loaiHoSoResult?.data || [];
+  const { data: loaiHoSoResult, isLoading: loadingLoaiHoSo } = useLoaiHoSoList(false);
+
+  const loaiHoSoList = useMemo(() => {
+    const activeLoaiHoSoList: LoaiHoSo[] = loaiHoSoResult?.data || [];
+    if (
+      mode === 'edit' &&
+      initialData?.loai_ho_so &&
+      !activeLoaiHoSoList.some((l) => l.id === initialData.loai_ho_so_id)
+    ) {
+      return [...activeLoaiHoSoList, initialData.loai_ho_so];
+    }
+    return activeLoaiHoSoList;
+  }, [loaiHoSoResult?.data, mode, initialData]);
 
   const { data: tinhTrangResult, isLoading: loadingTinhTrang } = useTinhTrangList();
   const tinhTrangList = tinhTrangResult?.data || [];
 
-  const currentLoaiHoSo = Form.useWatch('loai_ho_so_id', form);
+  const currentLoaiHoSoId = Form.useWatch('loai_ho_so_id', form);
   const isApDungQuyDinhWatch = Form.useWatch('ap_dung_quy_dinh_tam_thoi', form);
-  const currentMaLoai = loaiHoSoList.find((l: any) => l.id === currentLoaiHoSo)?.ma_loai;
+  const currentLoaiObj =
+    loaiHoSoList.find((l) => l.id === currentLoaiHoSoId) ||
+    (initialData?.loai_ho_so_id === currentLoaiHoSoId ? initialData?.loai_ho_so : undefined);
+  const currentMaLoai = currentLoaiObj?.ma_loai;
+  const currentCustomFields = getCustomFields(currentLoaiObj);
+  const hasLegacyForm = Boolean(currentMaLoai && LEGACY_CODES.has(currentMaLoai));
+  const hasSpecificSection = hasLegacyForm || currentCustomFields.length > 0;
 
   useEffect(() => {
     if (open) {
       if (mode === 'edit' && initialData) {
-        // Trích xuất thong_tin_rieng một cách tự động (dynamic)
-        let thong_tin_rieng = undefined;
-        const dacThuKey = Object.keys(initialData).find(key => 
-          key.startsWith('ho_so_') && 
-          (initialData as any)[key] && 
-          typeof (initialData as any)[key] === 'object' && 
-          key !== 'ho_so_chung' && 
-          key !== 'ho_so_cu'
-        );
-        if (dacThuKey) {
-          thong_tin_rieng = (initialData as any)[dacThuKey];
+        const rawRieng = extractThongTinRieng(initialData);
+        const editLoai =
+          loaiHoSoList.find((l) => l.id === initialData.loai_ho_so_id) || initialData.loai_ho_so;
+        const editCustomFields = getCustomFields(editLoai);
+        const thong_tin_rieng: Record<string, unknown> | undefined = rawRieng ? { ...rawRieng } : undefined;
+
+        if (thong_tin_rieng && editCustomFields.length > 0) {
+          for (const field of editCustomFields) {
+            const val = thong_tin_rieng[field.key];
+            if (field.type === 'date' && val) {
+              thong_tin_rieng[field.key] = dayjs(val as string | number | Date);
+            }
+          }
         }
 
         form.setFieldsValue({
           ma_ho_so: initialData.ma_ho_so,
           so_chinh: initialData.so_chinh,
           ten_san_pham: initialData.ten_san_pham,
-          loai_ho_so_id: initialData.loai_ho_so_id, 
+          loai_ho_so_id: initialData.loai_ho_so_id,
           tinh_trang_id: initialData.tinh_trang_id,
           cong_ty_so_huu_id: initialData.cong_ty_so_huu_id,
           ngay_cong_bo: initialData.ngay_cong_bo ? dayjs(initialData.ngay_cong_bo) : undefined,
@@ -71,13 +94,13 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           tai_lieu_quy_dinh_url: initialData.tai_lieu_quy_dinh_url || '',
           ghi_chu: initialData.ghi_chu || '',
           ho_so_luu_url: initialData.ho_so_luu_url || '',
-          thong_tin_rieng, // Đổ dữ liệu riêng vào form
+          thong_tin_rieng,
         });
       } else if (mode === 'create') {
         form.resetFields();
       }
     }
-  }, [open, mode, initialData, form]);
+  }, [open, mode, initialData, form, loaiHoSoList]);
 
   const handleValuesChange = (changedValues: any) => {
     if (changedValues.loai_ho_so_id) {
@@ -89,12 +112,10 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
             form.setFieldValue('thong_tin_rieng', undefined);
           },
           onCancel: () => {
-            // Hoàn tác về loại hồ sơ cũ
             form.setFieldValue('loai_ho_so_id', initialData.loai_ho_so_id);
-          }
+          },
         });
       } else {
-        // Reset thông tin riêng khi tạo mới hoặc chuyển sang loại khác không bị trùng initial
         form.setFieldValue('thong_tin_rieng', undefined);
       }
     }
@@ -115,6 +136,11 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
 
     if (payload.thong_tin_rieng && typeof payload.thong_tin_rieng === 'object') {
       const { id: _id, ho_so_chung_id: _cid, ...cleanRieng } = payload.thong_tin_rieng;
+      for (const field of currentCustomFields) {
+        if (field.type === 'date' && cleanRieng[field.key] && dayjs.isDayjs(cleanRieng[field.key])) {
+          cleanRieng[field.key] = cleanRieng[field.key].format('YYYY-MM-DD');
+        }
+      }
       payload.thong_tin_rieng = cleanRieng;
     }
 
@@ -130,7 +156,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
             ? err.response.data.message.join(', ')
             : (err.response?.data?.message || err.message || 'Lỗi khi tạo mới');
           message.error(errMsg);
-        }
+        },
       });
     } else {
       if (!initialData?.id) return;
@@ -144,12 +170,12 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
             ? err.response.data.message.join(', ')
             : (err.response?.data?.message || err.message || 'Lỗi khi cập nhật');
           message.error(errMsg);
-        }
+        },
       });
     }
   };
 
-  const renderDynamicFields = () => {
+  const renderLegacyFields = () => {
     if (!currentMaLoai) return null;
     switch (currentMaLoai) {
       case LOAI_HO_SO_CODE.THUOC: return <FormThuoc />;
@@ -171,12 +197,12 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
       confirmLoading={creating || updating}
       okText="Lưu"
       cancelText="Hủy"
-      width={700}
+      width={720}
     >
-      <Form 
-        form={form} 
-        layout="vertical" 
-        onFinish={handleFinish} 
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleFinish}
         onValuesChange={handleValuesChange}
       >
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -187,19 +213,21 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           <Form.Item name="so_chinh" label="Số công bố">
             <Input placeholder="Nhập số công bố" />
           </Form.Item>
-          
+
           <Form.Item name="ten_san_pham" label="Tên sản phẩm" rules={[{ required: true, message: 'Vui lòng nhập tên sản phẩm' }]}>
             <Input placeholder="Nhập tên sản phẩm" />
           </Form.Item>
-          
+
           <Form.Item name="loai_ho_so_id" label="Loại hồ sơ" rules={[{ required: true, message: 'Vui lòng chọn loại hồ sơ' }]}>
             <Select placeholder="Chọn loại hồ sơ" loading={loadingLoaiHoSo}>
-              {loaiHoSoList.map((loai: any) => (
-                <Select.Option key={loai.id} value={loai.id}>{loai.ten_loai}</Select.Option>
+              {loaiHoSoList.map((loai) => (
+                <Select.Option key={loai.id} value={loai.id}>
+                  {loai.ten_loai}{loai.trang_thai === false ? ' (Ngưng hoạt động)' : ''}
+                </Select.Option>
               ))}
             </Select>
           </Form.Item>
-          
+
           <Form.Item name="tinh_trang_id" label="Trạng thái hồ sơ">
             <Select placeholder="Chọn trạng thái" loading={loadingTinhTrang} allowClear>
               {tinhTrangList.map((tt: any) => (
@@ -217,7 +245,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           </Form.Item>
 
           <Form.Item name="cong_ty_so_huu_id" label="Công ty / Đơn vị sở hữu">
-            <Select 
+            <Select
               showSearch
               allowClear
               placeholder="Nhập tên công ty để tìm kiếm..."
@@ -230,8 +258,8 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
         </div>
 
         <div className="mb-4 p-3 rounded-lg border border-indigo-100 bg-indigo-50/40">
-          <Form.Item 
-            name="ap_dung_quy_dinh_tam_thoi" 
+          <Form.Item
+            name="ap_dung_quy_dinh_tam_thoi"
             label={<span className="font-semibold text-indigo-900">Áp dụng quy định cho phép tiếp tục sử dụng số công bố</span>}
             valuePropName="checked"
             style={{ marginBottom: isApDungQuyDinhWatch ? 12 : 0 }}
@@ -242,24 +270,24 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
 
           {isApDungQuyDinhWatch && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px', marginTop: 12 }}>
-              <Form.Item 
-                name="can_cu_quy_dinh" 
-                label="Căn cứ pháp lý quy định" 
+              <Form.Item
+                name="can_cu_quy_dinh"
+                label="Căn cứ pháp lý quy định"
                 rules={[{ required: true, message: 'Nhập căn cứ văn bản (VD: NQ 80/2023, NĐ 07/2023)' }]}
               >
                 <Input placeholder="VD: Nghị quyết 80/2023/QH15" />
               </Form.Item>
 
-              <Form.Item 
-                name="ngay_het_han_quy_dinh" 
-                label="Hạn sử dụng theo quy định (Không bắt buộc)" 
+              <Form.Item
+                name="ngay_het_han_quy_dinh"
+                label="Hạn sử dụng theo quy định (Không bắt buộc)"
               >
                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày (nếu có)" allowClear />
               </Form.Item>
 
               <div style={{ gridColumn: 'span 2' }}>
-                <Form.Item 
-                  name="tai_lieu_quy_dinh_url" 
+                <Form.Item
+                  name="tai_lieu_quy_dinh_url"
                   label="Tài liệu / Công văn quy định đính kèm (Link hoặc tải file lên)"
                   extra="Có thể dán link ngoài (Google Drive, văn bản...) hoặc bấm Upload để tải file trực tiếp từ máy tính"
                 >
@@ -274,18 +302,20 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           <Input.TextArea rows={2} placeholder="Ghi chú thêm..." />
         </Form.Item>
 
-        <Form.Item 
-          name="ho_so_luu_url" 
-          label="Link thư mục lưu Hồ sơ" 
-         
+        <Form.Item
+          name="ho_so_luu_url"
+          label="Link thư mục lưu Hồ sơ"
         >
           <UploadOrLinkInput placeholder="Đường dẫn đến thư mục chứa hồ sơ (Google Drive, OneDrive...)" />
         </Form.Item>
 
-        {currentLoaiHoSo && (
+        {hasSpecificSection && (
           <>
-            <Divider  plain>Thông tin đặc thù</Divider>
-            {renderDynamicFields()}
+            <Divider plain>Thông tin đặc thù</Divider>
+            {renderLegacyFields()}
+            {currentCustomFields.length > 0 && (
+              <DynamicFieldsForm fields={currentCustomFields} showFileDivider={!hasLegacyForm} />
+            )}
           </>
         )}
       </Form>

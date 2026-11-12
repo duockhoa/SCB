@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHoSoDto } from './dto/create-ho-so.dto';
 import { UpdateHoSoDto } from './dto/update-ho-so.dto';
@@ -12,12 +12,57 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { dossierSnapshot } from './ho-so-audit';
 import { dateOnly, expiryStatus, EXPIRY_STATUSES, reminderDate, ExpiryConfig, DEFAULT_EXPIRY_CONFIG, effectiveExpiryDate } from './expiry';
 
+const LEGACY_DETAIL_SPECS: Record<string, {
+  tableKey: 'ho_so_thuoc' | 'ho_so_my_pham' | 'ho_so_tbyt' | 'ho_so_tpbvsk_tu_cong_bo' | 'ho_so_tpbvsk_cong_bo' | 'ho_so_cfs_cpp';
+  fields: Record<string, string>;
+}> = {
+  THUOC: { tableKey: 'ho_so_thuoc', fields: Prisma.Ho_so_thuocScalarFieldEnum },
+  MY_PHAM: { tableKey: 'ho_so_my_pham', fields: Prisma.Ho_so_my_phamScalarFieldEnum },
+  TBYT: { tableKey: 'ho_so_tbyt', fields: Prisma.Ho_so_tbytScalarFieldEnum },
+  TPBVSK_TU_CONG_BO: { tableKey: 'ho_so_tpbvsk_tu_cong_bo', fields: Prisma.Ho_so_tpbvsk_tu_cong_boScalarFieldEnum },
+  TPBVSK_CONG_BO: { tableKey: 'ho_so_tpbvsk_cong_bo', fields: Prisma.Ho_so_tpbvsk_cong_boScalarFieldEnum },
+  CFS_CPP: { tableKey: 'ho_so_cfs_cpp', fields: Prisma.Ho_so_cfs_cppScalarFieldEnum },
+};
+
 @Injectable()
 export class HoSoService {
   constructor(
     private prisma: PrismaService,
     private eventEmitter: EventEmitter2
   ) {}
+
+  private splitThongTinRieng(maLoai: string, thongTinRieng?: Record<string, any>) {
+    if (!thongTinRieng || typeof thongTinRieng !== 'object') {
+      return { legacyData: null as Record<string, any> | null, customData: null as Record<string, any> | null, spec: LEGACY_DETAIL_SPECS[maLoai] };
+    }
+    const { id: _id, ho_so_chung_id: _cid, ...clean } = thongTinRieng;
+    const spec = LEGACY_DETAIL_SPECS[maLoai];
+    if (!spec) {
+      return {
+        legacyData: null,
+        customData: Object.keys(clean).length > 0 ? clean : null,
+        spec: undefined,
+      };
+    }
+
+    const legacyAllowed = new Set(Object.values(spec.fields));
+    const legacyData: Record<string, any> = {};
+    const customData: Record<string, any> = {};
+
+    for (const [k, v] of Object.entries(clean)) {
+      if (legacyAllowed.has(k)) {
+        legacyData[k] = v;
+      } else if (v !== undefined) {
+        customData[k] = v;
+      }
+    }
+
+    return {
+      legacyData: Object.keys(legacyData).length > 0 ? legacyData : null,
+      customData: Object.keys(customData).length > 0 ? customData : null,
+      spec,
+    };
+  }
 
   private async getLoaiHoSoExpiryConfig(loaiHoSoId?: number | null): Promise<ExpiryConfig> {
     if (!loaiHoSoId) return DEFAULT_EXPIRY_CONFIG;
@@ -77,53 +122,65 @@ export class HoSoService {
     const andConditions: Prisma.ho_so_chungWhereInput[] = [];
 
     if (search) {
-      andConditions.push({
-        OR: [
-          // Bảng chung
-          { ma_ho_so: { contains: search } },
-          { so_chinh: { contains: search } },
-          { ten_san_pham: { contains: search } },
-          { ten_san_pham_khong_dau: { contains: search } },
-          { ma_san_pham_noi_bo: { contains: search } },
-          
-          // Chi tiết Thuốc
-          { ho_so_thuoc: { is: { OR: [
-            { hoat_chat_ham_luong: { contains: search } },
-            { bao_che: { contains: search } },
-            { quy_cach_dong_goi: { contains: search } }
-          ]}}},
-          
-          // Chi tiết Mỹ Phẩm
-          { ho_so_my_pham: { is: { OR: [
-            { nhan_hang: { contains: search } },
-            { dang_my_pham: { contains: search } }
-          ]}}},
-          
-          // Chi tiết TBYT
-          { ho_so_tbyt: { is: { OR: [
-            { ten_thuong_mai: { contains: search } },
-            { ten_tbyt_chung_loai: { contains: search } },
-            { chu_so_huu: { contains: search } }
-          ]}}},
-          
-          // Chi tiết TPBVSK Tự Công Bố
-          { ho_so_tpbvsk_tu_cong_bo: { is: { OR: [
-            { co_so_dung_ten: { contains: search } },
-            { dang_san_pham: { contains: search } }
-          ]}}},
-          
-          // Chi tiết TPBVSK Công Bố
-          { ho_so_tpbvsk_cong_bo: { is: { OR: [
-            { thanh_phan: { contains: search } },
-            { chu_so_huu: { contains: search } }
-          ]}}},
-          
-          // Chi tiết CFS/CPP
-          { ho_so_cfs_cpp: { is: { OR: [
-            { nuoc_xuat_khau: { contains: search } }
-          ]}}}
-        ]
-      });
+      const searchPattern = `%${String(search).toLowerCase()}%`;
+      const rawMatches = await this.prisma.$queryRaw<Array<{ id: number }>>`
+        SELECT id FROM ho_so_chung
+        WHERE du_lieu_dac_thu IS NOT NULL
+          AND LOWER(CAST(du_lieu_dac_thu AS CHAR)) LIKE ${searchPattern}
+      `;
+      const dynamicMatchedIds = rawMatches.map((r) => Number(r.id)).filter((n) => !Number.isNaN(n));
+
+      const searchOrConditions: Prisma.ho_so_chungWhereInput[] = [
+        // Bảng chung
+        { ma_ho_so: { contains: search } },
+        { so_chinh: { contains: search } },
+        { ten_san_pham: { contains: search } },
+        { ten_san_pham_khong_dau: { contains: search } },
+        { ma_san_pham_noi_bo: { contains: search } },
+
+        // Chi tiết Thuốc
+        { ho_so_thuoc: { is: { OR: [
+          { hoat_chat_ham_luong: { contains: search } },
+          { bao_che: { contains: search } },
+          { quy_cach_dong_goi: { contains: search } }
+        ]}}},
+
+        // Chi tiết Mỹ Phẩm
+        { ho_so_my_pham: { is: { OR: [
+          { nhan_hang: { contains: search } },
+          { dang_my_pham: { contains: search } }
+        ]}}},
+
+        // Chi tiết TBYT
+        { ho_so_tbyt: { is: { OR: [
+          { ten_thuong_mai: { contains: search } },
+          { ten_tbyt_chung_loai: { contains: search } },
+          { chu_so_huu: { contains: search } }
+        ]}}},
+
+        // Chi tiết TPBVSK Tự Công Bố
+        { ho_so_tpbvsk_tu_cong_bo: { is: { OR: [
+          { co_so_dung_ten: { contains: search } },
+          { dang_san_pham: { contains: search } }
+        ]}}},
+
+        // Chi tiết TPBVSK Công Bố
+        { ho_so_tpbvsk_cong_bo: { is: { OR: [
+          { thanh_phan: { contains: search } },
+          { chu_so_huu: { contains: search } }
+        ]}}},
+
+        // Chi tiết CFS/CPP
+        { ho_so_cfs_cpp: { is: { OR: [
+          { nuoc_xuat_khau: { contains: search } }
+        ]}}},
+      ];
+
+      if (dynamicMatchedIds.length > 0) {
+        searchOrConditions.push({ id: { in: dynamicMatchedIds } });
+      }
+
+      andConditions.push({ OR: searchOrConditions });
     }
 
     if (loai_ho_so) andConditions.push({ loai_ho_so_id: Number(loai_ho_so) });
@@ -267,6 +324,9 @@ export class HoSoService {
 
     const loaiHoSo = await this.prisma.dm_loai_ho_so.findUnique({ where: { id: data.loai_ho_so_id } });
     if (!loaiHoSo) throw new NotFoundException('Không tìm thấy loại hồ sơ');
+    if (!loaiHoSo.trang_thai) throw new BadRequestException('Loại hồ sơ này đã ngưng hoạt động');
+
+    const { legacyData, customData, spec } = this.splitThongTinRieng(loaiHoSo.ma_loai, thong_tin_rieng);
 
     const result = await this.prisma.$transaction(async (tx) => {
       const hoSoChung = await tx.ho_so_chung.create({
@@ -280,23 +340,13 @@ export class HoSoService {
           tai_lieu_quy_dinh_url: chungData.tai_lieu_quy_dinh_url,
           ngay_nhac_han: reminderDate(effectiveExpiry, expiryConfig),
           tinh_trang_id: statusId,
+          du_lieu_dac_thu: customData ? (customData as Prisma.InputJsonValue) : Prisma.JsonNull,
         }
       });
 
-      if (thong_tin_rieng) {
-        const delegateMap: Record<string, any> = {
-          'THUOC': tx.ho_so_thuoc,
-          'MY_PHAM': tx.ho_so_my_pham,
-          'TBYT': tx.ho_so_tbyt,
-          'TPBVSK_TU_CONG_BO': tx.ho_so_tpbvsk_tu_cong_bo,
-          'TPBVSK_CONG_BO': tx.ho_so_tpbvsk_cong_bo,
-          'CFS_CPP': tx.ho_so_cfs_cpp
-        };
-        const delegate = delegateMap[loaiHoSo.ma_loai];
-        if (delegate) {
-          const { id: _id, ho_so_chung_id: _cid, ...cleanThongTinRieng } = thong_tin_rieng;
-          await delegate.create({ data: { ho_so_chung_id: hoSoChung.id, ...cleanThongTinRieng } });
-        }
+      if (spec && legacyData) {
+        const delegate = tx[spec.tableKey] as any;
+        await delegate.create({ data: { ho_so_chung_id: hoSoChung.id, ...legacyData } });
       }
 
       await tx.nhat_ky_ho_so.create({
@@ -361,6 +411,15 @@ export class HoSoService {
     const effectiveExpiry = effectiveExpiryDate(expiry, apDung, expiryQuyDinh);
 
     const loaiHoSoId = chungData.loai_ho_so_id || hoSo.loai_ho_so_id;
+    const isChangingLoai = Boolean(chungData.loai_ho_so_id && chungData.loai_ho_so_id !== hoSo.loai_ho_so_id);
+    const targetLoaiHoSo = isChangingLoai
+      ? await this.prisma.dm_loai_ho_so.findUnique({ where: { id: loaiHoSoId } })
+      : hoSo.loai_ho_so;
+    if (!targetLoaiHoSo) throw new NotFoundException('Không tìm thấy loại hồ sơ');
+    if (isChangingLoai && !targetLoaiHoSo.trang_thai) {
+      throw new BadRequestException('Loại hồ sơ mới đã ngưng hoạt động');
+    }
+
     const expiryConfig = await this.getLoaiHoSoExpiryConfig(loaiHoSoId);
     const requestedStatus = chungData.tinh_trang_id !== undefined
       ? await this.prisma.dm_tinh_trang.findUnique({ where: { id: chungData.tinh_trang_id } }) : hoSo.tinh_trang;
@@ -375,6 +434,15 @@ export class HoSoService {
       if (exists) throw new ConflictException('Mã hồ sơ đã tồn tại');
     }
 
+    const hasThongTinRieng = thong_tin_rieng !== undefined;
+    const { legacyData, customData, spec } = hasThongTinRieng
+      ? this.splitThongTinRieng(targetLoaiHoSo.ma_loai, thong_tin_rieng)
+      : { legacyData: null, customData: null, spec: LEGACY_DETAIL_SPECS[targetLoaiHoSo.ma_loai] };
+
+    const nextDuLieuDacThu = hasThongTinRieng
+      ? (customData ? (customData as Prisma.InputJsonValue) : Prisma.JsonNull)
+      : (isChangingLoai ? Prisma.JsonNull : undefined);
+
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedChung = await tx.ho_so_chung.update({
         where: { id },
@@ -388,27 +456,24 @@ export class HoSoService {
           tai_lieu_quy_dinh_url: chungData.tai_lieu_quy_dinh_url,
           ngay_nhac_han: reminderDate(effectiveExpiry, expiryConfig),
           tinh_trang_id: statusId,
+          ...(nextDuLieuDacThu !== undefined ? { du_lieu_dac_thu: nextDuLieuDacThu } : {}),
         }
       });
 
-      if (thong_tin_rieng) {
-        const delegateMap: Record<string, any> = {
-          'THUOC': tx.ho_so_thuoc,
-          'MY_PHAM': tx.ho_so_my_pham,
-          'TBYT': tx.ho_so_tbyt,
-          'TPBVSK_TU_CONG_BO': tx.ho_so_tpbvsk_tu_cong_bo,
-          'TPBVSK_CONG_BO': tx.ho_so_tpbvsk_cong_bo,
-          'CFS_CPP': tx.ho_so_cfs_cpp
-        };
-        const delegate = delegateMap[hoSo.loai_ho_so.ma_loai];
-        if (delegate) {
-          const { id: _id, ho_so_chung_id: _cid, ...cleanThongTinRieng } = thong_tin_rieng;
-          await delegate.upsert({
-            where: { ho_so_chung_id: id },
-            update: cleanThongTinRieng,
-            create: { ho_so_chung_id: id, ...cleanThongTinRieng }
-          });
+      if (isChangingLoai) {
+        const oldSpec = LEGACY_DETAIL_SPECS[hoSo.loai_ho_so.ma_loai];
+        if (oldSpec) {
+          await (tx[oldSpec.tableKey] as any).deleteMany({ where: { ho_so_chung_id: id } });
         }
+      }
+
+      if (hasThongTinRieng && spec && legacyData) {
+        const delegate = tx[spec.tableKey] as any;
+        await delegate.upsert({
+          where: { ho_so_chung_id: id },
+          update: legacyData,
+          create: { ho_so_chung_id: id, ...legacyData }
+        });
       }
 
       await tx.nhat_ky_ho_so.create({

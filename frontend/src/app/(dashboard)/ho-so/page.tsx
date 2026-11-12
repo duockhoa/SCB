@@ -5,9 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Breadcrumb, Button, Skeleton, Dropdown, MenuProps, Popconfirm, message, Input, Descriptions, Empty, Timeline, Card, Tag } from 'antd';
 import { CloseOutlined, PlusCircleOutlined, SyncOutlined, SwapOutlined, StopOutlined, EditOutlined, DeleteOutlined, MoreOutlined, PlusOutlined, SearchOutlined, ClockCircleOutlined, FileAddOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useHoSoList, useHoSoDetail, useDeleteHoSo } from '@/hooks/queries/useHoSo';
-import type { HoSoChung } from '@/types/ho-so.type';
+import type { HoSoChung, LoaiHoSo } from '@/types/ho-so.type';
 import dayjs from 'dayjs';
-import { LOAI_HO_SO_CODE } from '@/constants/loai-ho-so';
+import { useLoaiHoSoList } from '@/hooks/queries/useDanhMuc';
+import { extractThongTinRieng, findFieldConfig, getFieldLabel, getLoaiHoSoColorClass, isFileFieldKey } from '@/utils/loai-ho-so';
 import { useUiStore } from '@/store/uiStore';
 
 import CapSoModal from '@/components/ho-so/CapSoModal';
@@ -112,86 +113,17 @@ function HoSoMasterDetailContent() {
   //   }
   // }, [dsHoSo, selectedId, isLoading]);
   
+  const { data: loaiHoSoResult } = useLoaiHoSoList(false);
+  const loaiHoSoFilterList: LoaiHoSo[] = loaiHoSoResult?.data || [];
+
   const { mutate: deleteHoSo } = useDeleteHoSo();
 
   const selectedItem = dsHoSo.find(item => item.id === selectedId);
   const { data: detailData, isLoading: isLoadingDetail } = useHoSoDetail(selectedId as number);
 
   // Xác định thông tin đặc thù cho hồ sơ đang chọn từ API detail
-  let thong_tin_rieng: any = null;
   const currentData = detailData?.data || selectedItem;
-
-  if (currentData) {
-    const dacThuKey = Object.keys(currentData).find(key => 
-      key.startsWith('ho_so_') && 
-      currentData[key] && 
-      typeof currentData[key] === 'object' && 
-      key !== 'ho_so_chung' && 
-      key !== 'ho_so_cu'
-    );
-    if (dacThuKey) {
-      thong_tin_rieng = currentData[dacThuKey];
-    }
-  }
-
-  const formatLabelFromKey = (key: string) => {
-    // Từ điển ánh xạ key database -> Tiếng Việt có dấu chuẩn
-    const dictionary: Record<string, string> = {
-      // Dùng chung
-      id: 'ID',
-      ho_so_chung_id: 'ID hồ sơ chung',
-      
-      // Hồ sơ Thuốc (ho_so_thuoc)
-      hoat_chat_ham_luong: 'Hoạt chất hàm lượng',
-      bao_che: 'Bào chế',
-      quy_cach_dong_goi: 'Quy cách đóng gói',
-      dot_cap_so: 'Đợt cấp số',
-      gia_han: 'Gia hạn',
-      quyet_dinh_cap_sdk_url: 'Quyết định cấp SĐK',
-      ke_khai_gia_url: 'Kê khai giá',
-      quang_cao_url: 'Quảng cáo',
-      
-      // Hồ sơ Mỹ phẩm (ho_so_my_pham)
-      nhan_hang: 'Nhãn hàng',
-      dang_my_pham: 'Dạng mỹ phẩm',
-      phieu_cong_bo_url: 'Phiếu công bố',
-      hs_thay_the_ghi_chu: 'Hồ sơ thay thế / Ghi chú',
-      xn_quang_cao_url: 'Xác nhận quảng cáo',
-      
-      // Hồ sơ Trang thiết bị y tế (ho_so_tbyt)
-      ten_thuong_mai: 'Tên thương mại',
-      ten_tbyt_chung_loai: 'Tên TBYT chủng loại',
-      phan_loai: 'Phân loại',
-      chu_so_huu: 'Chủ sở hữu',
-      phieu_tiep_nhan_url: 'Phiếu tiếp nhận',
-      tai_lieu_mo_ta_kt_url: 'Tài liệu mô tả kỹ thuật',
-      tieu_chuan_co_so_url: 'Tiêu chuẩn cơ sở',
-      nhan_url: 'Nhãn',
-      hdsd_url: 'Hướng dẫn sử dụng',
-      
-      // Hồ sơ TPBVSK Tự công bố (ho_so_tpbvsk_tu_cong_bo)
-      co_so_dung_ten: 'Cơ sở đứng tên',
-      dang_san_pham: 'Dạng sản phẩm',
-      
-      // Hồ sơ TPBVSK Công bố (ho_so_tpbvsk_cong_bo)
-      thanh_phan: 'Thành phần',
-      
-      // Hồ sơ CFS/CPP (ho_so_cfs_cpp)
-      loai_hinh: 'Loại hình',
-      nuoc_xuat_khau: 'Nước xuất khẩu',
-      cong_van_cap_url: 'Công văn cấp',
-    };
-
-    if (dictionary[key]) {
-      return dictionary[key];
-    }
-
-    // Fallback nếu không có trong từ điển
-    const words = key.split('_');
-    if (words.length === 0) return key;
-    const first = words[0].charAt(0).toUpperCase() + words[0].slice(1);
-    return [first, ...words.slice(1)].join(' ');
-  };
+  const thong_tin_rieng = extractThongTinRieng(currentData);
 
   const renderThongTinDacThu = () => {
     if (!currentData || !thong_tin_rieng) return null;
@@ -206,11 +138,29 @@ function HoSoMasterDetailContent() {
 
     const items = Object.entries(thong_tin_rieng)
       .filter(([k, v]) => k !== 'id' && k !== 'ho_so_chung_id' && v !== null && v !== undefined && v !== '')
-      .map(([k, v], idx) => ({
-        key: idx.toString(),
-        label: formatLabelFromKey(k),
-        value: String(v),
-      }));
+      .map(([k, v], idx) => {
+        const fieldCfg = findFieldConfig(k, currentData?.loai_ho_so);
+        const isFile = isFileFieldKey(k, currentData?.loai_ho_so);
+        let displayNode: React.ReactNode = String(v);
+        if (isFile) {
+          displayNode = (
+            <button
+              type="button"
+              onClick={() => openDocumentUrl(String(v))}
+              className="text-blue-600 hover:underline cursor-pointer bg-transparent border-0 p-0 text-left break-all"
+            >
+              [Xem tài liệu]
+            </button>
+          );
+        } else if (fieldCfg?.type === 'date' && dayjs(String(v)).isValid()) {
+          displayNode = dayjs(String(v)).format('DD/MM/YYYY');
+        }
+        return {
+          key: idx.toString(),
+          label: getFieldLabel(k, currentData?.loai_ho_so),
+          value: displayNode,
+        };
+      });
 
     if (items.length === 0) return null;
 
@@ -285,18 +235,6 @@ function HoSoMasterDetailContent() {
   };
 
   // Helper functions cho UI
-  const getLoaiHoSoColor = (maLoai?: string) => {
-    switch (maLoai) {
-      case 'THUOC':              return 'text-red-600 bg-red-50 border-red-200';
-      case 'MY_PHAM':            return 'text-pink-600 bg-pink-50 border-pink-200';
-      case 'TBYT':               return 'text-violet-600 bg-violet-50 border-violet-200';
-      case 'TPBVSK_CONG_BO':     return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      case 'TPBVSK_TU_CONG_BO':  return 'text-teal-600 bg-teal-50 border-teal-200';
-      case 'CFS_CPP':            return 'text-amber-600 bg-amber-50 border-amber-200';
-      default:                   return 'text-blue-500 bg-blue-50 border-blue-100';
-    }
-  };
-
   const getStatusColor = (tenTinhTrang?: string) => {
     if (!tenTinhTrang) return 'text-gray-500';
     if (tenTinhTrang.includes('Đang xử lý') || tenTinhTrang.includes('Sắp hết hạn')) return 'text-orange-500';
@@ -332,28 +270,23 @@ function HoSoMasterDetailContent() {
             </Button>
           )}
         </div>
-        {/* Filter loại hồ sơ */}
+        {/* Filter loại hồ sơ (động theo danh mục) */}
         <div className="px-3 py-2 border-b border-gray-200 bg-white flex flex-wrap gap-1.5">
-          {[
-            { code: 'THUOC', label: 'Thuốc' },
-            { code: 'MY_PHAM', label: 'Mỹ phẩm' },
-            { code: 'TBYT', label: 'TBYT' },
-            { code: 'TPBVSK_CONG_BO', label: 'TPBVSK CB' },
-            { code: 'TPBVSK_TU_CONG_BO', label: 'TPBVSK TCB' },
-            { code: 'CFS_CPP', label: 'CFS/CPP' },
-          ].map(({ code, label }) => {
-            const isActive = selectedLoaiFilter.includes(code);
+          {loaiHoSoFilterList.map((loai) => {
+            const isActive = selectedLoaiFilter.includes(loai.ma_loai);
             return (
               <button
-                key={code}
+                key={loai.id}
                 onClick={() => setSelectedLoaiFilter(prev =>
-                  prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+                  prev.includes(loai.ma_loai) ? prev.filter(c => c !== loai.ma_loai) : [...prev, loai.ma_loai]
                 )}
                 className={`text-[11px] font-semibold px-2 py-1 rounded-full border transition-all cursor-pointer ${
-                  isActive ? getLoaiHoSoColor(code) + ' ring-1 ring-current' : 'text-gray-400 bg-gray-50 border-gray-200 hover:bg-gray-100'
+                  isActive
+                    ? getLoaiHoSoColorClass(loai.ma_loai, loai.mau_sac) + ' ring-1 ring-current'
+                    : 'text-gray-400 bg-gray-50 border-gray-200 hover:bg-gray-100'
                 }`}
               >
-                {label}
+                {loai.ten_loai}
               </button>
             );
           })}
@@ -386,7 +319,7 @@ function HoSoMasterDetailContent() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${getLoaiHoSoColor(item.loai_ho_so?.ma_loai)}`}>{item.loai_ho_so?.ten_loai || 'KHÁC'}</span>
+                  <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${getLoaiHoSoColorClass(item.loai_ho_so?.ma_loai, item.loai_ho_so?.mau_sac)}`}>{item.loai_ho_so?.ten_loai || 'KHÁC'}</span>
                 </div>
                 <div className="flex justify-between items-center mt-1.5">
                   <span className="text-gray-500 text-sm">{item.ma_ho_so}</span>
