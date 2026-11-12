@@ -7,6 +7,7 @@ import { GiaHanDto } from './dto/gia-han.dto';
 import { ThayTheDto } from './dto/thay-the.dto';
 import { ThayDoiDto } from './dto/thay-doi.dto';
 import { QuyDinhTamThoiDto } from './dto/quy-dinh-tam-thoi.dto';
+import { TaiLieuDto, UpdateTaiLieuDto, ReplaceTaiLieuDto } from './dto/tai-lieu.dto';
 import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { dossierSnapshot } from './ho-so-audit';
@@ -282,6 +283,10 @@ export class HoSoService {
         ho_so_tpbvsk_cong_bo: true,
         ho_so_cfs_cpp: true,
         tai_lieu: {
+          include: {
+            loai_tai_lieu: true,
+            nguoi_tai_len: { select: { id: true, ho_ten: true } },
+          },
           orderBy: [
             { tai_lieu_hien_hanh: 'desc' },
             { so_phien_ban: 'desc' },
@@ -856,34 +861,70 @@ export class HoSoService {
     return { message: 'Xóa thành công' };
   }
 
-  // --- QUẢN LÝ TÀI LIỆU KHÁC ---
+  // --- QUẢN LÝ TÀI LIỆU ĐÍNH KÈM ---
 
-  async addTaiLieu(hoSoId: number, data: import('./dto/tai-lieu.dto').TaiLieuDto, userId?: number) {
-    const hoSo = await this.findOne(hoSoId);
+  private cleanDynamicDocData(raw?: Record<string, any> | null) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const cleaned: Record<string, any> = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (v !== undefined) cleaned[k] = v;
+    }
+    return Object.keys(cleaned).length > 0 ? cleaned : null;
+  }
 
-    // Tìm hoặc tạo loại tài liệu "KHAC"
-    let loaiTaiLieu = await this.prisma.dm_loai_tai_lieu.findFirst({
-      where: { ma_loai_tai_lieu: 'KHAC' }
+  private async resolveLoaiTaiLieuForHoSo(hoSoLoaiId: number, loaiTaiLieuId?: number) {
+    if (loaiTaiLieuId) {
+      const loai = await this.prisma.dm_loai_tai_lieu.findUnique({
+        where: { id: loaiTaiLieuId },
+        include: { loai_ho_so_links: { select: { loai_ho_so_id: true } } },
+      });
+      if (!loai) throw new NotFoundException('Không tìm thấy loại tài liệu');
+      if (!loai.trang_thai) {
+        throw new BadRequestException('Loại tài liệu này đã ngưng hoạt động');
+      }
+      const applies =
+        loai.ap_dung_tat_ca ||
+        loai.loai_ho_so_links.some((link) => link.loai_ho_so_id === hoSoLoaiId);
+      if (!applies) {
+        throw new BadRequestException('Loại tài liệu này không áp dụng cho loại hồ sơ hiện tại');
+      }
+      return loai;
+    }
+
+    let loaiKhac = await this.prisma.dm_loai_tai_lieu.findFirst({
+      where: { ma_loai_tai_lieu: 'KHAC' },
     });
-
-    if (!loaiTaiLieu) {
-      loaiTaiLieu = await this.prisma.dm_loai_tai_lieu.create({
+    if (!loaiKhac) {
+      loaiKhac = await this.prisma.dm_loai_tai_lieu.create({
         data: {
           ma_loai_tai_lieu: 'KHAC',
           ten_loai_tai_lieu: 'Tài liệu khác',
-        }
+          ap_dung_tat_ca: true,
+        },
       });
     }
+    return loaiKhac;
+  }
+
+  async addTaiLieu(hoSoId: number, data: TaiLieuDto, userId?: number) {
+    const hoSo = await this.findOne(hoSoId);
+    const loaiTaiLieu = await this.resolveLoaiTaiLieuForHoSo(hoSo.loai_ho_so_id, data.loai_tai_lieu_id);
+    const customDocData = this.cleanDynamicDocData(data.du_lieu_dac_thu);
 
     return this.prisma.$transaction(async (tx) => {
       const taiLieu = await tx.tai_lieu_ho_so.create({
         data: {
           ho_so_chung_id: hoSoId,
           loai_tai_lieu_id: loaiTaiLieu.id,
-          ten_tai_lieu: data.ten_tai_lieu,
-          duong_dan_url: data.duong_dan_url,
-          ghi_chu: data.ghi_chu,
-        }
+          ten_tai_lieu: data.ten_tai_lieu.trim(),
+          duong_dan_url: data.duong_dan_url.trim(),
+          ngay_hieu_luc: data.ngay_hieu_luc ? dateOnly(data.ngay_hieu_luc) : null,
+          ngay_het_hieu_luc: data.ngay_het_hieu_luc ? dateOnly(data.ngay_het_hieu_luc) : null,
+          ghi_chu: data.ghi_chu?.trim() || null,
+          du_lieu_dac_thu: customDocData ? (customDocData as Prisma.InputJsonValue) : Prisma.JsonNull,
+          nguoi_tai_len_id: userId || null,
+        },
+        include: { loai_tai_lieu: true },
       });
 
       await tx.nhat_ky_ho_so.create({
@@ -891,20 +932,76 @@ export class HoSoService {
           ho_so_chung_id: hoSoId,
           hanh_dong: 'UPDATE',
           nguoi_thuc_hien_id: userId || null,
-          noi_dung: `Đã thêm tài liệu đính kèm: ${data.ten_tai_lieu}`,
-          du_lieu_moi: JSON.stringify(taiLieu)
-        }
+          noi_dung: `Đã thêm tài liệu [${loaiTaiLieu.ten_loai_tai_lieu}]: ${taiLieu.ten_tai_lieu}`,
+          du_lieu_moi: JSON.stringify(taiLieu),
+        },
       });
 
       return taiLieu;
     });
   }
 
-  async deleteTaiLieu(hoSoId: number, taiLieuId: number, userId?: number) {
+  async updateTaiLieu(hoSoId: number, taiLieuId: number, data: UpdateTaiLieuDto, userId?: number) {
     const hoSo = await this.findOne(hoSoId);
-    
+    const oldDoc = await this.prisma.tai_lieu_ho_so.findUnique({
+      where: { id: taiLieuId },
+      include: { loai_tai_lieu: true },
+    });
+
+    if (!oldDoc || oldDoc.ho_so_chung_id !== hoSoId) {
+      throw new NotFoundException('Không tìm thấy tài liệu trong hồ sơ này');
+    }
+
+    let nextLoaiTaiLieuId: number | undefined;
+    if (data.loai_tai_lieu_id !== undefined && data.loai_tai_lieu_id !== oldDoc.loai_tai_lieu_id) {
+      const targetLoai = await this.resolveLoaiTaiLieuForHoSo(hoSo.loai_ho_so_id, data.loai_tai_lieu_id);
+      nextLoaiTaiLieuId = targetLoai.id;
+    }
+
+    const customDocData =
+      data.du_lieu_dac_thu !== undefined ? this.cleanDynamicDocData(data.du_lieu_dac_thu) : undefined;
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.tai_lieu_ho_so.update({
+        where: { id: taiLieuId },
+        data: {
+          ...(nextLoaiTaiLieuId !== undefined ? { loai_tai_lieu_id: nextLoaiTaiLieuId } : {}),
+          ...(data.ten_tai_lieu !== undefined ? { ten_tai_lieu: data.ten_tai_lieu.trim() } : {}),
+          ...(data.duong_dan_url !== undefined ? { duong_dan_url: data.duong_dan_url.trim() } : {}),
+          ...(Object.hasOwn(data, 'ngay_hieu_luc')
+            ? { ngay_hieu_luc: data.ngay_hieu_luc ? dateOnly(data.ngay_hieu_luc) : null }
+            : {}),
+          ...(Object.hasOwn(data, 'ngay_het_hieu_luc')
+            ? { ngay_het_hieu_luc: data.ngay_het_hieu_luc ? dateOnly(data.ngay_het_hieu_luc) : null }
+            : {}),
+          ...(Object.hasOwn(data, 'ghi_chu') ? { ghi_chu: data.ghi_chu?.trim() || null } : {}),
+          ...(customDocData !== undefined
+            ? { du_lieu_dac_thu: customDocData ? (customDocData as Prisma.InputJsonValue) : Prisma.JsonNull }
+            : {}),
+        },
+        include: { loai_tai_lieu: true },
+      });
+
+      await tx.nhat_ky_ho_so.create({
+        data: {
+          ho_so_chung_id: hoSoId,
+          hanh_dong: 'UPDATE',
+          nguoi_thuc_hien_id: userId || null,
+          noi_dung: `Đã cập nhật thông tin tài liệu: ${updated.ten_tai_lieu}`,
+          du_lieu_cu: JSON.stringify(oldDoc),
+          du_lieu_moi: JSON.stringify(updated),
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  async deleteTaiLieu(hoSoId: number, taiLieuId: number, userId?: number) {
+    await this.findOne(hoSoId);
+
     const taiLieu = await this.prisma.tai_lieu_ho_so.findUnique({
-      where: { id: taiLieuId }
+      where: { id: taiLieuId },
     });
 
     if (!taiLieu || taiLieu.ho_so_chung_id !== hoSoId) {
@@ -913,7 +1010,7 @@ export class HoSoService {
 
     return this.prisma.$transaction(async (tx) => {
       await tx.tai_lieu_ho_so.delete({
-        where: { id: taiLieuId }
+        where: { id: taiLieuId },
       });
 
       await tx.nhat_ky_ho_so.create({
@@ -922,8 +1019,8 @@ export class HoSoService {
           hanh_dong: 'UPDATE',
           nguoi_thuc_hien_id: userId || null,
           noi_dung: `Đã xóa tài liệu đính kèm: ${taiLieu.ten_tai_lieu}`,
-          du_lieu_cu: JSON.stringify(taiLieu)
-        }
+          du_lieu_cu: JSON.stringify(taiLieu),
+        },
       });
 
       return { message: 'Xóa tài liệu thành công' };
@@ -931,10 +1028,10 @@ export class HoSoService {
   }
 
   async replaceTaiLieu(
-    hoSoId: number, 
-    taiLieuId: number, 
-    data: { duong_dan_url: string; ghi_chu?: string; ten_tai_lieu?: string }, 
-    userId?: number
+    hoSoId: number,
+    taiLieuId: number,
+    data: ReplaceTaiLieuDto,
+    userId?: number,
   ) {
     const hoSo = await this.findOne(hoSoId);
     const oldDoc = await this.prisma.tai_lieu_ho_so.findUnique({
@@ -945,35 +1042,57 @@ export class HoSoService {
       throw new NotFoundException('Không tìm thấy tài liệu trong hồ sơ này');
     }
 
+    let nextLoaiTaiLieuId = oldDoc.loai_tai_lieu_id;
+    if (data.loai_tai_lieu_id !== undefined && data.loai_tai_lieu_id !== oldDoc.loai_tai_lieu_id) {
+      const targetLoai = await this.resolveLoaiTaiLieuForHoSo(hoSo.loai_ho_so_id, data.loai_tai_lieu_id);
+      nextLoaiTaiLieuId = targetLoai.id;
+    }
+
+    const customDocData =
+      data.du_lieu_dac_thu !== undefined
+        ? this.cleanDynamicDocData(data.du_lieu_dac_thu)
+        : this.cleanDynamicDocData(oldDoc.du_lieu_dac_thu as Record<string, any> | null);
+
+    const nextNgayHieuLuc =
+      data.ngay_hieu_luc !== undefined
+        ? (data.ngay_hieu_luc ? dateOnly(data.ngay_hieu_luc) : null)
+        : new Date();
+    const nextNgayHetHieuLuc =
+      data.ngay_het_hieu_luc !== undefined
+        ? (data.ngay_het_hieu_luc ? dateOnly(data.ngay_het_hieu_luc) : null)
+        : oldDoc.ngay_het_hieu_luc;
+
     return this.prisma.$transaction(async (tx) => {
-      // 1. Đánh dấu bản cũ là không còn hiệu lực
       const updatedOldDoc = await tx.tai_lieu_ho_so.update({
         where: { id: taiLieuId },
         data: {
           tai_lieu_hien_hanh: false,
           ngay_het_hieu_luc: new Date(),
-          ghi_chu: oldDoc.ghi_chu 
-            ? `${oldDoc.ghi_chu} (Đã thay thế bởi phiên bản v${oldDoc.so_phien_ban + 1})` 
+          ghi_chu: oldDoc.ghi_chu
+            ? `${oldDoc.ghi_chu} (Đã thay thế bởi phiên bản v${oldDoc.so_phien_ban + 1})`
             : `Đã thay thế bởi phiên bản v${oldDoc.so_phien_ban + 1}`,
         },
       });
 
-      // 2. Tạo bản mới với số phiên bản tăng lên và đang có hiệu lực
       const newDoc = await tx.tai_lieu_ho_so.create({
         data: {
           ho_so_chung_id: hoSoId,
-          loai_tai_lieu_id: oldDoc.loai_tai_lieu_id,
-          ten_tai_lieu: data.ten_tai_lieu || oldDoc.ten_tai_lieu,
-          duong_dan_url: data.duong_dan_url,
+          loai_tai_lieu_id: nextLoaiTaiLieuId,
+          ten_tai_lieu: data.ten_tai_lieu?.trim() || oldDoc.ten_tai_lieu,
+          duong_dan_url: data.duong_dan_url.trim(),
           so_phien_ban: oldDoc.so_phien_ban + 1,
           tai_lieu_hien_hanh: true,
-          ngay_hieu_luc: new Date(),
-          ghi_chu: data.ghi_chu || `Bản thay thế cho phiên bản v${oldDoc.so_phien_ban}`,
+          ngay_hieu_luc: nextNgayHieuLuc,
+          ngay_het_hieu_luc: nextNgayHetHieuLuc,
+          ghi_chu: data.ghi_chu !== undefined
+            ? (data.ghi_chu?.trim() || null)
+            : `Bản thay thế cho phiên bản v${oldDoc.so_phien_ban}`,
+          du_lieu_dac_thu: customDocData ? (customDocData as Prisma.InputJsonValue) : Prisma.JsonNull,
           nguoi_tai_len_id: userId || null,
         },
+        include: { loai_tai_lieu: true },
       });
 
-      // 3. Ghi nhật ký kiểm toán hệ thống
       await tx.nhat_ky_ho_so.create({
         data: {
           ho_so_chung_id: hoSoId,

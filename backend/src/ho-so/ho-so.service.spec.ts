@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { HoSoService } from './ho-so.service';
 
@@ -13,6 +14,10 @@ describe('HoSoService dynamic fields', () => {
         upsert: jest.fn(),
         deleteMany: jest.fn(),
       },
+      tai_lieu_ho_so: {
+        create: jest.fn(),
+        update: jest.fn(),
+      },
       nhat_ky_ho_so: {
         create: jest.fn().mockResolvedValue({}),
       },
@@ -22,12 +27,20 @@ describe('HoSoService dynamic fields', () => {
       dm_loai_ho_so: {
         findUnique: jest.fn(),
       },
+      dm_loai_tai_lieu: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        create: jest.fn(),
+      },
       dm_tinh_trang: {
         findUnique: jest.fn(),
       },
       ho_so_chung: {
         findUnique: jest.fn(),
         findFirst: jest.fn(),
+      },
+      tai_lieu_ho_so: {
+        findUnique: jest.fn(),
       },
       $transaction: jest.fn((cb: (t: any) => any) => cb(tx)),
     };
@@ -179,6 +192,113 @@ describe('HoSoService dynamic fields', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           du_lieu_dac_thu: Prisma.JsonNull,
+        }),
+      }),
+    );
+  });
+
+  it('adds tai_lieu_ho_so with selected loai_tai_lieu_id and dynamic fields', async () => {
+    const { prisma, tx, service } = createMockHoSoDeps();
+    prisma.ho_so_chung.findUnique.mockResolvedValue({ id: 50, loai_ho_so_id: 1 });
+    prisma.dm_loai_tai_lieu.findUnique.mockResolvedValue({
+      id: 4,
+      ma_loai_tai_lieu: 'CONG_VAN',
+      ten_loai_tai_lieu: 'Công văn',
+      trang_thai: true,
+      ap_dung_tat_ca: false,
+      loai_ho_so_links: [{ loai_ho_so_id: 1 }],
+    });
+    tx.tai_lieu_ho_so.create.mockImplementation(async ({ data }: any) => ({ id: 201, ...data }));
+
+    await service.addTaiLieu(
+      50,
+      {
+        loai_tai_lieu_id: 4,
+        ten_tai_lieu: 'Công văn duyệt nhãn',
+        duong_dan_url: '/uploads/cv.pdf',
+        ngay_hieu_luc: '2026-11-01',
+        du_lieu_dac_thu: { so_cong_van: '123/QLD', co_quan: 'Cục QLD' },
+      },
+      9,
+    );
+
+    expect(tx.tai_lieu_ho_so.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          ho_so_chung_id: 50,
+          loai_tai_lieu_id: 4,
+          ten_tai_lieu: 'Công văn duyệt nhãn',
+          du_lieu_dac_thu: { so_cong_van: '123/QLD', co_quan: 'Cục QLD' },
+        }),
+      }),
+    );
+  });
+
+  it('rejects addTaiLieu when loai_tai_lieu does not apply to the dossier type', async () => {
+    const { prisma, service } = createMockHoSoDeps();
+    prisma.ho_so_chung.findUnique.mockResolvedValue({ id: 50, loai_ho_so_id: 1 });
+    prisma.dm_loai_tai_lieu.findUnique.mockResolvedValue({
+      id: 7,
+      ma_loai_tai_lieu: 'DOC_TBYT',
+      ten_loai_tai_lieu: 'Tài liệu riêng TBYT',
+      trang_thai: true,
+      ap_dung_tat_ca: false,
+      loai_ho_so_links: [{ loai_ho_so_id: 3 }],
+    });
+
+    await expect(
+      service.addTaiLieu(50, {
+        loai_tai_lieu_id: 7,
+        ten_tai_lieu: 'Tài liệu sai loại',
+        duong_dan_url: '/uploads/x.pdf',
+      }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('updates and replaces tai_lieu metadata and du_lieu_dac_thu', async () => {
+    const { prisma, tx, service } = createMockHoSoDeps();
+    prisma.ho_so_chung.findUnique.mockResolvedValue({ id: 50, loai_ho_so_id: 1 });
+    prisma.tai_lieu_ho_so.findUnique.mockResolvedValue({
+      id: 201,
+      ho_so_chung_id: 50,
+      loai_tai_lieu_id: 4,
+      ten_tai_lieu: 'Công văn cũ',
+      so_phien_ban: 1,
+      ghi_chu: null,
+      ngay_het_hieu_luc: null,
+      du_lieu_dac_thu: { so_cong_van: '123/QLD' },
+    });
+    tx.tai_lieu_ho_so.update.mockResolvedValue({ id: 201, ten_tai_lieu: 'Công văn mới' });
+    tx.tai_lieu_ho_so.create.mockImplementation(async ({ data }: any) => ({ id: 202, ...data }));
+
+    await service.updateTaiLieu(
+      50,
+      201,
+      { ten_tai_lieu: 'Công văn mới', du_lieu_dac_thu: { so_cong_van: '456/QLD' } },
+      9,
+    );
+    expect(tx.tai_lieu_ho_so.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 201 },
+        data: expect.objectContaining({
+          ten_tai_lieu: 'Công văn mới',
+          du_lieu_dac_thu: { so_cong_van: '456/QLD' },
+        }),
+      }),
+    );
+
+    await service.replaceTaiLieu(
+      50,
+      201,
+      { duong_dan_url: '/uploads/cv-v2.pdf', du_lieu_dac_thu: { so_cong_van: '789/QLD' } },
+      9,
+    );
+    expect(tx.tai_lieu_ho_so.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          so_phien_ban: 2,
+          loai_tai_lieu_id: 4,
+          du_lieu_dac_thu: { so_cong_van: '789/QLD' },
         }),
       }),
     );

@@ -2,24 +2,41 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { DanhMucService } from './danh-muc.service';
 
 describe('DanhMucService', () => {
-  const createMockPrisma = () => ({
-    dm_loai_ho_so: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      aggregate: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    dm_tinh_trang: {
-      findMany: jest.fn(),
-    },
-    ho_so_chung: {
-      findMany: jest.fn(),
-      update: jest.fn(),
-    },
-  });
+  const createMockPrisma = () => {
+    const prisma: any = {
+      dm_loai_ho_so: {
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        aggregate: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
+      dm_loai_tai_lieu: {
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        aggregate: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
+      dm_loai_ho_so_tai_lieu: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
+      },
+      dm_tinh_trang: {
+        findMany: jest.fn(),
+      },
+      ho_so_chung: {
+        findMany: jest.fn(),
+        update: jest.fn(),
+      },
+      $transaction: jest.fn((cb: (tx: any) => any) => cb(prisma)),
+    };
+    return prisma;
+  };
 
   describe('createLoaiHoSo', () => {
     it('normalizes ma_loai, assigns next thu_tu, and formats response', async () => {
@@ -223,6 +240,111 @@ describe('DanhMucService', () => {
 
       expect(prisma.dm_loai_ho_so.delete).toHaveBeenCalledWith({ where: { id: 9 } });
       expect(res.message).toContain('Xóa loại hồ sơ thành công');
+    });
+  });
+
+  describe('loai_tai_lieu CRUD & scoping', () => {
+    it('filters active document types by loaiHoSoId', async () => {
+      const prisma = createMockPrisma();
+      prisma.dm_loai_tai_lieu.findMany.mockResolvedValue([
+        {
+          id: 2,
+          ma_loai_tai_lieu: 'NHAN',
+          ten_loai_tai_lieu: 'Nhãn sản phẩm',
+          ap_dung_tat_ca: false,
+          _count: { tai_lieu_ho_so: 3 },
+          loai_ho_so_links: [
+            { loai_ho_so_id: 1, loai_ho_so: { id: 1, ma_loai: 'THUOC', ten_loai: 'Thuốc', mau_sac: 'red' } },
+          ],
+        },
+      ]);
+
+      const service = new DanhMucService(prisma as any);
+      const list = await service.getLoaiTaiLieu(false, 1);
+
+      expect(prisma.dm_loai_tai_lieu.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            trang_thai: true,
+            OR: [{ ap_dung_tat_ca: true }, { loai_ho_so_links: { some: { loai_ho_so_id: 1 } } }],
+          },
+        }),
+      );
+      expect(list[0].loai_ho_so_ids).toEqual([1]);
+      expect(list[0].so_luong_tai_lieu).toBe(3);
+    });
+
+    it('creates a scoped loai_tai_lieu with custom fields', async () => {
+      const prisma = createMockPrisma();
+      prisma.dm_loai_tai_lieu.findUnique.mockResolvedValue(null);
+      prisma.dm_loai_ho_so.findMany.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+      prisma.dm_loai_tai_lieu.aggregate.mockResolvedValue({ _max: { thu_tu: 9 } });
+      prisma.dm_loai_tai_lieu.create.mockImplementation(async ({ data }: any) => ({
+        id: 11,
+        ...data,
+        _count: { tai_lieu_ho_so: 0 },
+        loai_ho_so_links: [
+          { loai_ho_so_id: 1, loai_ho_so: { id: 1, ma_loai: 'THUOC', ten_loai: 'Thuốc', mau_sac: 'red' } },
+          { loai_ho_so_id: 2, loai_ho_so: { id: 2, ma_loai: 'MY_PHAM', ten_loai: 'Mỹ phẩm', mau_sac: 'pink' } },
+        ],
+      }));
+
+      const service = new DanhMucService(prisma as any);
+      const created = await service.createLoaiTaiLieu({
+        ma_loai_tai_lieu: 'phieu_kiem_nghiem',
+        ten_loai_tai_lieu: 'Phiếu kiểm nghiệm',
+        ap_dung_tat_ca: false,
+        loai_ho_so_ids: [1, 2],
+        cau_hinh_truong: [{ key: 'so_phieu', label: 'Số phiếu', type: 'text', required: true }],
+      });
+
+      expect(created.ma_loai_tai_lieu).toBe('PHIEU_KIEM_NGHIEM');
+      expect(created.thu_tu).toBe(10);
+      expect(created.loai_ho_so_ids).toEqual([1, 2]);
+      expect(created.is_system).toBe(false);
+    });
+
+    it('rejects createLoaiTaiLieu when ap_dung_tat_ca is false without loai_ho_so_ids', async () => {
+      const prisma = createMockPrisma();
+      prisma.dm_loai_tai_lieu.findUnique.mockResolvedValue(null);
+
+      const service = new DanhMucService(prisma as any);
+      await expect(
+        service.createLoaiTaiLieu({
+          ma_loai_tai_lieu: 'PHIEU_KN',
+          ten_loai_tai_lieu: 'Phiếu KN',
+          ap_dung_tat_ca: false,
+          loai_ho_so_ids: [],
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('blocks deleting KHAC or in-use document type, deletes unused custom type', async () => {
+      const prisma = createMockPrisma();
+      const service = new DanhMucService(prisma as any);
+
+      prisma.dm_loai_tai_lieu.findUnique.mockResolvedValueOnce({
+        id: 9,
+        ma_loai_tai_lieu: 'KHAC',
+        _count: { tai_lieu_ho_so: 0 },
+      });
+      await expect(service.deleteLoaiTaiLieu(9)).rejects.toThrow(BadRequestException);
+
+      prisma.dm_loai_tai_lieu.findUnique.mockResolvedValueOnce({
+        id: 12,
+        ma_loai_tai_lieu: 'CUSTOM_DOC',
+        _count: { tai_lieu_ho_so: 2 },
+      });
+      await expect(service.deleteLoaiTaiLieu(12)).rejects.toThrow(ConflictException);
+
+      prisma.dm_loai_tai_lieu.findUnique.mockResolvedValueOnce({
+        id: 12,
+        ma_loai_tai_lieu: 'CUSTOM_DOC',
+        _count: { tai_lieu_ho_so: 0 },
+      });
+      prisma.dm_loai_tai_lieu.delete.mockResolvedValue({ id: 12 });
+      const res = await service.deleteLoaiTaiLieu(12);
+      expect(res.message).toContain('Xóa loại tài liệu thành công');
     });
   });
 });

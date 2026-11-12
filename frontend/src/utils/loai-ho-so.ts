@@ -1,4 +1,8 @@
-import type { CustomFieldConfig, LoaiHoSo } from '@/types/ho-so.type';
+import type { CustomFieldConfig } from '@/types/ho-so.type';
+
+export type DynamicFieldHolder = {
+  cau_hinh_truong?: CustomFieldConfig[] | null;
+} | null | undefined;
 
 export interface ColorOption {
   value: string;
@@ -131,19 +135,19 @@ export function extractThongTinRieng(hoSo: unknown): Record<string, unknown> | n
   };
 }
 
-export function getCustomFields(loaiHoSo?: LoaiHoSo | null): CustomFieldConfig[] {
-  if (!loaiHoSo?.cau_hinh_truong || !Array.isArray(loaiHoSo.cau_hinh_truong)) {
+export function getCustomFields(holder?: DynamicFieldHolder): CustomFieldConfig[] {
+  if (!holder?.cau_hinh_truong || !Array.isArray(holder.cau_hinh_truong)) {
     return [];
   }
-  return loaiHoSo.cau_hinh_truong;
+  return holder.cau_hinh_truong;
 }
 
-export function findFieldConfig(key: string, loaiHoSo?: LoaiHoSo | null): CustomFieldConfig | undefined {
-  return getCustomFields(loaiHoSo).find((f) => f.key === key);
+export function findFieldConfig(key: string, holder?: DynamicFieldHolder): CustomFieldConfig | undefined {
+  return getCustomFields(holder).find((f) => f.key === key);
 }
 
-export function getFieldLabel(key: string, loaiHoSo?: LoaiHoSo | null): string {
-  const custom = findFieldConfig(key, loaiHoSo);
+export function getFieldLabel(key: string, holder?: DynamicFieldHolder): string {
+  const custom = findFieldConfig(key, holder);
   if (custom?.label) return custom.label;
   if (LEGACY_FIELD_DICTIONARY[key]) return LEGACY_FIELD_DICTIONARY[key];
 
@@ -153,8 +157,8 @@ export function getFieldLabel(key: string, loaiHoSo?: LoaiHoSo | null): string {
   return [first, ...words.slice(1)].join(' ');
 }
 
-export function isFileFieldKey(key: string, loaiHoSo?: LoaiHoSo | null): boolean {
-  const custom = findFieldConfig(key, loaiHoSo);
+export function isFileFieldKey(key: string, holder?: DynamicFieldHolder): boolean {
+  const custom = findFieldConfig(key, holder);
   if (custom) return custom.type === 'file';
   return key.endsWith('_url');
 }

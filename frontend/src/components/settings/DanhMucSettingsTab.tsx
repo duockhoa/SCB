@@ -22,7 +22,7 @@ import {
   Space,
   Divider,
   Popconfirm,
-  Checkbox,
+  Tabs,
 } from 'antd';
 import {
   DatabaseOutlined,
@@ -36,9 +36,8 @@ import {
   PlusOutlined,
   DeleteOutlined,
   FormOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
   LockOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import type { CustomFieldConfig, LoaiHoSo } from '@/types/ho-so.type';
 import {
@@ -53,20 +52,12 @@ import {
   getLoaiHoSoAntdColor,
   LOAI_HO_SO_COLORS,
   SYSTEM_BUILT_IN_FIELDS_SUMMARY,
-  toFieldSnakeKey,
   toMaLoaiCode,
 } from '@/utils/loai-ho-so';
+import CustomFieldsBuilder, { cleanCustomFieldsPayload } from './CustomFieldsBuilder';
+import LoaiTaiLieuSettingsPanel from './LoaiTaiLieuSettingsPanel';
 
 const { Title, Text } = Typography;
-
-const FIELD_TYPE_OPTIONS = [
-  { value: 'text', label: 'Văn bản ngắn' },
-  { value: 'textarea', label: 'Văn bản dài (Nhiều dòng)' },
-  { value: 'number', label: 'Số' },
-  { value: 'date', label: 'Ngày tháng' },
-  { value: 'select', label: 'Danh sách chọn' },
-  { value: 'file', label: 'Tài liệu (Upload / Link)' },
-];
 
 export default function DanhMucSettingsTab() {
   const { canDanhMucCreate, canDanhMucUpdate, canDanhMucDelete } = usePermissions();
@@ -152,17 +143,7 @@ export default function DanhMucSettingsTab() {
   };
 
   const handleSaveCrud = async (values: CrudFormValues) => {
-    const cleanedFields: CustomFieldConfig[] = (values.cau_hinh_truong || []).map((f) => ({
-      key: (f.key || '').trim(),
-      label: (f.label || '').trim(),
-      type: f.type || 'text',
-      required: Boolean(f.required),
-      placeholder: f.placeholder?.trim() || undefined,
-      colSpan: f.colSpan || (f.type === 'textarea' || f.type === 'file' ? 24 : 12),
-      ...(f.type === 'select'
-        ? { options: (f.options || []).map((o) => o.trim()).filter(Boolean) }
-        : {}),
-    }));
+    const cleanedFields = cleanCustomFieldsPayload(values.cau_hinh_truong);
 
     const basePayload = {
       ten_loai: values.ten_loai?.trim(),
@@ -439,7 +420,7 @@ export default function DanhMucSettingsTab() {
     },
   ];
 
-  return (
+  const loaiHoSoSection = (
     <div className="space-y-6">
       <Card className="rounded-xl border border-gray-200 shadow-sm" styles={{ body: { padding: '24px' } }}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -613,10 +594,6 @@ export default function DanhMucSettingsTab() {
             </Col>
           </Row>
 
-          <Divider plain className="!my-3">
-            Cấu hình Trường Thông Tin Đặc Thù
-          </Divider>
-
           {builtInSummary && (
             <Alert
               type="info"
@@ -636,221 +613,14 @@ export default function DanhMucSettingsTab() {
             />
           )}
 
-          <Form.List name="cau_hinh_truong">
-            {(fields, { add, remove, move }) => (
-              <div className="space-y-3">
-                {fields.length === 0 ? (
-                  <div className="p-4 text-center bg-gray-50 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500">
-                    Chưa có trường đặc thù tùy chỉnh nào. Bấm &quot;Thêm trường thông tin&quot; bên dưới nếu loại hồ sơ này cần nhập dữ liệu riêng.
-                  </div>
-                ) : (
-                  fields.map((field, index) => (
-                    <div
-                      key={field.key}
-                      className="p-3 bg-gray-50/80 border border-gray-200 rounded-lg relative"
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-blue-600">
-                          Trường #{index + 1}
-                        </span>
-                        <Space size="small">
-                          {index > 0 && (
-                            <Button
-                              size="small"
-                              type="text"
-                              icon={<ArrowUpOutlined />}
-                              onClick={() => move(index, index - 1)}
-                            />
-                          )}
-                          {index < fields.length - 1 && (
-                            <Button
-                              size="small"
-                              type="text"
-                              icon={<ArrowDownOutlined />}
-                              onClick={() => move(index, index + 1)}
-                            />
-                          )}
-                          <Button
-                            size="small"
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => remove(field.name)}
-                          >
-                            Xóa
-                          </Button>
-                        </Space>
-                      </div>
-
-                      <Row gutter={12}>
-                        <Col xs={24} sm={8}>
-                          <Form.Item
-                            {...field}
-                            name={[field.name, 'label']}
-                            label="Tên trường hiển thị"
-                            rules={[{ required: true, message: 'Nhập tên trường' }]}
-                            className="!mb-2"
-                          >
-                            <Input
-                              placeholder="VD: Số giấy phép"
-                              onChange={(e) => {
-                                const currentKey = crudForm.getFieldValue([
-                                  'cau_hinh_truong',
-                                  field.name,
-                                  'key',
-                                ]);
-                                const wasAuto = crudForm.getFieldValue([
-                                  'cau_hinh_truong',
-                                  field.name,
-                                  '_manualKey',
-                                ]);
-                                if (!wasAuto && (!currentKey || crudMode === 'create' || !editingLoai?.cau_hinh_truong?.[field.name])) {
-                                  crudForm.setFieldValue(
-                                    ['cau_hinh_truong', field.name, 'key'],
-                                    toFieldSnakeKey(e.target.value),
-                                  );
-                                }
-                              }}
-                            />
-                          </Form.Item>
-                        </Col>
-
-                        <Col xs={24} sm={8}>
-                          <Form.Item
-                            {...field}
-                            name={[field.name, 'key']}
-                            label="Mã trường (snake_case)"
-                            rules={[
-                              { required: true, message: 'Nhập mã trường' },
-                              {
-                                pattern: /^[a-z][a-z0-9_]*$/,
-                                message: 'Bắt đầu bằng chữ thường, gồm a-z, 0-9, _',
-                              },
-                            ]}
-                            className="!mb-2"
-                          >
-                            <Input
-                              placeholder="VD: so_giay_phep"
-                              onChange={() => {
-                                crudForm.setFieldValue(
-                                  ['cau_hinh_truong', field.name, '_manualKey'],
-                                  true,
-                                );
-                              }}
-                            />
-                          </Form.Item>
-                        </Col>
-
-                        <Col xs={24} sm={8}>
-                          <Form.Item
-                            {...field}
-                            name={[field.name, 'type']}
-                            label="Kiểu dữ liệu"
-                            rules={[{ required: true, message: 'Chọn kiểu' }]}
-                            className="!mb-2"
-                          >
-                            <Select options={FIELD_TYPE_OPTIONS} />
-                          </Form.Item>
-                        </Col>
-
-                        <Col xs={24} sm={10}>
-                          <Form.Item
-                            {...field}
-                            name={[field.name, 'placeholder']}
-                            label="Gợi ý nhập (Placeholder)"
-                            className="!mb-2"
-                          >
-                            <Input placeholder="VD: Nhập số giấy phép..." />
-                          </Form.Item>
-                        </Col>
-
-                        <Col xs={12} sm={7}>
-                          <Form.Item
-                            {...field}
-                            name={[field.name, 'colSpan']}
-                            label="Độ rộng"
-                            className="!mb-2"
-                          >
-                            <Select>
-                              <Select.Option value={12}>Nửa hàng (1/2)</Select.Option>
-                              <Select.Option value={24}>Toàn hàng (1/1)</Select.Option>
-                            </Select>
-                          </Form.Item>
-                        </Col>
-
-                        <Col xs={12} sm={7} className="flex items-end pb-2">
-                          <Form.Item
-                            {...field}
-                            name={[field.name, 'required']}
-                            valuePropName="checked"
-                            className="!mb-0"
-                          >
-                            <Checkbox>Bắt buộc nhập</Checkbox>
-                          </Form.Item>
-                        </Col>
-
-                        <Form.Item
-                          noStyle
-                          shouldUpdate={(prev, curr) =>
-                            prev?.cau_hinh_truong?.[field.name]?.type !==
-                            curr?.cau_hinh_truong?.[field.name]?.type
-                          }
-                        >
-                          {({ getFieldValue }) => {
-                            const fieldType = getFieldValue([
-                              'cau_hinh_truong',
-                              field.name,
-                              'type',
-                            ]);
-                            if (fieldType !== 'select') return null;
-                            return (
-                              <Col span={24}>
-                                <Form.Item
-                                  {...field}
-                                  name={[field.name, 'options']}
-                                  label="Các lựa chọn (Nhập từng mục rồi nhấn Enter)"
-                                  rules={[
-                                    {
-                                      required: true,
-                                      message: 'Vui lòng thêm ít nhất 1 lựa chọn',
-                                    },
-                                  ]}
-                                  className="!mb-1"
-                                >
-                                  <Select
-                                    mode="tags"
-                                    tokenSeparators={[',']}
-                                    placeholder="Nhập lựa chọn rồi nhấn Enter (VD: Nhóm 1, Nhóm 2)"
-                                  />
-                                </Form.Item>
-                              </Col>
-                            );
-                          }}
-                        </Form.Item>
-                      </Row>
-                    </div>
-                  ))
-                )}
-
-                <Button
-                  type="dashed"
-                  block
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    add({
-                      label: '',
-                      key: '',
-                      type: 'text',
-                      colSpan: 12,
-                      required: false,
-                    })
-                  }
-                >
-                  Thêm trường thông tin đặc thù
-                </Button>
-              </div>
-            )}
-          </Form.List>
+          <CustomFieldsBuilder
+            form={crudForm}
+            crudMode={crudMode}
+            existingFields={editingLoai?.cau_hinh_truong}
+            dividerTitle="Cấu hình Trường Thông Tin Đặc Thù"
+            emptyText='Chưa có trường đặc thù tùy chỉnh nào. Bấm "Thêm trường thông tin đặc thù" bên dưới nếu loại hồ sơ này cần nhập dữ liệu riêng.'
+            addButtonText="Thêm trường thông tin đặc thù"
+          />
 
           <div className="flex justify-end gap-2 pt-5 mt-4 border-t border-gray-100">
             <Button onClick={() => setIsCrudModalOpen(false)}>Hủy</Button>
@@ -955,5 +725,34 @@ export default function DanhMucSettingsTab() {
         </Form>
       </Modal>
     </div>
+  );
+
+  return (
+    <Tabs
+      defaultActiveKey="loai-ho-so"
+      type="card"
+      items={[
+        {
+          key: 'loai-ho-so',
+          label: (
+            <span className="flex items-center gap-1.5 font-medium">
+              <TagsOutlined />
+              Loại hồ sơ
+            </span>
+          ),
+          children: loaiHoSoSection,
+        },
+        {
+          key: 'loai-tai-lieu',
+          label: (
+            <span className="flex items-center gap-1.5 font-medium">
+              <FileTextOutlined />
+              Loại tài liệu
+            </span>
+          ),
+          children: <LoaiTaiLieuSettingsPanel />,
+        },
+      ]}
+    />
   );
 }

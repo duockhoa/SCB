@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { danhMucService, type LoaiHoSoPayload } from '@/services/danh-muc.service';
+import { danhMucService, type LoaiHoSoPayload, type LoaiTaiLieuPayload } from '@/services/danh-muc.service';
 
 export const useLoaiHoSoList = (includeInactive = false) => {
   return useQuery({
@@ -65,6 +65,52 @@ export const useTinhTrangList = () => {
   return useQuery({
     queryKey: ['DANH_MUC', 'TINH_TRANG'],
     queryFn: () => danhMucService.getTinhTrang(),
+  });
+};
+
+export const useLoaiTaiLieuList = (options?: {
+  includeInactive?: boolean;
+  loaiHoSoId?: number;
+  enabled?: boolean;
+}) => {
+  const includeInactive = Boolean(options?.includeInactive);
+  const loaiHoSoId = options?.loaiHoSoId;
+  return useQuery({
+    queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU', { includeInactive, loaiHoSoId: loaiHoSoId ?? null }],
+    queryFn: () => danhMucService.getLoaiTaiLieu({ includeInactive, loaiHoSoId }),
+    enabled: options?.enabled ?? true,
+  });
+};
+
+export const useCreateLoaiTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: LoaiTaiLieuPayload) => danhMucService.createLoaiTaiLieu(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+    },
+  });
+};
+
+export const useUpdateLoaiTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: LoaiTaiLieuPayload }) =>
+      danhMucService.updateLoaiTaiLieu(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};
+
+export const useDeleteLoaiTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => danhMucService.deleteLoaiTaiLieu(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+    },
   });
 };
 

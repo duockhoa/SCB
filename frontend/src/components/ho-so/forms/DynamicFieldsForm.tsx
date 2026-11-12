@@ -6,10 +6,17 @@ import UploadOrLinkInput from '../../common/UploadOrLinkInput';
 
 interface Props {
   fields: CustomFieldConfig[];
+  fieldPrefix?: string;
   showFileDivider?: boolean;
+  fileDividerTitle?: string;
 }
 
-export default function DynamicFieldsForm({ fields, showFileDivider = true }: Props) {
+export default function DynamicFieldsForm({
+  fields,
+  fieldPrefix = 'thong_tin_rieng',
+  showFileDivider = true,
+  fileDividerTitle = 'Link Tài Liệu Đặc Thù',
+}: Props) {
   if (!fields || fields.length === 0) return null;
 
   const regularFields = fields.filter((f) => f.type !== 'file');
@@ -47,7 +54,7 @@ export default function DynamicFieldsForm({ fields, showFileDivider = true }: Pr
       {list.map((field) => (
         <Col span={field.colSpan || (field.type === 'textarea' || field.type === 'file' ? 24 : 12)} key={field.key}>
           <Form.Item
-            name={['thong_tin_rieng', field.key]}
+            name={[fieldPrefix, field.key]}
             label={field.label}
             rules={field.required ? [{ required: true, message: `Vui lòng nhập ${field.label}` }] : undefined}
           >
@@ -65,7 +72,7 @@ export default function DynamicFieldsForm({ fields, showFileDivider = true }: Pr
         <>
           {showFileDivider && (
             <Divider plain style={{ margin: '12px 0' }}>
-              Link Tài Liệu Đặc Thù
+              {fileDividerTitle}
             </Divider>
           )}
           {renderFieldList(fileFields)}

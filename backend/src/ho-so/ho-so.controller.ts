@@ -6,6 +6,7 @@ import { CapSoDto } from './dto/cap-so.dto';
 import { GiaHanDto } from './dto/gia-han.dto';
 import { ThayTheDto } from './dto/thay-the.dto';
 import { QuyDinhTamThoiDto } from './dto/quy-dinh-tam-thoi.dto';
+import { TaiLieuDto, UpdateTaiLieuDto, ReplaceTaiLieuDto } from './dto/tai-lieu.dto';
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -131,14 +132,26 @@ export class HoSoController {
   }
 
   @Post(':id/tai-lieu')
-  @ApiOperation({ summary: 'Thêm tài liệu đính kèm khác' })
+  @ApiOperation({ summary: 'Thêm tài liệu đính kèm theo loại tài liệu' })
   @RequirePermissions('HOSO_TAI_LIEU_UPLOAD', 'HOSO_TAI_LIEU')
-  addTaiLieu(@Param('id', ParseIntPipe) id: number, @Body() data: import('./dto/tai-lieu.dto').TaiLieuDto, @Req() req: any) {
+  addTaiLieu(@Param('id', ParseIntPipe) id: number, @Body() data: TaiLieuDto, @Req() req: any) {
     return this.hoSoService.addTaiLieu(id, data, req.user?.userId);
   }
 
+  @Patch(':id/tai-lieu/:taiLieuId')
+  @ApiOperation({ summary: 'Cập nhật thông tin & trường động tài liệu đính kèm' })
+  @RequirePermissions('HOSO_TAI_LIEU_UPLOAD', 'HOSO_TAI_LIEU_REPLACE', 'HOSO_TAI_LIEU')
+  updateTaiLieu(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('taiLieuId', ParseIntPipe) taiLieuId: number,
+    @Body() data: UpdateTaiLieuDto,
+    @Req() req: any,
+  ) {
+    return this.hoSoService.updateTaiLieu(id, taiLieuId, data, req.user?.userId);
+  }
+
   @Delete(':id/tai-lieu/:taiLieuId')
-  @ApiOperation({ summary: 'Xóa tài liệu đính kèm khác' })
+  @ApiOperation({ summary: 'Xóa tài liệu đính kèm' })
   @RequirePermissions('HOSO_TAI_LIEU_DELETE', 'HOSO_TAI_LIEU', 'HOSO_DELETE')
   deleteTaiLieu(
     @Param('id', ParseIntPipe) id: number,
@@ -154,7 +167,7 @@ export class HoSoController {
   replaceTaiLieu(
     @Param('id', ParseIntPipe) id: number,
     @Param('taiLieuId', ParseIntPipe) taiLieuId: number,
-    @Body() data: { duong_dan_url: string; ghi_chu?: string; ten_tai_lieu?: string },
+    @Body() data: ReplaceTaiLieuDto,
     @Req() req: any
   ) {
     return this.hoSoService.replaceTaiLieu(id, taiLieuId, data, req.user?.userId);

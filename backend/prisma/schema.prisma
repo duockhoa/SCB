@@ -22,7 +22,8 @@ model dm_loai_ho_so {
   don_vi_canh_bao    String        @default("THANG") @db.VarChar(20)
   cau_hinh_truong    Json?
   
-  ho_so_chung ho_so_chung[]
+  ho_so_chung          ho_so_chung[]
+  loai_tai_lieu_links  dm_loai_ho_so_tai_lieu[]
 }
 
 model dm_tinh_trang {
@@ -56,10 +57,28 @@ model dm_loai_tai_lieu {
   id                Int           @id @default(autoincrement())
   ma_loai_tai_lieu  String        @unique @db.VarChar(50)
   ten_loai_tai_lieu String        @db.VarChar(200)
+  mo_ta             String?       @db.VarChar(500)
+  mau_sac           String?       @db.VarChar(30)
   thu_tu            Int           @default(0)
   trang_thai        Boolean       @default(true)
+  ap_dung_tat_ca    Boolean       @default(true)
+  cau_hinh_truong   Json?
 
   tai_lieu_ho_so    tai_lieu_ho_so[]
+  loai_ho_so_links  dm_loai_ho_so_tai_lieu[]
+}
+
+model dm_loai_ho_so_tai_lieu {
+  loai_ho_so_id    Int
+  loai_tai_lieu_id Int
+  bat_buoc         Boolean @default(false)
+  thu_tu           Int     @default(0)
+
+  loai_ho_so       dm_loai_ho_so    @relation(fields: [loai_ho_so_id], references: [id], onDelete: Cascade)
+  loai_tai_lieu    dm_loai_tai_lieu @relation(fields: [loai_tai_lieu_id], references: [id], onDelete: Cascade)
+
+  @@id([loai_ho_so_id, loai_tai_lieu_id])
+  @@index([loai_tai_lieu_id])
 }
 
 model dm_loai_thay_doi {
@@ -279,6 +298,7 @@ model tai_lieu_ho_so {
   ngay_hieu_luc         DateTime? @db.Date
   ngay_het_hieu_luc     DateTime? @db.Date
   ghi_chu               String?   @db.Text
+  du_lieu_dac_thu       Json?
   ngay_tai_len          DateTime  @default(now())
   nguoi_tai_len_id      Int?
 

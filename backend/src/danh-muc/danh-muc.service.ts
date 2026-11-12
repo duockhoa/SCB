@@ -8,6 +8,10 @@ import {
   UpdateLoaiHoSoDto,
   UpdateLoaiHoSoExpiryDto,
 } from './dto/loai-ho-so.dto';
+import {
+  CreateLoaiTaiLieuDto,
+  UpdateLoaiTaiLieuDto,
+} from './dto/loai-tai-lieu.dto';
 
 export const SYSTEM_LOAI_HO_SO_CODES = new Set([
   'THUOC',
@@ -17,6 +21,8 @@ export const SYSTEM_LOAI_HO_SO_CODES = new Set([
   'TPBVSK_CONG_BO',
   'CFS_CPP',
 ]);
+
+export const SYSTEM_LOAI_TAI_LIEU_CODES = new Set(['KHAC']);
 
 const RESERVED_FIELD_KEYS = new Set(['id', 'ho_so_chung_id']);
 
@@ -204,11 +210,253 @@ export class DanhMucService {
     });
   }
 
-  async getLoaiTaiLieu() {
-    return this.prisma.dm_loai_tai_lieu.findMany({
-      where: { trang_thai: true },
-      orderBy: { thu_tu: 'asc' },
+  private formatLoaiTaiLieu<
+    T extends {
+      ma_loai_tai_lieu: string;
+      _count?: { tai_lieu_ho_so: number };
+      loai_ho_so_links?: Array<{
+        loai_ho_so_id: number;
+        loai_ho_so: { id: number; ma_loai: string; ten_loai: string; mau_sac: string | null };
+      }>;
+    },
+  >(item: T) {
+    const { _count, loai_ho_so_links, ...rest } = item;
+    const links = loai_ho_so_links || [];
+    return {
+      ...rest,
+      is_system: SYSTEM_LOAI_TAI_LIEU_CODES.has(item.ma_loai_tai_lieu),
+      so_luong_tai_lieu: _count?.tai_lieu_ho_so ?? 0,
+      loai_ho_so_ids: links.map((l) => l.loai_ho_so_id),
+      loai_ho_so_list: links.map((l) => l.loai_ho_so),
+    };
+  }
+
+  private async validateLoaiHoSoIds(loaiHoSoIds?: number[]): Promise<number[]> {
+    const uniqueIds = Array.from(new Set((loaiHoSoIds || []).map(Number).filter((n) => Number.isInteger(n) && n > 0)));
+    if (uniqueIds.length === 0) return [];
+    const found = await this.prisma.dm_loai_ho_so.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true },
     });
+    if (found.length !== uniqueIds.length) {
+      throw new BadRequestException('Một hoặc nhiều loại hồ sơ được chọn không tồn tại');
+    }
+    return uniqueIds;
+  }
+
+  async getLoaiTaiLieu(includeInactive = false, loaiHoSoId?: number) {
+    const where: Prisma.dm_loai_tai_lieuWhereInput = {
+      ...(includeInactive ? {} : { trang_thai: true }),
+      ...(loaiHoSoId
+        ? {
+            OR: [
+              { ap_dung_tat_ca: true },
+              { loai_ho_so_links: { some: { loai_ho_so_id: loaiHoSoId } } },
+            ],
+          }
+        : {}),
+    };
+
+    const items = await this.prisma.dm_loai_tai_lieu.findMany({
+      where,
+      include: {
+        _count: { select: { tai_lieu_ho_so: true } },
+        loai_ho_so_links: {
+          include: {
+            loai_ho_so: {
+              select: { id: true, ma_loai: true, ten_loai: true, mau_sac: true },
+            },
+          },
+          orderBy: [{ thu_tu: 'asc' }, { loai_ho_so_id: 'asc' }],
+        },
+      },
+      orderBy: [{ thu_tu: 'asc' }, { id: 'asc' }],
+    });
+
+    return items.map((item) => this.formatLoaiTaiLieu(item));
+  }
+
+  async createLoaiTaiLieu(dto: CreateLoaiTaiLieuDto) {
+    const ma_loai_tai_lieu = this.normalizeCode(dto.ma_loai_tai_lieu);
+    const ten_loai_tai_lieu = dto.ten_loai_tai_lieu.trim();
+    if (!ten_loai_tai_lieu) {
+      throw new BadRequestException('Tên loại tài liệu không được để trống');
+    }
+
+    const exists = await this.prisma.dm_loai_tai_lieu.findUnique({ where: { ma_loai_tai_lieu } });
+    if (exists) {
+      throw new ConflictException(`Mã loại tài liệu "${ma_loai_tai_lieu}" đã tồn tại`);
+    }
+
+    const apDungTatCa = dto.ap_dung_tat_ca ?? true;
+    const validLoaiHoSoIds = apDungTatCa ? [] : await this.validateLoaiHoSoIds(dto.loai_ho_so_ids);
+    if (!apDungTatCa && validLoaiHoSoIds.length === 0) {
+      throw new BadRequestException('Vui lòng chọn ít nhất 1 loại hồ sơ áp dụng hoặc bật "Áp dụng tất cả"');
+    }
+
+    const cau_hinh_truong = this.normalizeCustomFields(dto.cau_hinh_truong);
+    let thu_tu = dto.thu_tu;
+    if (thu_tu === undefined) {
+      const agg = await this.prisma.dm_loai_tai_lieu.aggregate({ _max: { thu_tu: true } });
+      thu_tu = (agg._max.thu_tu ?? 0) + 1;
+    }
+
+    const created = await this.prisma.dm_loai_tai_lieu.create({
+      data: {
+        ma_loai_tai_lieu,
+        ten_loai_tai_lieu,
+        mo_ta: dto.mo_ta?.trim() || null,
+        mau_sac: dto.mau_sac?.trim() || null,
+        thu_tu,
+        trang_thai: dto.trang_thai ?? true,
+        ap_dung_tat_ca: apDungTatCa,
+        cau_hinh_truong: cau_hinh_truong as unknown as Prisma.InputJsonValue,
+        ...(validLoaiHoSoIds.length > 0
+          ? {
+              loai_ho_so_links: {
+                create: validLoaiHoSoIds.map((loai_ho_so_id, idx) => ({
+                  loai_ho_so_id,
+                  thu_tu: idx,
+                })),
+              },
+            }
+          : {}),
+      },
+      include: {
+        _count: { select: { tai_lieu_ho_so: true } },
+        loai_ho_so_links: {
+          include: {
+            loai_ho_so: {
+              select: { id: true, ma_loai: true, ten_loai: true, mau_sac: true },
+            },
+          },
+          orderBy: [{ thu_tu: 'asc' }, { loai_ho_so_id: 'asc' }],
+        },
+      },
+    });
+
+    return this.formatLoaiTaiLieu(created);
+  }
+
+  async updateLoaiTaiLieu(id: number, dto: UpdateLoaiTaiLieuDto) {
+    const existing = await this.prisma.dm_loai_tai_lieu.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { tai_lieu_ho_so: true } },
+        loai_ho_so_links: true,
+      },
+    });
+    if (!existing) throw new NotFoundException('Không tìm thấy loại tài liệu');
+
+    let nextMaLoai: string | undefined;
+    if (dto.ma_loai_tai_lieu !== undefined) {
+      const normalized = this.normalizeCode(dto.ma_loai_tai_lieu);
+      if (normalized !== existing.ma_loai_tai_lieu) {
+        if (SYSTEM_LOAI_TAI_LIEU_CODES.has(existing.ma_loai_tai_lieu)) {
+          throw new BadRequestException('Không thể thay đổi mã của loại tài liệu mặc định hệ thống');
+        }
+        if (existing._count.tai_lieu_ho_so > 0) {
+          throw new BadRequestException('Không thể thay đổi mã loại tài liệu khi đã có tài liệu sử dụng');
+        }
+        const dup = await this.prisma.dm_loai_tai_lieu.findFirst({
+          where: { ma_loai_tai_lieu: normalized, id: { not: id } },
+        });
+        if (dup) throw new ConflictException(`Mã loại tài liệu "${normalized}" đã tồn tại`);
+        nextMaLoai = normalized;
+      }
+    }
+
+    let nextTenLoai: string | undefined;
+    if (dto.ten_loai_tai_lieu !== undefined) {
+      nextTenLoai = dto.ten_loai_tai_lieu.trim();
+      if (!nextTenLoai) {
+        throw new BadRequestException('Tên loại tài liệu không được để trống');
+      }
+    }
+
+    const nextApDungTatCa = dto.ap_dung_tat_ca ?? existing.ap_dung_tat_ca;
+    const shouldReplaceLinks = dto.ap_dung_tat_ca !== undefined || dto.loai_ho_so_ids !== undefined;
+    let nextLoaiHoSoIds: number[] = [];
+
+    if (!nextApDungTatCa) {
+      const rawIds =
+        dto.loai_ho_so_ids !== undefined
+          ? dto.loai_ho_so_ids
+          : existing.loai_ho_so_links.map((l) => l.loai_ho_so_id);
+      nextLoaiHoSoIds = await this.validateLoaiHoSoIds(rawIds);
+      if (nextLoaiHoSoIds.length === 0) {
+        throw new BadRequestException('Vui lòng chọn ít nhất 1 loại hồ sơ áp dụng hoặc bật "Áp dụng tất cả"');
+      }
+    }
+
+    const cau_hinh_truong = dto.cau_hinh_truong !== undefined
+      ? (this.normalizeCustomFields(dto.cau_hinh_truong) as unknown as Prisma.InputJsonValue)
+      : undefined;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (shouldReplaceLinks) {
+        await tx.dm_loai_ho_so_tai_lieu.deleteMany({ where: { loai_tai_lieu_id: id } });
+        if (!nextApDungTatCa && nextLoaiHoSoIds.length > 0) {
+          await tx.dm_loai_ho_so_tai_lieu.createMany({
+            data: nextLoaiHoSoIds.map((loai_ho_so_id, idx) => ({
+              loai_ho_so_id,
+              loai_tai_lieu_id: id,
+              thu_tu: idx,
+            })),
+          });
+        }
+      }
+
+      return tx.dm_loai_tai_lieu.update({
+        where: { id },
+        data: {
+          ...(nextMaLoai !== undefined ? { ma_loai_tai_lieu: nextMaLoai } : {}),
+          ...(nextTenLoai !== undefined ? { ten_loai_tai_lieu: nextTenLoai } : {}),
+          ...(dto.mo_ta !== undefined ? { mo_ta: dto.mo_ta?.trim() || null } : {}),
+          ...(dto.mau_sac !== undefined ? { mau_sac: dto.mau_sac?.trim() || null } : {}),
+          ...(dto.thu_tu !== undefined ? { thu_tu: dto.thu_tu } : {}),
+          ...(dto.trang_thai !== undefined ? { trang_thai: dto.trang_thai } : {}),
+          ...(dto.ap_dung_tat_ca !== undefined ? { ap_dung_tat_ca: dto.ap_dung_tat_ca } : {}),
+          ...(cau_hinh_truong !== undefined ? { cau_hinh_truong } : {}),
+        },
+        include: {
+          _count: { select: { tai_lieu_ho_so: true } },
+          loai_ho_so_links: {
+            include: {
+              loai_ho_so: {
+                select: { id: true, ma_loai: true, ten_loai: true, mau_sac: true },
+              },
+            },
+            orderBy: [{ thu_tu: 'asc' }, { loai_ho_so_id: 'asc' }],
+          },
+        },
+      });
+    });
+
+    return this.formatLoaiTaiLieu(updated);
+  }
+
+  async deleteLoaiTaiLieu(id: number) {
+    const existing = await this.prisma.dm_loai_tai_lieu.findUnique({
+      where: { id },
+      include: { _count: { select: { tai_lieu_ho_so: true } } },
+    });
+    if (!existing) throw new NotFoundException('Không tìm thấy loại tài liệu');
+
+    if (SYSTEM_LOAI_TAI_LIEU_CODES.has(existing.ma_loai_tai_lieu)) {
+      throw new BadRequestException(
+        'Không thể xóa loại tài liệu mặc định hệ thống. Bạn có thể đổi tên hoặc chuyển sang Ngưng hoạt động.',
+      );
+    }
+
+    if (existing._count.tai_lieu_ho_so > 0) {
+      throw new ConflictException(
+        `Không thể xóa loại tài liệu đang được sử dụng bởi ${existing._count.tai_lieu_ho_so} tài liệu. Vui lòng chuyển sang Ngưng hoạt động.`,
+      );
+    }
+
+    await this.prisma.dm_loai_tai_lieu.delete({ where: { id } });
+    return { message: 'Xóa loại tài liệu thành công' };
   }
 
   async getLoaiThayDoi() {

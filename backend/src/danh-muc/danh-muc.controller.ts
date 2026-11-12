@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermissions } from '../auth/decorators/roles.decorator';
 import { CreateLoaiHoSoDto, UpdateLoaiHoSoDto, UpdateLoaiHoSoExpiryDto } from './dto/loai-ho-so.dto';
+import { CreateLoaiTaiLieuDto, UpdateLoaiTaiLieuDto } from './dto/loai-tai-lieu.dto';
 
 @ApiTags('Danh Mục')
 @ApiBearerAuth()
@@ -61,9 +62,39 @@ export class DanhMucController {
   }
 
   @Get('loai-tai-lieu')
-  @ApiOperation({ summary: 'Lấy danh mục loại tài liệu' })
-  getLoaiTaiLieu() {
-    return this.danhMucService.getLoaiTaiLieu();
+  @ApiOperation({ summary: 'Lấy danh mục loại tài liệu (hỗ trợ lọc theo loại hồ sơ)' })
+  @ApiQuery({ name: 'includeInactive', required: false, type: Boolean })
+  @ApiQuery({ name: 'loaiHoSoId', required: false, type: Number })
+  getLoaiTaiLieu(
+    @Query('includeInactive') includeInactive?: string,
+    @Query('loaiHoSoId') loaiHoSoId?: string,
+  ) {
+    const parsedLoaiHoSoId = loaiHoSoId && Number(loaiHoSoId) > 0 ? Number(loaiHoSoId) : undefined;
+    return this.danhMucService.getLoaiTaiLieu(includeInactive === 'true', parsedLoaiHoSoId);
+  }
+
+  @Post('loai-tai-lieu')
+  @ApiOperation({ summary: 'Thêm mới loại tài liệu' })
+  @RequirePermissions('DANH_MUC_CREATE', 'DANH_MUC_MANAGE')
+  createLoaiTaiLieu(@Body() body: CreateLoaiTaiLieuDto) {
+    return this.danhMucService.createLoaiTaiLieu(body);
+  }
+
+  @Put('loai-tai-lieu/:id')
+  @ApiOperation({ summary: 'Cập nhật loại tài liệu, phạm vi loại hồ sơ & cấu hình trường động' })
+  @RequirePermissions('DANH_MUC_UPDATE', 'DANH_MUC_MANAGE')
+  updateLoaiTaiLieu(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateLoaiTaiLieuDto,
+  ) {
+    return this.danhMucService.updateLoaiTaiLieu(id, body);
+  }
+
+  @Delete('loai-tai-lieu/:id')
+  @ApiOperation({ summary: 'Xóa loại tài liệu (khi chưa có tài liệu sử dụng và không phải loại hệ thống)' })
+  @RequirePermissions('DANH_MUC_DELETE', 'DANH_MUC_MANAGE')
+  deleteLoaiTaiLieu(@Param('id', ParseIntPipe) id: number) {
+    return this.danhMucService.deleteLoaiTaiLieu(id);
   }
 
   @Get('loai-thay-doi')

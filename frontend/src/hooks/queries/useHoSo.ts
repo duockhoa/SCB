@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { hoSoService } from '@/services/ho-so.service';
+import {
+  hoSoService,
+  type TaiLieuPayload,
+  type UpdateTaiLieuPayload,
+  type ReplaceTaiLieuPayload,
+} from '@/services/ho-so.service';
 
 export const useHoSoList = (filters?: any) => {
   return useQuery({
@@ -123,7 +128,29 @@ export const useDeleteLichSuThayDoi = () => {
 export const useAddTaiLieu = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { ten_tai_lieu: string, duong_dan_url: string, ghi_chu?: string } }) => hoSoService.addTaiLieu(id, data),
+    mutationFn: ({ id, data }: { id: number; data: TaiLieuPayload }) => hoSoService.addTaiLieu(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};
+
+export const useUpdateTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, taiLieuId, data }: { id: number; taiLieuId: number; data: UpdateTaiLieuPayload }) =>
+      hoSoService.updateTaiLieu(id, taiLieuId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};
+
+export const useReplaceTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, taiLieuId, data }: { id: number; taiLieuId: number; data: ReplaceTaiLieuPayload }) =>
+      hoSoService.replaceTaiLieu(id, taiLieuId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
     },
