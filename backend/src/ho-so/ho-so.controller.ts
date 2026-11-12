@@ -51,8 +51,8 @@ export class HoSoController {
   @Get(':id')
   @ApiOperation({ summary: 'Lấy thông tin chi tiết hồ sơ' })
   @RequirePermissions('HOSO_VIEW')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.hoSoService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.hoSoService.findOne(id, req.user);
   }
 
   @Put(':id')
@@ -135,7 +135,7 @@ export class HoSoController {
   @ApiOperation({ summary: 'Thêm tài liệu đính kèm theo loại tài liệu' })
   @RequirePermissions('HOSO_TAI_LIEU_UPLOAD', 'HOSO_TAI_LIEU')
   addTaiLieu(@Param('id', ParseIntPipe) id: number, @Body() data: TaiLieuDto, @Req() req: any) {
-    return this.hoSoService.addTaiLieu(id, data, req.user?.userId);
+    return this.hoSoService.addTaiLieu(id, data, req.user?.userId, req.user);
   }
 
   @Patch(':id/tai-lieu/:taiLieuId')
@@ -147,7 +147,7 @@ export class HoSoController {
     @Body() data: UpdateTaiLieuDto,
     @Req() req: any,
   ) {
-    return this.hoSoService.updateTaiLieu(id, taiLieuId, data, req.user?.userId);
+    return this.hoSoService.updateTaiLieu(id, taiLieuId, data, req.user?.userId, req.user);
   }
 
   @Delete(':id/tai-lieu/:taiLieuId')
@@ -158,7 +158,7 @@ export class HoSoController {
     @Param('taiLieuId', ParseIntPipe) taiLieuId: number,
     @Req() req: any
   ) {
-    return this.hoSoService.deleteTaiLieu(id, taiLieuId, req.user?.userId);
+    return this.hoSoService.deleteTaiLieu(id, taiLieuId, req.user?.userId, req.user);
   }
 
   @Post(':id/tai-lieu/:taiLieuId/thay-the')
@@ -170,6 +170,6 @@ export class HoSoController {
     @Body() data: ReplaceTaiLieuDto,
     @Req() req: any
   ) {
-    return this.hoSoService.replaceTaiLieu(id, taiLieuId, data, req.user?.userId);
+    return this.hoSoService.replaceTaiLieu(id, taiLieuId, data, req.user?.userId, req.user);
   }
 }

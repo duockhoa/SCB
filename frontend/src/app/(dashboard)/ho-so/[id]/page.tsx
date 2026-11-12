@@ -7,6 +7,7 @@ import { Button, Spin, Tag, Tabs, Descriptions, Empty, Space, Breadcrumb, Card }
 import { ArrowLeftOutlined, EditOutlined, FileAddOutlined, ClockCircleOutlined, SwapOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { extractThongTinRieng, findFieldConfig, getFieldLabel, getLoaiHoSoAntdColor, isFileFieldKey } from '@/utils/loai-ho-so';
+import { usePermissions } from '@/hooks/usePermissions';
 
 import HoSoTaiLieuTab from '@/components/ho-so/HoSoTaiLieuTab';
 import HoSoTimelineTab from '@/components/ho-so/HoSoTimelineTab';
@@ -24,6 +25,7 @@ export default function HoSoDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = Number(params.id);
+  const { canUpdate, canCapSo, canGiaHan, canThayThe, canThayDoiCreate } = usePermissions();
 
   const { data: responseData, isLoading, isError, refetch } = useHoSoDetail(id);
   const hoSoData = responseData?.data;
@@ -200,28 +202,38 @@ export default function HoSoDetailPage() {
         </div>
 
         <Space wrap size="small">
-          <Button icon={<EditOutlined />} onClick={() => setOpenEditModal(true)}>Sửa hồ sơ</Button>
+          {canUpdate && (
+            <Button icon={<EditOutlined />} onClick={() => setOpenEditModal(true)}>Sửa hồ sơ</Button>
+          )}
           
-          {(ttMa === 'DANG_XU_LY' || !ttMa) && (
+          {(ttMa === 'DANG_XU_LY' || !ttMa) && (canCapSo || canUpdate) && (
             <Button type="primary" icon={<FileAddOutlined />} onClick={() => setOpenCapSoModal(true)}>Cấp số</Button>
           )}
 
           {(ttMa === 'CON_HIEU_LUC' || ttMa === 'SAP_HET_HAN') && (
             <>
-              <Button type="primary" style={{ background: '#722ed1' }} icon={<ClockCircleOutlined />} onClick={() => setOpenGiaHanModal(true)}>Gia hạn</Button>
-              <Button type="primary" style={{ background: '#fa8c16' }} icon={<SwapOutlined />} onClick={() => setOpenThayTheModal(true)}>Thay thế</Button>
+              {(canGiaHan || canUpdate) && (
+                <Button type="primary" style={{ background: '#722ed1' }} icon={<ClockCircleOutlined />} onClick={() => setOpenGiaHanModal(true)}>Gia hạn</Button>
+              )}
+              {(canThayThe || canUpdate) && (
+                <Button type="primary" style={{ background: '#fa8c16' }} icon={<SwapOutlined />} onClick={() => setOpenThayTheModal(true)}>Thay thế</Button>
+              )}
             </>
           )}
           
-          <Button 
-            style={{ borderColor: '#722ed1', color: '#722ed1' }} 
-            icon={<SafetyCertificateOutlined />} 
-            onClick={() => setOpenQuyDinhModal(true)}
-          >
-            QĐ Tạm Thời
-          </Button>
+          {canUpdate && (
+            <Button 
+              style={{ borderColor: '#722ed1', color: '#722ed1' }} 
+              icon={<SafetyCertificateOutlined />} 
+              onClick={() => setOpenQuyDinhModal(true)}
+            >
+              QĐ Tạm Thời
+            </Button>
+          )}
           
-          <Button icon={<FileAddOutlined />} onClick={() => setOpenThayDoiModal(true)}>Thêm thay đổi</Button>
+          {canThayDoiCreate && (
+            <Button icon={<FileAddOutlined />} onClick={() => setOpenThayDoiModal(true)}>Thêm thay đổi</Button>
+          )}
         </Space>
       </div>
 

@@ -2,6 +2,13 @@ import { useAuthStore } from '@/store/authStore';
 
 const DEVELOPER_USERNAMES = (process.env.NEXT_PUBLIC_DEVELOPER_USERNAMES || 'lehoangcuong').split(',').map(s => s.trim().toLowerCase());
 
+export type TaiLieuGroupAction = 'VIEW' | 'UPLOAD' | 'REPLACE' | 'DELETE';
+export const TAI_LIEU_GROUP_PREFIX = 'HOSO_TAI_LIEU_GROUP:';
+
+export function buildTaiLieuGroupPermissionCode(maLoaiTaiLieu: string, action: TaiLieuGroupAction): string {
+  return `${TAI_LIEU_GROUP_PREFIX}${maLoaiTaiLieu.trim().toUpperCase()}:${action}`;
+}
+
 export const usePermissions = () => {
   const { user } = useAuthStore();
 
@@ -28,6 +35,7 @@ export const usePermissions = () => {
       canTaiLieuReplace: false,
       canTaiLieuDelete: false,
       canTaiLieu: false,
+      hasTaiLieuGroupPermission: (_maLoaiTaiLieu: string | null | undefined, _action: TaiLieuGroupAction) => false,
       // Công ty
       canCongTyView: false,
       canCongTyCreate: false,
@@ -98,11 +106,65 @@ export const usePermissions = () => {
   const canThayDoiDelete = hasPermission('HOSO_THAY_DOI_DELETE') || hasPermission('HOSO_THAY_DOI');
   const canThayDoi = canThayDoiCreate;
 
-  // 3. Phân hệ Tài liệu đính kèm & phiên bản
-  const canTaiLieuView = hasPermission('HOSO_TAI_LIEU_VIEW') || hasPermission('HOSO_TAI_LIEU');
-  const canTaiLieuUpload = hasPermission('HOSO_TAI_LIEU_UPLOAD') || hasPermission('HOSO_TAI_LIEU');
-  const canTaiLieuReplace = hasPermission('HOSO_TAI_LIEU_REPLACE') || hasPermission('HOSO_TAI_LIEU');
-  const canTaiLieuDelete = hasPermission('HOSO_TAI_LIEU_DELETE') || hasPermission('HOSO_TAI_LIEU');
+  // 3. Phân hệ Tài liệu đính kèm & phiên bản (bao gồm chi tiết theo từng nhóm tài liệu)
+  const hasAnyGroupView = permissions.some(
+    (p) =>
+      p.startsWith(TAI_LIEU_GROUP_PREFIX) &&
+      (p.endsWith(':VIEW') || p.endsWith(':UPLOAD') || p.endsWith(':REPLACE') || p.endsWith(':DELETE')),
+  );
+  const hasAnyGroupUpload = permissions.some(
+    (p) => p.startsWith(TAI_LIEU_GROUP_PREFIX) && p.endsWith(':UPLOAD'),
+  );
+  const hasAnyGroupReplace = permissions.some(
+    (p) => p.startsWith(TAI_LIEU_GROUP_PREFIX) && p.endsWith(':REPLACE'),
+  );
+  const hasAnyGroupDelete = permissions.some(
+    (p) => p.startsWith(TAI_LIEU_GROUP_PREFIX) && p.endsWith(':DELETE'),
+  );
+
+  const hasTaiLieuGroupPermission = (
+    maLoaiTaiLieu: string | null | undefined,
+    action: TaiLieuGroupAction,
+  ): boolean => {
+    if (isAdmin || permissions.includes('*') || permissions.includes('HOSO_TAI_LIEU')) return true;
+
+    if (action === 'VIEW') {
+      if (
+        hasPermission('HOSO_TAI_LIEU_VIEW') ||
+        hasPermission('HOSO_TAI_LIEU_UPLOAD') ||
+        hasPermission('HOSO_TAI_LIEU_REPLACE') ||
+        hasPermission('HOSO_TAI_LIEU_DELETE')
+      ) {
+        return true;
+      }
+      if (!maLoaiTaiLieu) return false;
+      const code = maLoaiTaiLieu.trim().toUpperCase();
+      return (
+        permissions.includes(buildTaiLieuGroupPermissionCode(code, 'VIEW')) ||
+        permissions.includes(buildTaiLieuGroupPermissionCode(code, 'UPLOAD')) ||
+        permissions.includes(buildTaiLieuGroupPermissionCode(code, 'REPLACE')) ||
+        permissions.includes(buildTaiLieuGroupPermissionCode(code, 'DELETE'))
+      );
+    }
+
+    if (action === 'UPLOAD' && hasPermission('HOSO_TAI_LIEU_UPLOAD')) return true;
+    if (action === 'REPLACE' && hasPermission('HOSO_TAI_LIEU_REPLACE')) return true;
+    if (action === 'DELETE' && (hasPermission('HOSO_TAI_LIEU_DELETE') || hasPermission('HOSO_DELETE'))) {
+      return true;
+    }
+
+    if (!maLoaiTaiLieu) return false;
+    return permissions.includes(buildTaiLieuGroupPermissionCode(maLoaiTaiLieu, action));
+  };
+
+  const canTaiLieuView =
+    hasPermission('HOSO_TAI_LIEU_VIEW') || hasPermission('HOSO_TAI_LIEU') || hasAnyGroupView;
+  const canTaiLieuUpload =
+    hasPermission('HOSO_TAI_LIEU_UPLOAD') || hasPermission('HOSO_TAI_LIEU') || hasAnyGroupUpload;
+  const canTaiLieuReplace =
+    hasPermission('HOSO_TAI_LIEU_REPLACE') || hasPermission('HOSO_TAI_LIEU') || hasAnyGroupReplace;
+  const canTaiLieuDelete =
+    hasPermission('HOSO_TAI_LIEU_DELETE') || hasPermission('HOSO_TAI_LIEU') || hasAnyGroupDelete;
   const canTaiLieu = canTaiLieuUpload || canTaiLieuReplace;
 
   // 4. Phân hệ Quản lý Công ty
@@ -166,6 +228,7 @@ export const usePermissions = () => {
     canTaiLieuReplace,
     canTaiLieuDelete,
     canTaiLieu,
+    hasTaiLieuGroupPermission,
     // Công ty
     canCongTyView,
     canCongTyCreate,

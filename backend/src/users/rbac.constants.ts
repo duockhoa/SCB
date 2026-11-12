@@ -109,6 +109,140 @@ export const ALL_PERMISSION_CODES = PERMISSION_MODULES.flatMap((m) =>
   m.permissions.map((p) => p.code),
 );
 
+export type TaiLieuAction = 'VIEW' | 'UPLOAD' | 'REPLACE' | 'DELETE';
+
+export const TAI_LIEU_GROUP_PREFIX = 'HOSO_TAI_LIEU_GROUP:';
+
+export function buildTaiLieuGroupPermissionCode(maLoaiTaiLieu: string, action: TaiLieuAction): string {
+  return `${TAI_LIEU_GROUP_PREFIX}${maLoaiTaiLieu.trim().toUpperCase()}:${action}`;
+}
+
+export function buildTaiLieuGroupPermissions(
+  groups: Array<{ ma_loai_tai_lieu: string; ten_loai_tai_lieu: string }>,
+): PermissionModule[] {
+  if (!groups || groups.length === 0) return [];
+
+  const permissions: PermissionItem[] = [];
+  for (const group of groups) {
+    const code = group.ma_loai_tai_lieu.trim().toUpperCase();
+    const label = group.ten_loai_tai_lieu.trim();
+    permissions.push(
+      {
+        code: buildTaiLieuGroupPermissionCode(code, 'VIEW'),
+        name: `[${label}] Xem & tải tài liệu`,
+        description: `Xem và tải các tài liệu thuộc nhóm "${label}" (${code})`,
+      },
+      {
+        code: buildTaiLieuGroupPermissionCode(code, 'UPLOAD'),
+        name: `[${label}] Tải lên & sửa tài liệu`,
+        description: `Thêm mới và chỉnh sửa tài liệu thuộc nhóm "${label}" (${code})`,
+      },
+      {
+        code: buildTaiLieuGroupPermissionCode(code, 'REPLACE'),
+        name: `[${label}] Thay thế phiên bản`,
+        description: `Upload thay thế phiên bản mới cho tài liệu thuộc nhóm "${label}" (${code})`,
+      },
+      {
+        code: buildTaiLieuGroupPermissionCode(code, 'DELETE'),
+        name: `[${label}] Xóa tài liệu`,
+        description: `Xóa tài liệu thuộc nhóm "${label}" (${code})`,
+        isDangerous: true,
+      },
+    );
+  }
+
+  return [
+    {
+      module: 'Phân quyền theo Nhóm Tài liệu Tải lên',
+      description:
+        'Phân quyền chi tiết theo từng nhóm loại tài liệu (nếu không bật quyền Tài liệu tổng quát ở trên, vai trò/nhân sự chỉ thao tác được các nhóm được chọn dưới đây)',
+      permissions,
+    },
+  ];
+}
+
+export interface AuthUserContext {
+  userId?: number;
+  username?: string;
+  role?: string | null;
+  isAdmin?: boolean;
+  permissions?: string[];
+}
+
+export function isAdminOrWildcardUser(user?: AuthUserContext | null): boolean {
+  if (!user) return false;
+  const developerUsernames = (process.env.DEVELOPER_USERNAMES || 'lehoangcuong')
+    .split(',')
+    .map((s) => s.trim().toLowerCase());
+  const isDevOrAdmin =
+    developerUsernames.includes(user.username?.toLowerCase() || '') ||
+    user.role === 'ADMIN' ||
+    !!user.isAdmin;
+  if (isDevOrAdmin) return true;
+  return Array.isArray(user.permissions) && user.permissions.includes('*');
+}
+
+export function hasAnyTaiLieuGroupAction(userPerms: string[], action: TaiLieuAction): boolean {
+  if (!userPerms || userPerms.length === 0) return false;
+  if (action === 'VIEW') {
+    return userPerms.some(
+      (p) =>
+        p.startsWith(TAI_LIEU_GROUP_PREFIX) &&
+        (p.endsWith(':VIEW') || p.endsWith(':UPLOAD') || p.endsWith(':REPLACE') || p.endsWith(':DELETE')),
+    );
+  }
+  return userPerms.some((p) => p.startsWith(TAI_LIEU_GROUP_PREFIX) && p.endsWith(`:${action}`));
+}
+
+export function hasRoutePermissionMatch(userPerms: string[], requiredPerm: string): boolean {
+  if (userPerms.includes(requiredPerm)) return true;
+  if (requiredPerm === 'HOSO_TAI_LIEU_VIEW') return hasAnyTaiLieuGroupAction(userPerms, 'VIEW');
+  if (requiredPerm === 'HOSO_TAI_LIEU_UPLOAD') return hasAnyTaiLieuGroupAction(userPerms, 'UPLOAD');
+  if (requiredPerm === 'HOSO_TAI_LIEU_REPLACE') return hasAnyTaiLieuGroupAction(userPerms, 'REPLACE');
+  if (requiredPerm === 'HOSO_TAI_LIEU_DELETE') return hasAnyTaiLieuGroupAction(userPerms, 'DELETE');
+  return false;
+}
+
+export function hasTaiLieuGroupPermission(
+  user: AuthUserContext | null | undefined,
+  maLoaiTaiLieu: string | null | undefined,
+  action: TaiLieuAction,
+): boolean {
+  if (!user) return false;
+  if (isAdminOrWildcardUser(user)) return true;
+
+  const perms = Array.isArray(user.permissions) ? user.permissions : [];
+  if (perms.includes('HOSO_TAI_LIEU')) return true;
+
+  if (action === 'VIEW') {
+    if (
+      perms.includes('HOSO_TAI_LIEU_VIEW') ||
+      perms.includes('HOSO_TAI_LIEU_UPLOAD') ||
+      perms.includes('HOSO_TAI_LIEU_REPLACE') ||
+      perms.includes('HOSO_TAI_LIEU_DELETE')
+    ) {
+      return true;
+    }
+    if (!maLoaiTaiLieu) return false;
+    const code = maLoaiTaiLieu.trim().toUpperCase();
+    return (
+      perms.includes(buildTaiLieuGroupPermissionCode(code, 'VIEW')) ||
+      perms.includes(buildTaiLieuGroupPermissionCode(code, 'UPLOAD')) ||
+      perms.includes(buildTaiLieuGroupPermissionCode(code, 'REPLACE')) ||
+      perms.includes(buildTaiLieuGroupPermissionCode(code, 'DELETE'))
+    );
+  }
+
+  if (action === 'UPLOAD' && perms.includes('HOSO_TAI_LIEU_UPLOAD')) return true;
+  if (action === 'REPLACE' && perms.includes('HOSO_TAI_LIEU_REPLACE')) return true;
+  if (action === 'DELETE' && (perms.includes('HOSO_TAI_LIEU_DELETE') || perms.includes('HOSO_DELETE'))) {
+    return true;
+  }
+
+  if (!maLoaiTaiLieu) return false;
+  return perms.includes(buildTaiLieuGroupPermissionCode(maLoaiTaiLieu, action));
+}
+
 // Bản đồ tương thích ngược mở rộng các mã quyền cũ thành các quyền chi tiết
 export const LEGACY_PERMISSION_MAP: Record<string, string[]> = {
   HOSO_TAI_LIEU: ['HOSO_TAI_LIEU_VIEW', 'HOSO_TAI_LIEU_UPLOAD', 'HOSO_TAI_LIEU_REPLACE', 'HOSO_TAI_LIEU_DELETE'],

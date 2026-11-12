@@ -155,12 +155,25 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
   const { mutateAsync: updateTaiLieu, isPending: updatingTaiLieu } = useUpdateTaiLieu();
   const { mutateAsync: replaceTaiLieu, isPending: replacingTaiLieu } = useReplaceTaiLieu();
   const { mutate: deleteTaiLieu } = useDeleteTaiLieu();
-  const { canTaiLieuUpload, canTaiLieuReplace, canTaiLieuDelete } = usePermissions();
+  const {
+    canUpdate,
+    canTaiLieuView,
+    canTaiLieuReplace,
+    hasTaiLieuGroupPermission,
+  } = usePermissions();
 
   const { data: loaiTaiLieuRes } = useLoaiTaiLieuList({ loaiHoSoId: hoSo.loai_ho_so_id });
   const activeLoaiTaiLieuList: LoaiTaiLieu[] = useMemo(
     () => loaiTaiLieuRes?.data || [],
     [loaiTaiLieuRes?.data],
+  );
+
+  const uploadableLoaiTaiLieuList: LoaiTaiLieu[] = useMemo(
+    () =>
+      activeLoaiTaiLieuList.filter((item) =>
+        hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'UPLOAD'),
+      ),
+    [activeLoaiTaiLieuList, hasTaiLieuGroupPermission],
   );
 
   const queryClient = useQueryClient();
@@ -174,14 +187,27 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
   const watchedLoaiTaiLieuId = Form.useWatch('loai_tai_lieu_id', form);
 
   const modalLoaiTaiLieuOptions = useMemo(() => {
+    const allowedList = activeLoaiTaiLieuList.filter((item) => {
+      if (docModalMode === 'replace') {
+        return hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'REPLACE');
+      }
+      if (docModalMode === 'edit') {
+        return (
+          hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'UPLOAD') ||
+          hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'REPLACE')
+        );
+      }
+      return hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'UPLOAD');
+    });
+
     if (
       activeDocRecord?.loai_tai_lieu &&
-      !activeLoaiTaiLieuList.some((item) => item.id === activeDocRecord.loai_tai_lieu?.id)
+      !allowedList.some((item) => item.id === activeDocRecord.loai_tai_lieu?.id)
     ) {
-      return [...activeLoaiTaiLieuList, activeDocRecord.loai_tai_lieu];
+      return [...allowedList, activeDocRecord.loai_tai_lieu];
     }
-    return activeLoaiTaiLieuList;
-  }, [activeLoaiTaiLieuList, activeDocRecord]);
+    return allowedList;
+  }, [activeLoaiTaiLieuList, activeDocRecord, docModalMode, hasTaiLieuGroupPermission]);
 
   const selectedLoaiTaiLieu = useMemo(
     () => modalLoaiTaiLieuOptions.find((item) => item.id === watchedLoaiTaiLieuId) || null,
@@ -234,6 +260,9 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
 
     if (hoSo.tai_lieu && hoSo.tai_lieu.length > 0) {
       hoSo.tai_lieu.forEach((tl: TaiLieuHoSo) => {
+        if (!hasTaiLieuGroupPermission(tl.loai_tai_lieu?.ma_loai_tai_lieu, 'VIEW')) {
+          return;
+        }
         rows.push({
           id: tl.id,
           real_id: tl.id,
@@ -256,7 +285,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     }
 
     return rows;
-  }, [hoSo, thongTinRieng]);
+  }, [hoSo, thongTinRieng, hasTaiLieuGroupPermission]);
 
   const filterOptions = useMemo(() => {
     const opts: Array<{ value: string | number; label: string }> = [];
@@ -295,8 +324,8 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     setDocModalMode('create');
     form.resetFields();
     const defaultLoai =
-      activeLoaiTaiLieuList.find((item) => item.ma_loai_tai_lieu === 'KHAC') ||
-      activeLoaiTaiLieuList[0];
+      uploadableLoaiTaiLieuList.find((item) => item.ma_loai_tai_lieu === 'KHAC') ||
+      uploadableLoaiTaiLieuList[0];
     form.setFieldsValue({
       loai_tai_lieu_id: defaultLoai?.id,
     });
@@ -586,20 +615,35 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
       width: 310,
       render: (_: unknown, record: TaiLieuRow) => {
         const isExpired = record.is_dynamic && record.tai_lieu_hien_hanh === false;
+        const maLoai = record.loai_tai_lieu?.ma_loai_tai_lieu;
+        const canViewDoc = record.is_dynamic
+          ? hasTaiLieuGroupPermission(maLoai, 'VIEW')
+          : canTaiLieuView;
+        const canEditDoc =
+          record.is_dynamic &&
+          !isExpired &&
+          (hasTaiLieuGroupPermission(maLoai, 'UPLOAD') ||
+            hasTaiLieuGroupPermission(maLoai, 'REPLACE'));
+        const canReplaceDynamic =
+          record.is_dynamic && !isExpired && hasTaiLieuGroupPermission(maLoai, 'REPLACE');
+        const canReplaceBuiltIn = !record.is_dynamic && !isExpired && canUpdate && canTaiLieuReplace;
+        const canDeleteDoc = record.is_dynamic && hasTaiLieuGroupPermission(maLoai, 'DELETE');
 
         return (
           <Space size="small" wrap>
-            <Button
-              type="primary"
-              ghost
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewFile(record)}
-              loading={viewingRecordId === record.id}
-            >
-              Mở xem
-            </Button>
-            {canTaiLieuUpload && record.is_dynamic && !isExpired && (
+            {canViewDoc && (
+              <Button
+                type="primary"
+                ghost
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => handleViewFile(record)}
+                loading={viewingRecordId === record.id}
+              >
+                Mở xem
+              </Button>
+            )}
+            {canEditDoc && (
               <Button
                 size="small"
                 icon={<EditOutlined />}
@@ -608,31 +652,30 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
                 Sửa
               </Button>
             )}
-            {canTaiLieuReplace && !isExpired && (
-              record.is_dynamic ? (
+            {canReplaceDynamic && (
+              <Button
+                size="small"
+                icon={<UploadOutlined />}
+                onClick={() => handleOpenReplaceModal(record)}
+              >
+                Thay thế
+              </Button>
+            )}
+            {canReplaceBuiltIn && (
+              <Upload
+                showUploadList={false}
+                beforeUpload={(file) => handleUploadReplaceBuiltIn(file, record)}
+              >
                 <Button
                   size="small"
                   icon={<UploadOutlined />}
-                  onClick={() => handleOpenReplaceModal(record)}
+                  loading={uploadingId === record.id}
                 >
-                  Thay thế
+                  Upload thay thế
                 </Button>
-              ) : (
-                <Upload
-                  showUploadList={false}
-                  beforeUpload={(file) => handleUploadReplaceBuiltIn(file, record)}
-                >
-                  <Button
-                    size="small"
-                    icon={<UploadOutlined />}
-                    loading={uploadingId === record.id}
-                  >
-                    Upload thay thế
-                  </Button>
-                </Upload>
-              )
+              </Upload>
             )}
-            {canTaiLieuDelete && record.is_dynamic && (
+            {canDeleteDoc && (
               <Popconfirm
                 title={isExpired ? 'Xóa bản lưu lịch sử này?' : 'Bạn có chắc chắn muốn xóa tài liệu này?'}
                 onConfirm={() => handleDeleteDocument(record)}
@@ -672,7 +715,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
             />
           )}
         </div>
-        {canTaiLieuUpload && (
+        {uploadableLoaiTaiLieuList.length > 0 && (
           <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateModal}>
             Thêm tài liệu
           </Button>

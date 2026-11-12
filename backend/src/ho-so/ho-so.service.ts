@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, InternalServerErrorException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHoSoDto } from './dto/create-ho-so.dto';
 import { UpdateHoSoDto } from './dto/update-ho-so.dto';
@@ -12,6 +12,7 @@ import { Prisma } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { dossierSnapshot } from './ho-so-audit';
 import { dateOnly, expiryStatus, EXPIRY_STATUSES, reminderDate, ExpiryConfig, DEFAULT_EXPIRY_CONFIG, effectiveExpiryDate } from './expiry';
+import { AuthUserContext, hasTaiLieuGroupPermission, TaiLieuAction } from '../users/rbac.constants';
 
 const LEGACY_DETAIL_SPECS: Record<string, {
   tableKey: 'ho_so_thuoc' | 'ho_so_my_pham' | 'ho_so_tbyt' | 'ho_so_tpbvsk_tu_cong_bo' | 'ho_so_tpbvsk_cong_bo' | 'ho_so_cfs_cpp';
@@ -267,7 +268,7 @@ export class HoSoService {
     return { stats, total, page, limit, data };
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, user?: AuthUserContext) {
     const hoSo = await this.prisma.ho_so_chung.findUnique({
       where: { id },
       include: {
@@ -309,6 +310,11 @@ export class HoSoService {
     });
 
     if (!hoSo) throw new NotFoundException('Không tìm thấy hồ sơ');
+    if (user && Array.isArray(hoSo.tai_lieu)) {
+      hoSo.tai_lieu = hoSo.tai_lieu.filter((tl: any) =>
+        hasTaiLieuGroupPermission(user, tl.loai_tai_lieu?.ma_loai_tai_lieu, 'VIEW'),
+      );
+    }
     return hoSo;
   }
 
@@ -906,9 +912,25 @@ export class HoSoService {
     return loaiKhac;
   }
 
-  async addTaiLieu(hoSoId: number, data: TaiLieuDto, userId?: number) {
+  private assertTaiLieuPermission(
+    user: AuthUserContext | undefined,
+    loaiTaiLieu: { ma_loai_tai_lieu?: string | null; ten_loai_tai_lieu?: string | null } | null | undefined,
+    actions: TaiLieuAction[],
+    actionLabel: string,
+  ) {
+    if (!user) return;
+    const maLoai = loaiTaiLieu?.ma_loai_tai_lieu;
+    const allowed = actions.some((action) => hasTaiLieuGroupPermission(user, maLoai, action));
+    if (!allowed) {
+      const groupName = loaiTaiLieu?.ten_loai_tai_lieu || maLoai || 'nhóm tài liệu này';
+      throw new ForbiddenException(`Bạn không có quyền ${actionLabel} đối với nhóm tài liệu "${groupName}"`);
+    }
+  }
+
+  async addTaiLieu(hoSoId: number, data: TaiLieuDto, userId?: number, user?: AuthUserContext) {
     const hoSo = await this.findOne(hoSoId);
     const loaiTaiLieu = await this.resolveLoaiTaiLieuForHoSo(hoSo.loai_ho_so_id, data.loai_tai_lieu_id);
+    this.assertTaiLieuPermission(user, loaiTaiLieu, ['UPLOAD'], 'tải lên');
     const customDocData = this.cleanDynamicDocData(data.du_lieu_dac_thu);
 
     return this.prisma.$transaction(async (tx) => {
@@ -941,7 +963,7 @@ export class HoSoService {
     });
   }
 
-  async updateTaiLieu(hoSoId: number, taiLieuId: number, data: UpdateTaiLieuDto, userId?: number) {
+  async updateTaiLieu(hoSoId: number, taiLieuId: number, data: UpdateTaiLieuDto, userId?: number, user?: AuthUserContext) {
     const hoSo = await this.findOne(hoSoId);
     const oldDoc = await this.prisma.tai_lieu_ho_so.findUnique({
       where: { id: taiLieuId },
@@ -952,9 +974,12 @@ export class HoSoService {
       throw new NotFoundException('Không tìm thấy tài liệu trong hồ sơ này');
     }
 
+    this.assertTaiLieuPermission(user, oldDoc.loai_tai_lieu, ['UPLOAD', 'REPLACE'], 'chỉnh sửa');
+
     let nextLoaiTaiLieuId: number | undefined;
     if (data.loai_tai_lieu_id !== undefined && data.loai_tai_lieu_id !== oldDoc.loai_tai_lieu_id) {
       const targetLoai = await this.resolveLoaiTaiLieuForHoSo(hoSo.loai_ho_so_id, data.loai_tai_lieu_id);
+      this.assertTaiLieuPermission(user, targetLoai, ['UPLOAD', 'REPLACE'], 'chuyển sang');
       nextLoaiTaiLieuId = targetLoai.id;
     }
 
@@ -997,16 +1022,19 @@ export class HoSoService {
     });
   }
 
-  async deleteTaiLieu(hoSoId: number, taiLieuId: number, userId?: number) {
+  async deleteTaiLieu(hoSoId: number, taiLieuId: number, userId?: number, user?: AuthUserContext) {
     await this.findOne(hoSoId);
 
     const taiLieu = await this.prisma.tai_lieu_ho_so.findUnique({
       where: { id: taiLieuId },
+      include: { loai_tai_lieu: true },
     });
 
     if (!taiLieu || taiLieu.ho_so_chung_id !== hoSoId) {
       throw new NotFoundException('Không tìm thấy tài liệu trong hồ sơ này');
     }
+
+    this.assertTaiLieuPermission(user, taiLieu.loai_tai_lieu, ['DELETE'], 'xóa');
 
     return this.prisma.$transaction(async (tx) => {
       await tx.tai_lieu_ho_so.delete({
@@ -1032,19 +1060,24 @@ export class HoSoService {
     taiLieuId: number,
     data: ReplaceTaiLieuDto,
     userId?: number,
+    user?: AuthUserContext,
   ) {
     const hoSo = await this.findOne(hoSoId);
     const oldDoc = await this.prisma.tai_lieu_ho_so.findUnique({
       where: { id: taiLieuId },
+      include: { loai_tai_lieu: true },
     });
 
     if (!oldDoc || oldDoc.ho_so_chung_id !== hoSoId) {
       throw new NotFoundException('Không tìm thấy tài liệu trong hồ sơ này');
     }
 
+    this.assertTaiLieuPermission(user, oldDoc.loai_tai_lieu, ['REPLACE'], 'thay thế phiên bản');
+
     let nextLoaiTaiLieuId = oldDoc.loai_tai_lieu_id;
     if (data.loai_tai_lieu_id !== undefined && data.loai_tai_lieu_id !== oldDoc.loai_tai_lieu_id) {
       const targetLoai = await this.resolveLoaiTaiLieuForHoSo(hoSo.loai_ho_so_id, data.loai_tai_lieu_id);
+      this.assertTaiLieuPermission(user, targetLoai, ['REPLACE'], 'chuyển sang');
       nextLoaiTaiLieuId = targetLoai.id;
     }
 

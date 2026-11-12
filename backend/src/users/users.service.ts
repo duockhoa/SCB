@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PERMISSION_MODULES, ALL_PERMISSION_CODES, expandPermissions } from './rbac.constants';
+import { PERMISSION_MODULES, buildTaiLieuGroupPermissions, expandPermissions } from './rbac.constants';
 
 @Injectable()
 export class UsersService {
@@ -72,7 +72,15 @@ export class UsersService {
   }
 
   async getPermissionsCatalog() {
-    return PERMISSION_MODULES;
+    const groups = await this.prisma.dm_loai_tai_lieu.findMany({
+      where: { trang_thai: true },
+      select: {
+        ma_loai_tai_lieu: true,
+        ten_loai_tai_lieu: true,
+      },
+      orderBy: [{ thu_tu: 'asc' }, { id: 'asc' }],
+    });
+    return [...PERMISSION_MODULES, ...buildTaiLieuGroupPermissions(groups)];
   }
 
   async createRole(data: { ma_vai_tro: string; ten_vai_tro: string; mo_ta?: string; quyen_han?: string[] }) {
@@ -188,11 +196,14 @@ export class UsersService {
       }
     }
 
+    const expandedRolePerms = expandPermissions(rolePerms);
+    const expandedCustomPerms = expandPermissions(customPerms);
+
     return {
       ...updated,
-      rolePermissions: rolePerms,
-      customPermissions: customPerms,
-      effectivePermissions: Array.from(new Set([...rolePerms, ...customPerms])),
+      rolePermissions: expandedRolePerms,
+      customPermissions: expandedCustomPerms,
+      effectivePermissions: Array.from(new Set([...expandedRolePerms, ...expandedCustomPerms])),
     };
   }
 }

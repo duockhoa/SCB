@@ -119,7 +119,7 @@ export default function RolesManagementTab() {
         ...m,
         permissions: m.permissions.map((p: PermissionItem) => ({
           ...p,
-          isDangerous: ['HOSO_DELETE', 'HOSO_THAY_THE'].includes(p.code),
+          isDangerous: Boolean(p.isDangerous) || ['HOSO_DELETE', 'HOSO_THAY_THE'].includes(p.code),
         })),
       }));
       setPermissionModules(modules);
@@ -358,7 +358,7 @@ export default function RolesManagementTab() {
             className="bg-gray-100 p-1 font-medium"
           />
 
-          <Button icon={<ReloadOutlined />} onClick={fetchRoles}>
+          <Button icon={<ReloadOutlined />} onClick={() => { fetchRoles(); fetchPermissions(); }}>
             Làm mới
           </Button>
 

@@ -407,6 +407,10 @@ export class DanhMucService {
         }
       }
 
+      if (nextMaLoai && nextMaLoai !== existing.ma_loai_tai_lieu) {
+        await this.syncTaiLieuGroupPermissionCodes(tx, existing.ma_loai_tai_lieu, nextMaLoai);
+      }
+
       return tx.dm_loai_tai_lieu.update({
         where: { id },
         data: {
@@ -456,7 +460,61 @@ export class DanhMucService {
     }
 
     await this.prisma.dm_loai_tai_lieu.delete({ where: { id } });
+    await this.syncTaiLieuGroupPermissionCodes(this.prisma, existing.ma_loai_tai_lieu, null);
     return { message: 'Xóa loại tài liệu thành công' };
+  }
+
+  private async syncTaiLieuGroupPermissionCodes(
+    client: any,
+    oldCode: string,
+    newCode: string | null,
+  ) {
+    const oldPrefix = `HOSO_TAI_LIEU_GROUP:${oldCode.trim().toUpperCase()}:`;
+    const newPrefix = newCode ? `HOSO_TAI_LIEU_GROUP:${newCode.trim().toUpperCase()}:` : null;
+
+    const rewriteJson = (raw: string | null): string | null | undefined => {
+      if (!raw) return undefined;
+      try {
+        const list = JSON.parse(raw);
+        if (!Array.isArray(list)) return undefined;
+        let changed = false;
+        const nextList: string[] = [];
+        for (const item of list) {
+          if (typeof item === 'string' && item.startsWith(oldPrefix)) {
+            changed = true;
+            if (newPrefix) {
+              nextList.push(newPrefix + item.slice(oldPrefix.length));
+            }
+          } else {
+            nextList.push(item);
+          }
+        }
+        if (!changed) return undefined;
+        return nextList.length > 0 ? JSON.stringify(Array.from(new Set(nextList))) : null;
+      } catch {
+        return undefined;
+      }
+    };
+
+    if (client?.vai_tro?.findMany) {
+      const roles = await client.vai_tro.findMany({ where: { quyen_han: { contains: oldPrefix } } });
+      for (const role of roles) {
+        const nextJson = rewriteJson(role.quyen_han);
+        if (nextJson !== undefined) {
+          await client.vai_tro.update({ where: { id: role.id }, data: { quyen_han: nextJson } });
+        }
+      }
+    }
+
+    if (client?.nguoi_dung?.findMany) {
+      const users = await client.nguoi_dung.findMany({ where: { quyen_rieng: { contains: oldPrefix } } });
+      for (const user of users) {
+        const nextJson = rewriteJson(user.quyen_rieng);
+        if (nextJson !== undefined) {
+          await client.nguoi_dung.update({ where: { id: user.id }, data: { quyen_rieng: nextJson } });
+        }
+      }
+    }
   }
 
   async getLoaiThayDoi() {

@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY, PERMISSIONS_KEY, RequiredRole } from '../decorators/roles.decorator';
+import { hasRoutePermissionMatch } from '../../users/rbac.constants';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -43,7 +44,7 @@ export class RolesGuard implements CanActivate {
 
     // 3. Kiểm tra trực tiếp theo danh sách quyền chi tiết (RBAC Granular Permissions)
     if (requiredPermissions && requiredPermissions.length > 0) {
-      const hasPermission = requiredPermissions.some(perm => userPerms.includes(perm));
+      const hasPermission = requiredPermissions.some(perm => hasRoutePermissionMatch(userPerms, perm));
       if (!hasPermission) {
         throw new ForbiddenException(
           `Bạn không có quyền thực hiện hành động này (Yêu cầu: ${requiredPermissions.join(', ')}). Vui lòng liên hệ Quản trị viên để được phân quyền trực tiếp trên ứng dụng.`

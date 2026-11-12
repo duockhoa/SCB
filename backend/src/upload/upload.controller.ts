@@ -1,4 +1,4 @@
-import { Controller, Post, Get, UseInterceptors, UploadedFile, BadRequestException, UseGuards, Param, Req, Res, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Get, UseInterceptors, UploadedFile, BadRequestException, UseGuards, Param, Req, Res } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
@@ -6,14 +6,26 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import type { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { RequirePermissions } from '../auth/decorators/roles.decorator';
 
 @ApiTags('Upload')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('upload')
 export class UploadController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Post()
+  @RequirePermissions(
+    'HOSO_TAI_LIEU_UPLOAD',
+    'HOSO_TAI_LIEU_REPLACE',
+    'HOSO_TAI_LIEU',
+    'HOSO_CREATE',
+    'HOSO_UPDATE',
+    'HOSO_THAY_DOI_CREATE',
+    'HOSO_THAY_DOI_UPDATE',
+    'HOSO_THAY_DOI',
+  )
   @ApiOperation({ summary: 'Tải lên một file tĩnh' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

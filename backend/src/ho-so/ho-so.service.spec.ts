@@ -1,6 +1,7 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { HoSoService } from './ho-so.service';
+import { hasRoutePermissionMatch } from '../users/rbac.constants';
 
 describe('HoSoService dynamic fields', () => {
   const createMockHoSoDeps = () => {
@@ -302,5 +303,99 @@ describe('HoSoService dynamic fields', () => {
         }),
       }),
     );
+  });
+
+  it('enforces per-document-group permissions for viewing, uploading, replacing, and deleting', async () => {
+    const { prisma, tx, service } = createMockHoSoDeps();
+    const scopedUser = {
+      userId: 12,
+      username: 'nhanvien',
+      role: 'NV_DANG_KY',
+      isAdmin: false,
+      permissions: [
+        'HOSO_VIEW',
+        'HOSO_TAI_LIEU_GROUP:NHAN_SP:VIEW',
+        'HOSO_TAI_LIEU_GROUP:NHAN_SP:UPLOAD',
+      ],
+    };
+
+    expect(hasRoutePermissionMatch(scopedUser.permissions, 'HOSO_TAI_LIEU_VIEW')).toBe(true);
+    expect(hasRoutePermissionMatch(scopedUser.permissions, 'HOSO_TAI_LIEU_UPLOAD')).toBe(true);
+    expect(hasRoutePermissionMatch(scopedUser.permissions, 'HOSO_TAI_LIEU_REPLACE')).toBe(false);
+    expect(hasRoutePermissionMatch(scopedUser.permissions, 'HOSO_TAI_LIEU_DELETE')).toBe(false);
+
+    prisma.ho_so_chung.findUnique.mockResolvedValue({
+      id: 50,
+      loai_ho_so_id: 1,
+      tai_lieu: [
+        { id: 1, ten_tai_lieu: 'Nhãn hộp', loai_tai_lieu: { ma_loai_tai_lieu: 'NHAN_SP' } },
+        { id: 2, ten_tai_lieu: 'Công văn mật', loai_tai_lieu: { ma_loai_tai_lieu: 'CONG_VAN' } },
+      ],
+    });
+
+    const detail = await service.findOne(50, scopedUser);
+    expect(detail.tai_lieu).toHaveLength(1);
+    expect(detail.tai_lieu[0].id).toBe(1);
+
+    prisma.dm_loai_tai_lieu.findUnique.mockResolvedValueOnce({
+      id: 9,
+      ma_loai_tai_lieu: 'CONG_VAN',
+      ten_loai_tai_lieu: 'Công văn',
+      trang_thai: true,
+      ap_dung_tat_ca: true,
+    });
+    await expect(
+      service.addTaiLieu(
+        50,
+        { loai_tai_lieu_id: 9, ten_tai_lieu: 'CV mới', duong_dan_url: '/uploads/cv.pdf' },
+        12,
+        scopedUser,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+
+    prisma.dm_loai_tai_lieu.findUnique.mockResolvedValueOnce({
+      id: 8,
+      ma_loai_tai_lieu: 'NHAN_SP',
+      ten_loai_tai_lieu: 'Nhãn sản phẩm',
+      trang_thai: true,
+      ap_dung_tat_ca: true,
+    });
+    tx.tai_lieu_ho_so.create.mockResolvedValueOnce({
+      id: 300,
+      ten_tai_lieu: 'Nhãn v1',
+      loai_tai_lieu: { ma_loai_tai_lieu: 'NHAN_SP', ten_loai_tai_lieu: 'Nhãn sản phẩm' },
+    });
+    await expect(
+      service.addTaiLieu(
+        50,
+        { loai_tai_lieu_id: 8, ten_tai_lieu: 'Nhãn v1', duong_dan_url: '/uploads/nhan.pdf' },
+        12,
+        scopedUser,
+      ),
+    ).resolves.toMatchObject({ id: 300 });
+
+    prisma.tai_lieu_ho_so.findUnique.mockResolvedValueOnce({
+      id: 300,
+      ho_so_chung_id: 50,
+      loai_tai_lieu_id: 8,
+      loai_tai_lieu: { ma_loai_tai_lieu: 'NHAN_SP', ten_loai_tai_lieu: 'Nhãn sản phẩm' },
+    });
+    await expect(
+      service.replaceTaiLieu(
+        50,
+        300,
+        { duong_dan_url: '/uploads/nhan-v2.pdf' },
+        12,
+        scopedUser,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+
+    prisma.tai_lieu_ho_so.findUnique.mockResolvedValueOnce({
+      id: 300,
+      ho_so_chung_id: 50,
+      loai_tai_lieu_id: 8,
+      loai_tai_lieu: { ma_loai_tai_lieu: 'NHAN_SP', ten_loai_tai_lieu: 'Nhãn sản phẩm' },
+    });
+    await expect(service.deleteTaiLieu(50, 300, 12, scopedUser)).rejects.toThrow(ForbiddenException);
   });
 });
