@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { danhMucService, type LoaiHoSoPayload, type LoaiTaiLieuPayload } from '@/services/danh-muc.service';
+import {
+  danhMucService,
+  type LoaiHoSoPayload,
+  type LoaiTaiLieuPayload,
+  type NhomTaiLieuPayload,
+} from '@/services/danh-muc.service';
 
 export const useLoaiHoSoList = (includeInactive = false) => {
   return useQuery({
@@ -68,6 +73,55 @@ export const useTinhTrangList = () => {
   });
 };
 
+export const useNhomTaiLieuList = (options?: {
+  includeInactive?: boolean;
+  loaiHoSoId?: number;
+  enabled?: boolean;
+}) => {
+  const includeInactive = Boolean(options?.includeInactive);
+  const loaiHoSoId = options?.loaiHoSoId;
+  return useQuery({
+    queryKey: ['DANH_MUC', 'NHOM_TAI_LIEU', { includeInactive, loaiHoSoId: loaiHoSoId ?? null }],
+    queryFn: () => danhMucService.getNhomTaiLieu({ includeInactive, loaiHoSoId }),
+    enabled: options?.enabled ?? true,
+  });
+};
+
+export const useCreateNhomTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: NhomTaiLieuPayload) => danhMucService.createNhomTaiLieu(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'NHOM_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+    },
+  });
+};
+
+export const useUpdateNhomTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: NhomTaiLieuPayload }) =>
+      danhMucService.updateNhomTaiLieu(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'NHOM_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};
+
+export const useDeleteNhomTaiLieu = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => danhMucService.deleteNhomTaiLieu(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'NHOM_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+    },
+  });
+};
+
 export const useLoaiTaiLieuList = (options?: {
   includeInactive?: boolean;
   loaiHoSoId?: number;
@@ -88,6 +142,7 @@ export const useCreateLoaiTaiLieu = () => {
     mutationFn: (data: LoaiTaiLieuPayload) => danhMucService.createLoaiTaiLieu(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'NHOM_TAI_LIEU'] });
     },
   });
 };
@@ -99,6 +154,7 @@ export const useUpdateLoaiTaiLieu = () => {
       danhMucService.updateLoaiTaiLieu(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'NHOM_TAI_LIEU'] });
       queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
     },
   });
@@ -110,6 +166,7 @@ export const useDeleteLoaiTaiLieu = () => {
     mutationFn: (id: number) => danhMucService.deleteLoaiTaiLieu(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'NHOM_TAI_LIEU'] });
     },
   });
 };

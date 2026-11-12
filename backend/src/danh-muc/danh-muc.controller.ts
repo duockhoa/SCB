@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermissions } from '../auth/decorators/roles.decorator';
 import { CreateLoaiHoSoDto, UpdateLoaiHoSoDto, UpdateLoaiHoSoExpiryDto } from './dto/loai-ho-so.dto';
 import { CreateLoaiTaiLieuDto, UpdateLoaiTaiLieuDto } from './dto/loai-tai-lieu.dto';
+import { CreateNhomTaiLieuDto, UpdateNhomTaiLieuDto } from './dto/nhom-tai-lieu.dto';
 
 @ApiTags('Danh Mục')
 @ApiBearerAuth()
@@ -59,6 +60,42 @@ export class DanhMucController {
   @ApiOperation({ summary: 'Lấy danh mục tình trạng hồ sơ' })
   getTinhTrang() {
     return this.danhMucService.getTinhTrang();
+  }
+
+  @Get('nhom-tai-lieu')
+  @ApiOperation({ summary: 'Lấy danh mục nhóm tài liệu kèm danh sách loại tài liệu thuộc nhóm' })
+  @ApiQuery({ name: 'includeInactive', required: false, type: Boolean })
+  @ApiQuery({ name: 'loaiHoSoId', required: false, type: Number })
+  getNhomTaiLieu(
+    @Query('includeInactive') includeInactive?: string,
+    @Query('loaiHoSoId') loaiHoSoId?: string,
+  ) {
+    const parsedLoaiHoSoId = loaiHoSoId && Number(loaiHoSoId) > 0 ? Number(loaiHoSoId) : undefined;
+    return this.danhMucService.getNhomTaiLieu(includeInactive === 'true', parsedLoaiHoSoId);
+  }
+
+  @Post('nhom-tai-lieu')
+  @ApiOperation({ summary: 'Thêm mới nhóm tài liệu' })
+  @RequirePermissions('DANH_MUC_CREATE', 'DANH_MUC_MANAGE')
+  createNhomTaiLieu(@Body() body: CreateNhomTaiLieuDto) {
+    return this.danhMucService.createNhomTaiLieu(body);
+  }
+
+  @Put('nhom-tai-lieu/:id')
+  @ApiOperation({ summary: 'Cập nhật nhóm tài liệu & phạm vi loại hồ sơ áp dụng' })
+  @RequirePermissions('DANH_MUC_UPDATE', 'DANH_MUC_MANAGE')
+  updateNhomTaiLieu(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateNhomTaiLieuDto,
+  ) {
+    return this.danhMucService.updateNhomTaiLieu(id, body);
+  }
+
+  @Delete('nhom-tai-lieu/:id')
+  @ApiOperation({ summary: 'Xóa nhóm tài liệu (khi chưa chứa loại tài liệu và không phải nhóm mặc định)' })
+  @RequirePermissions('DANH_MUC_DELETE', 'DANH_MUC_MANAGE')
+  deleteNhomTaiLieu(@Param('id', ParseIntPipe) id: number) {
+    return this.danhMucService.deleteNhomTaiLieu(id);
   }
 
   @Get('loai-tai-lieu')

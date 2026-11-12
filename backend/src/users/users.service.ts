@@ -72,11 +72,11 @@ export class UsersService {
   }
 
   async getPermissionsCatalog() {
-    const groups = await this.prisma.dm_loai_tai_lieu.findMany({
+    const groups = await this.prisma.dm_nhom_tai_lieu.findMany({
       where: { trang_thai: true },
       select: {
-        ma_loai_tai_lieu: true,
-        ten_loai_tai_lieu: true,
+        ma_nhom: true,
+        ten_nhom: true,
       },
       orderBy: [{ thu_tu: 'asc' }, { id: 'asc' }],
     });

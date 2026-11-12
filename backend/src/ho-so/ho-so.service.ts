@@ -285,7 +285,13 @@ export class HoSoService {
         ho_so_cfs_cpp: true,
         tai_lieu: {
           include: {
-            loai_tai_lieu: true,
+            loai_tai_lieu: {
+              include: {
+                nhom_tai_lieu: {
+                  select: { id: true, ma_nhom: true, ten_nhom: true, mau_sac: true },
+                },
+              },
+            },
             nguoi_tai_len: { select: { id: true, ho_ten: true } },
           },
           orderBy: [
@@ -311,9 +317,10 @@ export class HoSoService {
 
     if (!hoSo) throw new NotFoundException('Không tìm thấy hồ sơ');
     if (user && Array.isArray(hoSo.tai_lieu)) {
-      hoSo.tai_lieu = hoSo.tai_lieu.filter((tl: any) =>
-        hasTaiLieuGroupPermission(user, tl.loai_tai_lieu?.ma_loai_tai_lieu, 'VIEW'),
-      );
+      hoSo.tai_lieu = hoSo.tai_lieu.filter((tl: any) => {
+        const groupCode = tl.loai_tai_lieu?.nhom_tai_lieu?.ma_nhom || 'TAI_LIEU_CHUNG';
+        return hasTaiLieuGroupPermission(user, groupCode, 'VIEW');
+      });
     }
     return hoSo;
   }
@@ -882,16 +889,30 @@ export class HoSoService {
     if (loaiTaiLieuId) {
       const loai = await this.prisma.dm_loai_tai_lieu.findUnique({
         where: { id: loaiTaiLieuId },
-        include: { loai_ho_so_links: { select: { loai_ho_so_id: true } } },
+        include: {
+          nhom_tai_lieu: {
+            include: {
+              loai_ho_so_links: { select: { loai_ho_so_id: true } },
+            },
+          },
+          loai_ho_so_links: { select: { loai_ho_so_id: true } },
+        },
       });
       if (!loai) throw new NotFoundException('Không tìm thấy loại tài liệu');
       if (!loai.trang_thai) {
         throw new BadRequestException('Loại tài liệu này đã ngưng hoạt động');
       }
-      const applies =
+      if (loai.nhom_tai_lieu && !loai.nhom_tai_lieu.trang_thai) {
+        throw new BadRequestException('Nhóm tài liệu này đã ngưng hoạt động');
+      }
+      const groupApplies =
+        !loai.nhom_tai_lieu ||
+        loai.nhom_tai_lieu.ap_dung_tat_ca ||
+        loai.nhom_tai_lieu.loai_ho_so_links.some((link) => link.loai_ho_so_id === hoSoLoaiId);
+      const typeApplies =
         loai.ap_dung_tat_ca ||
         loai.loai_ho_so_links.some((link) => link.loai_ho_so_id === hoSoLoaiId);
-      if (!applies) {
+      if (!groupApplies || !typeApplies) {
         throw new BadRequestException('Loại tài liệu này không áp dụng cho loại hồ sơ hiện tại');
       }
       return loai;
@@ -899,6 +920,11 @@ export class HoSoService {
 
     let loaiKhac = await this.prisma.dm_loai_tai_lieu.findFirst({
       where: { ma_loai_tai_lieu: 'KHAC' },
+      include: {
+        nhom_tai_lieu: {
+          select: { id: true, ma_nhom: true, ten_nhom: true, mau_sac: true },
+        },
+      },
     });
     if (!loaiKhac) {
       loaiKhac = await this.prisma.dm_loai_tai_lieu.create({
@@ -907,6 +933,11 @@ export class HoSoService {
           ten_loai_tai_lieu: 'Tài liệu khác',
           ap_dung_tat_ca: true,
         },
+        include: {
+          nhom_tai_lieu: {
+            select: { id: true, ma_nhom: true, ten_nhom: true, mau_sac: true },
+          },
+        },
       });
     }
     return loaiKhac;
@@ -914,15 +945,22 @@ export class HoSoService {
 
   private assertTaiLieuPermission(
     user: AuthUserContext | undefined,
-    loaiTaiLieu: { ma_loai_tai_lieu?: string | null; ten_loai_tai_lieu?: string | null } | null | undefined,
+    loaiTaiLieu:
+      | {
+          ma_loai_tai_lieu?: string | null;
+          ten_loai_tai_lieu?: string | null;
+          nhom_tai_lieu?: { ma_nhom?: string | null; ten_nhom?: string | null } | null;
+        }
+      | null
+      | undefined,
     actions: TaiLieuAction[],
     actionLabel: string,
   ) {
     if (!user) return;
-    const maLoai = loaiTaiLieu?.ma_loai_tai_lieu;
-    const allowed = actions.some((action) => hasTaiLieuGroupPermission(user, maLoai, action));
+    const groupCode = loaiTaiLieu?.nhom_tai_lieu?.ma_nhom || 'TAI_LIEU_CHUNG';
+    const allowed = actions.some((action) => hasTaiLieuGroupPermission(user, groupCode, action));
     if (!allowed) {
-      const groupName = loaiTaiLieu?.ten_loai_tai_lieu || maLoai || 'nhóm tài liệu này';
+      const groupName = loaiTaiLieu?.nhom_tai_lieu?.ten_nhom || groupCode || 'nhóm tài liệu này';
       throw new ForbiddenException(`Bạn không có quyền ${actionLabel} đối với nhóm tài liệu "${groupName}"`);
     }
   }
@@ -946,7 +984,13 @@ export class HoSoService {
           du_lieu_dac_thu: customDocData ? (customDocData as Prisma.InputJsonValue) : Prisma.JsonNull,
           nguoi_tai_len_id: userId || null,
         },
-        include: { loai_tai_lieu: true },
+        include: {
+          loai_tai_lieu: {
+            include: {
+              nhom_tai_lieu: { select: { id: true, ma_nhom: true, ten_nhom: true, mau_sac: true } },
+            },
+          },
+        },
       });
 
       await tx.nhat_ky_ho_so.create({
@@ -967,7 +1011,13 @@ export class HoSoService {
     const hoSo = await this.findOne(hoSoId);
     const oldDoc = await this.prisma.tai_lieu_ho_so.findUnique({
       where: { id: taiLieuId },
-      include: { loai_tai_lieu: true },
+      include: {
+        loai_tai_lieu: {
+          include: {
+            nhom_tai_lieu: { select: { id: true, ma_nhom: true, ten_nhom: true, mau_sac: true } },
+          },
+        },
+      },
     });
 
     if (!oldDoc || oldDoc.ho_so_chung_id !== hoSoId) {
@@ -1004,7 +1054,13 @@ export class HoSoService {
             ? { du_lieu_dac_thu: customDocData ? (customDocData as Prisma.InputJsonValue) : Prisma.JsonNull }
             : {}),
         },
-        include: { loai_tai_lieu: true },
+        include: {
+          loai_tai_lieu: {
+            include: {
+              nhom_tai_lieu: { select: { id: true, ma_nhom: true, ten_nhom: true, mau_sac: true } },
+            },
+          },
+        },
       });
 
       await tx.nhat_ky_ho_so.create({
@@ -1027,7 +1083,13 @@ export class HoSoService {
 
     const taiLieu = await this.prisma.tai_lieu_ho_so.findUnique({
       where: { id: taiLieuId },
-      include: { loai_tai_lieu: true },
+      include: {
+        loai_tai_lieu: {
+          include: {
+            nhom_tai_lieu: { select: { id: true, ma_nhom: true, ten_nhom: true, mau_sac: true } },
+          },
+        },
+      },
     });
 
     if (!taiLieu || taiLieu.ho_so_chung_id !== hoSoId) {
@@ -1065,7 +1127,13 @@ export class HoSoService {
     const hoSo = await this.findOne(hoSoId);
     const oldDoc = await this.prisma.tai_lieu_ho_so.findUnique({
       where: { id: taiLieuId },
-      include: { loai_tai_lieu: true },
+      include: {
+        loai_tai_lieu: {
+          include: {
+            nhom_tai_lieu: { select: { id: true, ma_nhom: true, ten_nhom: true, mau_sac: true } },
+          },
+        },
+      },
     });
 
     if (!oldDoc || oldDoc.ho_so_chung_id !== hoSoId) {
@@ -1123,7 +1191,13 @@ export class HoSoService {
           du_lieu_dac_thu: customDocData ? (customDocData as Prisma.InputJsonValue) : Prisma.JsonNull,
           nguoi_tai_len_id: userId || null,
         },
-        include: { loai_tai_lieu: true },
+        include: {
+          loai_tai_lieu: {
+            include: {
+              nhom_tai_lieu: { select: { id: true, ma_nhom: true, ten_nhom: true, mau_sac: true } },
+            },
+          },
+        },
       });
 
       await tx.nhat_ky_ho_so.create({

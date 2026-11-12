@@ -47,25 +47,60 @@ async function main() {
   }
   console.log('✅ Seeded dm_tinh_trang');
 
-  // 3. Seed dm_loai_tai_lieu
+  // 3. Seed dm_nhom_tai_lieu & dm_loai_tai_lieu
+  const nhomChung = await prisma.dm_nhom_tai_lieu.upsert({
+    where: { ma_nhom: 'TAI_LIEU_CHUNG' },
+    update: {},
+    create: {
+      ma_nhom: 'TAI_LIEU_CHUNG',
+      ten_nhom: 'Tài liệu chung',
+      mo_ta: 'Nhóm tài liệu pháp lý / tiêu chuẩn dùng chung cho hồ sơ',
+      mau_sac: 'blue',
+      thu_tu: 1,
+      trang_thai: true,
+      ap_dung_tat_ca: true,
+    },
+  });
+
+  const nhomDacThu = await prisma.dm_nhom_tai_lieu.upsert({
+    where: { ma_nhom: 'TAI_LIEU_DAC_THU' },
+    update: {},
+    create: {
+      ma_nhom: 'TAI_LIEU_DAC_THU',
+      ten_nhom: 'Tài liệu đặc thù',
+      mo_ta: 'Nhóm tài liệu chuyên ngành / đặc thù theo từng loại hồ sơ',
+      mau_sac: 'purple',
+      thu_tu: 2,
+      trang_thai: true,
+      ap_dung_tat_ca: true,
+    },
+  });
+  console.log('✅ Seeded dm_nhom_tai_lieu');
+
   const loaiTaiLieuList = [
-    { ma_loai_tai_lieu: 'PHIEU_CONG_BO', ten_loai_tai_lieu: 'Phiếu công bố', thu_tu: 1 },
-    { ma_loai_tai_lieu: 'NHAN', ten_loai_tai_lieu: 'Nhãn sản phẩm', thu_tu: 2 },
-    { ma_loai_tai_lieu: 'HDSD', ten_loai_tai_lieu: 'Hướng dẫn sử dụng', thu_tu: 3 },
-    { ma_loai_tai_lieu: 'TCCS', ten_loai_tai_lieu: 'Tiêu chuẩn cơ sở', thu_tu: 4 },
-    { ma_loai_tai_lieu: 'CONG_VAN', ten_loai_tai_lieu: 'Công văn', thu_tu: 5 },
-    { ma_loai_tai_lieu: 'QUANG_CAO', ten_loai_tai_lieu: 'Xác nhận quảng cáo', thu_tu: 6 },
-    { ma_loai_tai_lieu: 'CFS', ten_loai_tai_lieu: 'Giấy chứng nhận lưu hành tự do (CFS)', thu_tu: 7 },
-    { ma_loai_tai_lieu: 'CPP', ten_loai_tai_lieu: 'Giấy chứng nhận sản phẩm dược (CPP)', thu_tu: 8 },
-    { ma_loai_tai_lieu: 'KHAC', ten_loai_tai_lieu: 'Khác', thu_tu: 9 },
+    { ma_loai_tai_lieu: 'PHIEU_CONG_BO', ten_loai_tai_lieu: 'Phiếu công bố', thu_tu: 1, nhom_tai_lieu_id: nhomDacThu.id },
+    { ma_loai_tai_lieu: 'NHAN', ten_loai_tai_lieu: 'Nhãn sản phẩm', thu_tu: 2, nhom_tai_lieu_id: nhomDacThu.id },
+    { ma_loai_tai_lieu: 'HDSD', ten_loai_tai_lieu: 'Hướng dẫn sử dụng', thu_tu: 3, nhom_tai_lieu_id: nhomDacThu.id },
+    { ma_loai_tai_lieu: 'TCCS', ten_loai_tai_lieu: 'Tiêu chuẩn cơ sở', thu_tu: 4, nhom_tai_lieu_id: nhomChung.id },
+    { ma_loai_tai_lieu: 'CONG_VAN', ten_loai_tai_lieu: 'Công văn', thu_tu: 5, nhom_tai_lieu_id: nhomChung.id },
+    { ma_loai_tai_lieu: 'QUANG_CAO', ten_loai_tai_lieu: 'Xác nhận quảng cáo', thu_tu: 6, nhom_tai_lieu_id: nhomDacThu.id },
+    { ma_loai_tai_lieu: 'CFS', ten_loai_tai_lieu: 'Giấy chứng nhận lưu hành tự do (CFS)', thu_tu: 7, nhom_tai_lieu_id: nhomDacThu.id },
+    { ma_loai_tai_lieu: 'CPP', ten_loai_tai_lieu: 'Giấy chứng nhận sản phẩm dược (CPP)', thu_tu: 8, nhom_tai_lieu_id: nhomDacThu.id },
+    { ma_loai_tai_lieu: 'KHAC', ten_loai_tai_lieu: 'Khác', thu_tu: 9, nhom_tai_lieu_id: nhomChung.id },
   ];
 
   for (const loai of loaiTaiLieuList) {
-    await prisma.dm_loai_tai_lieu.upsert({
+    const existing = await prisma.dm_loai_tai_lieu.findUnique({
       where: { ma_loai_tai_lieu: loai.ma_loai_tai_lieu },
-      update: {},
-      create: loai,
     });
+    if (!existing) {
+      await prisma.dm_loai_tai_lieu.create({ data: loai });
+    } else if (!existing.nhom_tai_lieu_id) {
+      await prisma.dm_loai_tai_lieu.update({
+        where: { id: existing.id },
+        data: { nhom_tai_lieu_id: loai.nhom_tai_lieu_id },
+      });
+    }
   }
   console.log('✅ Seeded dm_loai_tai_lieu');
 

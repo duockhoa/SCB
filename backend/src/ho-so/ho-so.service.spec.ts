@@ -305,7 +305,7 @@ describe('HoSoService dynamic fields', () => {
     );
   });
 
-  it('enforces per-document-group permissions for viewing, uploading, replacing, and deleting', async () => {
+  it('enforces per-document-group (dm_nhom_tai_lieu) permissions for viewing, uploading, replacing, and deleting', async () => {
     const { prisma, tx, service } = createMockHoSoDeps();
     const scopedUser = {
       userId: 12,
@@ -314,8 +314,8 @@ describe('HoSoService dynamic fields', () => {
       isAdmin: false,
       permissions: [
         'HOSO_VIEW',
-        'HOSO_TAI_LIEU_GROUP:NHAN_SP:VIEW',
-        'HOSO_TAI_LIEU_GROUP:NHAN_SP:UPLOAD',
+        'HOSO_TAI_LIEU_GROUP:TAI_LIEU_SAN_XUAT:VIEW',
+        'HOSO_TAI_LIEU_GROUP:TAI_LIEU_SAN_XUAT:UPLOAD',
       ],
     };
 
@@ -328,8 +328,22 @@ describe('HoSoService dynamic fields', () => {
       id: 50,
       loai_ho_so_id: 1,
       tai_lieu: [
-        { id: 1, ten_tai_lieu: 'Nhãn hộp', loai_tai_lieu: { ma_loai_tai_lieu: 'NHAN_SP' } },
-        { id: 2, ten_tai_lieu: 'Công văn mật', loai_tai_lieu: { ma_loai_tai_lieu: 'CONG_VAN' } },
+        {
+          id: 1,
+          ten_tai_lieu: 'Quy trình SX',
+          loai_tai_lieu: {
+            ma_loai_tai_lieu: 'QUY_TRINH_SX',
+            nhom_tai_lieu: { ma_nhom: 'TAI_LIEU_SAN_XUAT', ten_nhom: 'Tài liệu sản xuất' },
+          },
+        },
+        {
+          id: 2,
+          ten_tai_lieu: 'Công văn mật',
+          loai_tai_lieu: {
+            ma_loai_tai_lieu: 'CONG_VAN',
+            nhom_tai_lieu: { ma_nhom: 'TAI_LIEU_CHUNG', ten_nhom: 'Tài liệu chung' },
+          },
+        },
       ],
     });
 
@@ -343,6 +357,8 @@ describe('HoSoService dynamic fields', () => {
       ten_loai_tai_lieu: 'Công văn',
       trang_thai: true,
       ap_dung_tat_ca: true,
+      nhom_tai_lieu: { ma_nhom: 'TAI_LIEU_CHUNG', ten_nhom: 'Tài liệu chung', trang_thai: true, ap_dung_tat_ca: true, loai_ho_so_links: [] },
+      loai_ho_so_links: [],
     });
     await expect(
       service.addTaiLieu(
@@ -355,20 +371,26 @@ describe('HoSoService dynamic fields', () => {
 
     prisma.dm_loai_tai_lieu.findUnique.mockResolvedValueOnce({
       id: 8,
-      ma_loai_tai_lieu: 'NHAN_SP',
-      ten_loai_tai_lieu: 'Nhãn sản phẩm',
+      ma_loai_tai_lieu: 'QUY_TRINH_SX',
+      ten_loai_tai_lieu: 'Quy trình sản xuất',
       trang_thai: true,
       ap_dung_tat_ca: true,
+      nhom_tai_lieu: { ma_nhom: 'TAI_LIEU_SAN_XUAT', ten_nhom: 'Tài liệu sản xuất', trang_thai: true, ap_dung_tat_ca: true, loai_ho_so_links: [] },
+      loai_ho_so_links: [],
     });
     tx.tai_lieu_ho_so.create.mockResolvedValueOnce({
       id: 300,
-      ten_tai_lieu: 'Nhãn v1',
-      loai_tai_lieu: { ma_loai_tai_lieu: 'NHAN_SP', ten_loai_tai_lieu: 'Nhãn sản phẩm' },
+      ten_tai_lieu: 'QTSX v1',
+      loai_tai_lieu: {
+        ma_loai_tai_lieu: 'QUY_TRINH_SX',
+        ten_loai_tai_lieu: 'Quy trình sản xuất',
+        nhom_tai_lieu: { ma_nhom: 'TAI_LIEU_SAN_XUAT', ten_nhom: 'Tài liệu sản xuất' },
+      },
     });
     await expect(
       service.addTaiLieu(
         50,
-        { loai_tai_lieu_id: 8, ten_tai_lieu: 'Nhãn v1', duong_dan_url: '/uploads/nhan.pdf' },
+        { loai_tai_lieu_id: 8, ten_tai_lieu: 'QTSX v1', duong_dan_url: '/uploads/qtsx.pdf' },
         12,
         scopedUser,
       ),
@@ -378,13 +400,17 @@ describe('HoSoService dynamic fields', () => {
       id: 300,
       ho_so_chung_id: 50,
       loai_tai_lieu_id: 8,
-      loai_tai_lieu: { ma_loai_tai_lieu: 'NHAN_SP', ten_loai_tai_lieu: 'Nhãn sản phẩm' },
+      loai_tai_lieu: {
+        ma_loai_tai_lieu: 'QUY_TRINH_SX',
+        ten_loai_tai_lieu: 'Quy trình sản xuất',
+        nhom_tai_lieu: { ma_nhom: 'TAI_LIEU_SAN_XUAT', ten_nhom: 'Tài liệu sản xuất' },
+      },
     });
     await expect(
       service.replaceTaiLieu(
         50,
         300,
-        { duong_dan_url: '/uploads/nhan-v2.pdf' },
+        { duong_dan_url: '/uploads/qtsx-v2.pdf' },
         12,
         scopedUser,
       ),
@@ -394,7 +420,11 @@ describe('HoSoService dynamic fields', () => {
       id: 300,
       ho_so_chung_id: 50,
       loai_tai_lieu_id: 8,
-      loai_tai_lieu: { ma_loai_tai_lieu: 'NHAN_SP', ten_loai_tai_lieu: 'Nhãn sản phẩm' },
+      loai_tai_lieu: {
+        ma_loai_tai_lieu: 'QUY_TRINH_SX',
+        ten_loai_tai_lieu: 'Quy trình sản xuất',
+        nhom_tai_lieu: { ma_nhom: 'TAI_LIEU_SAN_XUAT', ten_nhom: 'Tài liệu sản xuất' },
+      },
     });
     await expect(service.deleteTaiLieu(50, 300, 12, scopedUser)).rejects.toThrow(ForbiddenException);
   });

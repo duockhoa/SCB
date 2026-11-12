@@ -1,13 +1,11 @@
 'use client';
 
 import {
-  Table,
   Button,
   Space,
   Tag,
   Empty,
   Upload,
-  message,
   Modal,
   Form,
   Input,
@@ -17,6 +15,9 @@ import {
   Row,
   Col,
   Divider,
+  Card,
+  Typography,
+  App,
 } from 'antd';
 import {
   EyeOutlined,
@@ -27,12 +28,19 @@ import {
   EditOutlined,
   CalendarOutlined,
   LinkOutlined,
+  HistoryOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useMemo, useState } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
-import type { CustomFieldConfig, HoSoChung, LoaiTaiLieu, TaiLieuHoSo } from '@/types/ho-so.type';
+import type {
+  CustomFieldConfig,
+  HoSoChung,
+  LoaiTaiLieu,
+  NhomTaiLieu,
+  TaiLieuHoSo,
+} from '@/types/ho-so.type';
 import { uploadFile, axiosInstance } from '@/services/api';
-import { openDocumentUrl } from '@/utils/file-viewer';
 import {
   useUpdateHoSo,
   useAddTaiLieu,
@@ -40,7 +48,7 @@ import {
   useReplaceTaiLieu,
   useDeleteTaiLieu,
 } from '@/hooks/queries/useHoSo';
-import { useLoaiTaiLieuList } from '@/hooks/queries/useDanhMuc';
+import { useNhomTaiLieuList } from '@/hooks/queries/useDanhMuc';
 import { useQueryClient } from '@tanstack/react-query';
 import UploadOrLinkInput from '../common/UploadOrLinkInput';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -52,25 +60,34 @@ import {
 } from '@/utils/loai-ho-so';
 import DynamicFieldsForm from './forms/DynamicFieldsForm';
 
+const { Text } = Typography;
+
 interface Props {
   hoSo: HoSoChung;
   thongTinRieng: Record<string, unknown> | null;
 }
 
-interface TaiLieuRow {
-  id: string | number;
-  real_id?: number;
+interface BuiltInDocItem {
+  id: string;
   ten_tai_lieu: string;
-  nhom_tai_lieu: string;
-  loai_tai_lieu_id?: number;
-  loai_tai_lieu?: LoaiTaiLieu | null;
+  field_key: string;
+  is_chung: boolean;
   url: string;
-  raw_url?: string;
-  field_key?: string;
-  is_dynamic: boolean;
+  raw_url: string;
+}
+
+interface DynamicDocItem {
+  id: number;
+  real_id: number;
+  ten_tai_lieu: string;
+  loai_tai_lieu_id: number;
+  loai_tai_lieu?: LoaiTaiLieu | null;
+  ma_nhom: string;
+  url: string;
+  raw_url: string;
   ghi_chu?: string | null;
-  so_phien_ban?: number;
-  tai_lieu_hien_hanh?: boolean;
+  so_phien_ban: number;
+  tai_lieu_hien_hanh: boolean;
   ngay_tai_len?: string;
   ngay_hieu_luc?: string | null;
   ngay_het_hieu_luc?: string | null;
@@ -150,64 +167,83 @@ function hydrateDynamicDocValues(
 }
 
 export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
+  const { message } = App.useApp();
   const { mutate: updateHoSo } = useUpdateHoSo();
   const { mutateAsync: addTaiLieu, isPending: addingTaiLieu } = useAddTaiLieu();
   const { mutateAsync: updateTaiLieu, isPending: updatingTaiLieu } = useUpdateTaiLieu();
   const { mutateAsync: replaceTaiLieu, isPending: replacingTaiLieu } = useReplaceTaiLieu();
   const { mutate: deleteTaiLieu } = useDeleteTaiLieu();
-  const {
-    canUpdate,
-    canTaiLieuView,
-    canTaiLieuReplace,
-    hasTaiLieuGroupPermission,
-  } = usePermissions();
+  const { canUpdate, hasTaiLieuGroupPermission } = usePermissions();
 
-  const { data: loaiTaiLieuRes } = useLoaiTaiLieuList({ loaiHoSoId: hoSo.loai_ho_so_id });
-  const activeLoaiTaiLieuList: LoaiTaiLieu[] = useMemo(
-    () => loaiTaiLieuRes?.data || [],
-    [loaiTaiLieuRes?.data],
-  );
-
-  const uploadableLoaiTaiLieuList: LoaiTaiLieu[] = useMemo(
-    () =>
-      activeLoaiTaiLieuList.filter((item) =>
-        hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'UPLOAD'),
-      ),
-    [activeLoaiTaiLieuList, hasTaiLieuGroupPermission],
-  );
+  const { data: nhomRes } = useNhomTaiLieuList({ loaiHoSoId: hoSo.loai_ho_so_id });
+  const nhomList: NhomTaiLieu[] = useMemo(() => nhomRes?.data || [], [nhomRes?.data]);
 
   const queryClient = useQueryClient();
   const [uploadingId, setUploadingId] = useState<string | number | null>(null);
-  const [viewingRecordId, setViewingRecordId] = useState<string | number | null>(null);
-  const [filterLoaiId, setFilterLoaiId] = useState<string | number | undefined>(undefined);
+  const [viewingId, setViewingId] = useState<string | number | null>(null);
+  const [filterNhomCode, setFilterNhomCode] = useState<string | undefined>(undefined);
+  const [showHistoryMap, setShowHistoryMap] = useState<Record<number, boolean>>({});
 
   const [docModalMode, setDocModalMode] = useState<'create' | 'edit' | 'replace' | null>(null);
-  const [activeDocRecord, setActiveDocRecord] = useState<TaiLieuRow | null>(null);
+  const [activeDocRecord, setActiveDocRecord] = useState<DynamicDocItem | null>(null);
   const [form] = Form.useForm<DocModalFormValues>();
   const watchedLoaiTaiLieuId = Form.useWatch('loai_tai_lieu_id', form);
 
+  // Tập các nhóm người dùng có quyền XEM
+  const visibleGroups = useMemo(
+    () => nhomList.filter((g) => hasTaiLieuGroupPermission(g.ma_nhom, 'VIEW')),
+    [nhomList, hasTaiLieuGroupPermission],
+  );
+
+  // Danh sách phẳng tất cả loại tài liệu đang hoạt động thuộc các nhóm
+  const allActiveTypes = useMemo(() => {
+    const list: Array<LoaiTaiLieu & { parentNhomCode: string; parentNhomName: string }> = [];
+    for (const g of nhomList) {
+      for (const lt of g.loai_tai_lieu || []) {
+        list.push({
+          ...lt,
+          parentNhomCode: g.ma_nhom,
+          parentNhomName: g.ten_nhom,
+        });
+      }
+    }
+    return list;
+  }, [nhomList]);
+
+  const uploadableTypes = useMemo(
+    () => allActiveTypes.filter((t) => hasTaiLieuGroupPermission(t.parentNhomCode, 'UPLOAD')),
+    [allActiveTypes, hasTaiLieuGroupPermission],
+  );
+
   const modalLoaiTaiLieuOptions = useMemo(() => {
-    const allowedList = activeLoaiTaiLieuList.filter((item) => {
+    const allowedList = allActiveTypes.filter((item) => {
       if (docModalMode === 'replace') {
-        return hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'REPLACE');
+        return hasTaiLieuGroupPermission(item.parentNhomCode, 'REPLACE');
       }
       if (docModalMode === 'edit') {
         return (
-          hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'UPLOAD') ||
-          hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'REPLACE')
+          hasTaiLieuGroupPermission(item.parentNhomCode, 'UPLOAD') ||
+          hasTaiLieuGroupPermission(item.parentNhomCode, 'REPLACE')
         );
       }
-      return hasTaiLieuGroupPermission(item.ma_loai_tai_lieu, 'UPLOAD');
+      return hasTaiLieuGroupPermission(item.parentNhomCode, 'UPLOAD');
     });
 
     if (
       activeDocRecord?.loai_tai_lieu &&
       !allowedList.some((item) => item.id === activeDocRecord.loai_tai_lieu?.id)
     ) {
-      return [...allowedList, activeDocRecord.loai_tai_lieu];
+      return [
+        ...allowedList,
+        {
+          ...activeDocRecord.loai_tai_lieu,
+          parentNhomCode: activeDocRecord.ma_nhom,
+          parentNhomName: activeDocRecord.loai_tai_lieu.nhom_tai_lieu?.ten_nhom || activeDocRecord.ma_nhom,
+        },
+      ];
     }
     return allowedList;
-  }, [activeLoaiTaiLieuList, activeDocRecord, docModalMode, hasTaiLieuGroupPermission]);
+  }, [allActiveTypes, activeDocRecord, docModalMode, hasTaiLieuGroupPermission]);
 
   const selectedLoaiTaiLieu = useMemo(
     () => modalLoaiTaiLieuOptions.find((item) => item.id === watchedLoaiTaiLieuId) || null,
@@ -219,119 +255,113 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     [selectedLoaiTaiLieu],
   );
 
-  const dataSource: TaiLieuRow[] = useMemo(() => {
-    const rows: TaiLieuRow[] = [];
-    let idCounter = 1;
-
-    if (hoSo.ho_so_luu_url) {
-      rows.push({
-        id: `chung-${idCounter++}`,
+  // Tài liệu built-in theo 2 nhóm mặc định
+  const builtInChungItems: BuiltInDocItem[] = useMemo(() => {
+    if (!hoSo.ho_so_luu_url) return [];
+    return [
+      {
+        id: 'builtin-chung-ho_so_luu_url',
         ten_tai_lieu: 'Thư mục Hồ sơ lưu trữ',
-        nhom_tai_lieu: 'Tài liệu chung',
+        field_key: 'ho_so_luu_url',
+        is_chung: true,
         url: getFullUrl(hoSo.ho_so_luu_url),
         raw_url: hoSo.ho_so_luu_url,
-        field_key: 'ho_so_luu_url',
-        is_dynamic: false,
-      });
-    }
+      },
+    ];
+  }, [hoSo.ho_so_luu_url]);
 
-    if (thongTinRieng) {
-      Object.keys(thongTinRieng).forEach((key) => {
-        const val = thongTinRieng[key];
-        if (
-          key !== 'id' &&
-          key !== 'ho_so_chung_id' &&
-          isFileFieldKey(key, hoSo.loai_ho_so) &&
-          typeof val === 'string' &&
-          val
-        ) {
-          rows.push({
-            id: `dacthu-${idCounter++}`,
-            ten_tai_lieu: getFieldLabel(key, hoSo.loai_ho_so),
-            nhom_tai_lieu: 'Tài liệu đặc thù',
-            url: getFullUrl(val),
-            raw_url: val,
-            field_key: key,
-            is_dynamic: false,
-          });
-        }
-      });
-    }
-
-    if (hoSo.tai_lieu && hoSo.tai_lieu.length > 0) {
-      hoSo.tai_lieu.forEach((tl: TaiLieuHoSo) => {
-        if (!hasTaiLieuGroupPermission(tl.loai_tai_lieu?.ma_loai_tai_lieu, 'VIEW')) {
-          return;
-        }
-        rows.push({
-          id: tl.id,
-          real_id: tl.id,
-          ten_tai_lieu: tl.ten_tai_lieu,
-          nhom_tai_lieu: tl.loai_tai_lieu?.ten_loai_tai_lieu || 'Tài liệu khác',
-          loai_tai_lieu_id: tl.loai_tai_lieu_id,
-          loai_tai_lieu: tl.loai_tai_lieu || null,
-          url: getFullUrl(tl.duong_dan_url),
-          raw_url: tl.duong_dan_url,
-          is_dynamic: true,
-          ghi_chu: tl.ghi_chu,
-          so_phien_ban: tl.so_phien_ban || 1,
-          tai_lieu_hien_hanh: tl.tai_lieu_hien_hanh !== false,
-          ngay_tai_len: tl.ngay_tai_len,
-          ngay_hieu_luc: tl.ngay_hieu_luc,
-          ngay_het_hieu_luc: tl.ngay_het_hieu_luc,
-          du_lieu_dac_thu: tl.du_lieu_dac_thu || null,
+  const builtInDacThuItems: BuiltInDocItem[] = useMemo(() => {
+    if (!thongTinRieng) return [];
+    const items: BuiltInDocItem[] = [];
+    Object.keys(thongTinRieng).forEach((key) => {
+      const val = thongTinRieng[key];
+      if (
+        key !== 'id' &&
+        key !== 'ho_so_chung_id' &&
+        isFileFieldKey(key, hoSo.loai_ho_so) &&
+        typeof val === 'string' &&
+        val
+      ) {
+        items.push({
+          id: `builtin-dacthu-${key}`,
+          ten_tai_lieu: getFieldLabel(key, hoSo.loai_ho_so),
+          field_key: key,
+          is_chung: false,
+          url: getFullUrl(val),
+          raw_url: val,
         });
+      }
+    });
+    return items;
+  }, [thongTinRieng, hoSo.loai_ho_so]);
+
+  // Chuẩn hóa tài liệu động đã upload
+  const dynamicDocs: DynamicDocItem[] = useMemo(() => {
+    if (!hoSo.tai_lieu || hoSo.tai_lieu.length === 0) return [];
+    const list: DynamicDocItem[] = [];
+    for (const tl of hoSo.tai_lieu as TaiLieuHoSo[]) {
+      const maNhom = tl.loai_tai_lieu?.nhom_tai_lieu?.ma_nhom || 'TAI_LIEU_CHUNG';
+      if (!hasTaiLieuGroupPermission(maNhom, 'VIEW')) continue;
+      list.push({
+        id: tl.id,
+        real_id: tl.id,
+        ten_tai_lieu: tl.ten_tai_lieu,
+        loai_tai_lieu_id: tl.loai_tai_lieu_id,
+        loai_tai_lieu: tl.loai_tai_lieu || null,
+        ma_nhom: maNhom,
+        url: getFullUrl(tl.duong_dan_url),
+        raw_url: tl.duong_dan_url,
+        ghi_chu: tl.ghi_chu,
+        so_phien_ban: tl.so_phien_ban || 1,
+        tai_lieu_hien_hanh: tl.tai_lieu_hien_hanh !== false,
+        ngay_tai_len: tl.ngay_tai_len,
+        ngay_hieu_luc: tl.ngay_hieu_luc,
+        ngay_het_hieu_luc: tl.ngay_het_hieu_luc,
+        du_lieu_dac_thu: tl.du_lieu_dac_thu || null,
       });
     }
+    return list;
+  }, [hoSo.tai_lieu, hasTaiLieuGroupPermission]);
 
-    return rows;
-  }, [hoSo, thongTinRieng, hasTaiLieuGroupPermission]);
+  const docsByLoaiId = useMemo(() => {
+    const map = new Map<number, DynamicDocItem[]>();
+    for (const doc of dynamicDocs) {
+      const arr = map.get(doc.loai_tai_lieu_id) || [];
+      arr.push(doc);
+      map.set(doc.loai_tai_lieu_id, arr);
+    }
+    return map;
+  }, [dynamicDocs]);
 
-  const filterOptions = useMemo(() => {
-    const opts: Array<{ value: string | number; label: string }> = [];
-    const seen = new Set<string | number>();
-
-    dataSource.forEach((row) => {
-      if (!row.is_dynamic) {
-        const key = `builtin:${row.nhom_tai_lieu}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          opts.push({ value: key, label: row.nhom_tai_lieu });
-        }
-      } else if (row.loai_tai_lieu_id) {
-        if (!seen.has(row.loai_tai_lieu_id)) {
-          seen.add(row.loai_tai_lieu_id);
-          opts.push({ value: row.loai_tai_lieu_id, label: row.nhom_tai_lieu });
-        }
+  // Các tài liệu có loai_tai_lieu đã bị ngưng hoạt động hoặc không còn nằm trong visibleGroups
+  const orphanDocs = useMemo(() => {
+    const knownTypeIds = new Set<number>();
+    for (const g of visibleGroups) {
+      for (const lt of g.loai_tai_lieu || []) {
+        knownTypeIds.add(lt.id);
       }
-    });
+    }
+    return dynamicDocs.filter((doc) => !knownTypeIds.has(doc.loai_tai_lieu_id));
+  }, [dynamicDocs, visibleGroups]);
 
-    return opts;
-  }, [dataSource]);
+  const displayedGroups = useMemo(() => {
+    if (!filterNhomCode) return visibleGroups;
+    return visibleGroups.filter((g) => g.ma_nhom === filterNhomCode);
+  }, [visibleGroups, filterNhomCode]);
 
-  const filteredDataSource = useMemo(() => {
-    if (!filterLoaiId) return dataSource;
-    return dataSource.filter((row) => {
-      if (typeof filterLoaiId === 'string' && filterLoaiId.startsWith('builtin:')) {
-        return !row.is_dynamic && `builtin:${row.nhom_tai_lieu}` === filterLoaiId;
-      }
-      return row.is_dynamic && row.loai_tai_lieu_id === filterLoaiId;
-    });
-  }, [dataSource, filterLoaiId]);
-
-  const handleOpenCreateModal = () => {
+  // --- Modal Handlers ---
+  const handleOpenCreateModal = (presetLoai?: LoaiTaiLieu) => {
     setActiveDocRecord(null);
     setDocModalMode('create');
     form.resetFields();
-    const defaultLoai =
-      uploadableLoaiTaiLieuList.find((item) => item.ma_loai_tai_lieu === 'KHAC') ||
-      uploadableLoaiTaiLieuList[0];
+    const defaultLoai = presetLoai || uploadableTypes[0];
     form.setFieldsValue({
       loai_tai_lieu_id: defaultLoai?.id,
+      ten_tai_lieu: presetLoai ? presetLoai.ten_loai_tai_lieu : undefined,
     });
   };
 
-  const handleOpenEditModal = (record: TaiLieuRow) => {
+  const handleOpenEditModal = (record: DynamicDocItem) => {
     setActiveDocRecord(record);
     setDocModalMode('edit');
     const fields = getCustomFields(record.loai_tai_lieu);
@@ -347,7 +377,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     });
   };
 
-  const handleOpenReplaceModal = (record: TaiLieuRow) => {
+  const handleOpenReplaceModal = (record: DynamicDocItem) => {
     setActiveDocRecord(record);
     setDocModalMode('replace');
     const fields = getCustomFields(record.loai_tai_lieu);
@@ -393,7 +423,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
             du_lieu_dac_thu: customPayload,
           },
         });
-        message.success('Tải thêm tài liệu thành công!');
+        message.success('Tải lên tài liệu thành công!');
       } else if (docModalMode === 'edit' && activeDocRecord?.real_id) {
         await updateTaiLieu({
           id: hoSo.id,
@@ -434,21 +464,19 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     }
   };
 
-  const handleUploadReplaceBuiltIn = async (file: File, record: TaiLieuRow) => {
-    if (!record.field_key) return false;
-    setUploadingId(record.id);
+  const handleUploadReplaceBuiltIn = async (file: File, item: BuiltInDocItem) => {
+    setUploadingId(item.id);
     try {
       const response = await uploadFile(file);
       if (response && response.url) {
-        const updateData: Record<string, unknown> =
-          record.nhom_tai_lieu === 'Tài liệu chung'
-            ? { [record.field_key]: response.url }
-            : {
-                thong_tin_rieng: {
-                  ...(thongTinRieng || {}),
-                  [record.field_key]: response.url,
-                },
-              };
+        const updateData: Record<string, unknown> = item.is_chung
+          ? { [item.field_key]: response.url }
+          : {
+              thong_tin_rieng: {
+                ...(thongTinRieng || {}),
+                [item.field_key]: response.url,
+              },
+            };
 
         updateHoSo(
           { id: hoSo.id, data: updateData },
@@ -471,8 +499,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     return false;
   };
 
-  const handleDeleteDocument = (record: TaiLieuRow) => {
-    if (!record.real_id) return;
+  const handleDeleteDocument = (record: DynamicDocItem) => {
     deleteTaiLieu(
       { id: hoSo.id, taiLieuId: record.real_id },
       {
@@ -482,16 +509,16 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     );
   };
 
-  const handleViewFile = async (record: TaiLieuRow) => {
+  const handleViewFile = async (url: string, rowId: string | number) => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    if (record.url && record.url.startsWith('http') && !record.url.startsWith(apiUrl)) {
-      window.open(record.url, '_blank');
+    if (url && url.startsWith('http') && !url.startsWith(apiUrl)) {
+      window.open(url, '_blank');
       return;
     }
 
-    setViewingRecordId(record.id);
+    setViewingId(rowId);
     try {
-      const response = await axiosInstance.get(record.url, {
+      const response = await axiosInstance.get(url, {
         responseType: 'blob',
       });
       const fileUrl = window.URL.createObjectURL(response as unknown as Blob);
@@ -499,243 +526,409 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     } catch {
       message.error('Lỗi khi mở tài liệu hoặc file không tồn tại');
     } finally {
-      setViewingRecordId(null);
+      setViewingId(null);
     }
   };
 
-  const columns = [
-    {
-      title: 'Tên tài liệu & Chi tiết',
-      dataIndex: 'ten_tai_lieu',
-      key: 'ten_tai_lieu',
-      render: (text: string, record: TaiLieuRow) => {
-        const isExpired = record.is_dynamic && record.tai_lieu_hien_hanh === false;
-        const customFields = getCustomFields(record.loai_tai_lieu);
-        const customEntries = record.du_lieu_dac_thu
-          ? Object.entries(record.du_lieu_dac_thu).filter(
-              ([, v]) => v !== null && v !== undefined && v !== '',
-            )
-          : [];
+  const renderDynamicDocDetails = (doc: DynamicDocItem, maNhom: string) => {
+    const canViewDoc = hasTaiLieuGroupPermission(maNhom, 'VIEW');
+    const canEditDoc =
+      hasTaiLieuGroupPermission(maNhom, 'UPLOAD') || hasTaiLieuGroupPermission(maNhom, 'REPLACE');
+    const canReplaceDoc = hasTaiLieuGroupPermission(maNhom, 'REPLACE');
+    const canDeleteDoc = hasTaiLieuGroupPermission(maNhom, 'DELETE');
+    const fields = getCustomFields(doc.loai_tai_lieu);
 
-        return (
-          <Space direction="vertical" size={4} className="w-full">
-            <div className="flex items-center gap-2 flex-wrap">
-              <a
-                onClick={() => handleViewFile(record)}
-                className={`font-medium ${isExpired ? 'text-gray-400 line-through' : 'text-blue-600 hover:underline'}`}
-              >
-                {record.nhom_tai_lieu === 'Tài liệu chung' ? <FolderOpenOutlined className="mr-1" /> : null}
-                {text}
-              </a>
-              {record.is_dynamic &&
-                (record.tai_lieu_hien_hanh ? (
-                  <Tag color="success" className="text-xs m-0">
-                    Hiệu lực (v{record.so_phien_ban})
-                  </Tag>
-                ) : (
-                  <Tag color="default" className="text-xs bg-gray-100 text-gray-500 border-gray-300 m-0">
-                    Hết hiệu lực (v{record.so_phien_ban})
-                  </Tag>
-                ))}
-            </div>
+    return (
+      <div
+        key={doc.id}
+        className={`flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 p-2.5 rounded-lg border ${
+          doc.tai_lieu_hien_hanh
+            ? 'bg-white border-slate-200'
+            : 'bg-slate-50/70 border-dashed border-slate-200 opacity-85'
+        }`}
+      >
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            {doc.tai_lieu_hien_hanh ? (
+              <Tag color="green" className="text-[11px] m-0">
+                Hiện hành • v{doc.so_phien_ban}
+              </Tag>
+            ) : (
+              <Tag color="default" className="text-[11px] m-0">
+                Bản cũ • v{doc.so_phien_ban}
+              </Tag>
+            )}
+            <span className="font-medium text-sm text-gray-800 break-words">
+              {doc.ten_tai_lieu}
+            </span>
+          </div>
 
-            {(record.ngay_hieu_luc || record.ngay_het_hieu_luc) && (
-              <div className="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+            {(doc.ngay_hieu_luc || doc.ngay_het_hieu_luc) && (
+              <span className="inline-flex items-center gap-1">
                 <CalendarOutlined className="text-gray-400" />
-                {record.ngay_hieu_luc && (
-                  <span>Hiệu lực: <strong>{formatDateDisplay(record.ngay_hieu_luc)}</strong></span>
-                )}
-                {record.ngay_het_hieu_luc && (
-                  <span>Hết hạn: <strong className="text-orange-600">{formatDateDisplay(record.ngay_het_hieu_luc)}</strong></span>
-                )}
-              </div>
+                {doc.ngay_hieu_luc ? `HL: ${formatDateDisplay(doc.ngay_hieu_luc)}` : ''}
+                {doc.ngay_hieu_luc && doc.ngay_het_hieu_luc ? ' • ' : ''}
+                {doc.ngay_het_hieu_luc ? (
+                  <span className="text-orange-600">
+                    HH: {formatDateDisplay(doc.ngay_het_hieu_luc)}
+                  </span>
+                ) : null}
+              </span>
             )}
+            {doc.ngay_tai_len && (
+              <span>Tải lên: {dayjs(doc.ngay_tai_len).format('DD/MM/YYYY HH:mm')}</span>
+            )}
+            {doc.ghi_chu && <span className="text-gray-400 italic">Ghi chú: {doc.ghi_chu}</span>}
+          </div>
 
-            {customEntries.length > 0 && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs bg-slate-50 border border-slate-200/80 rounded px-2.5 py-1.5">
-                {customEntries.map(([key, val]) => {
-                  const fieldCfg = customFields.find((f) => f.key === key);
-                  const label = getFieldLabel(key, record.loai_tai_lieu);
+          {doc.du_lieu_dac_thu && Object.keys(doc.du_lieu_dac_thu).length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {Object.entries(doc.du_lieu_dac_thu).map(([key, value]) => {
+                if (value === undefined || value === null || value === '') return null;
+                const fieldCfg = fields.find((f) => f.key === key);
+                const label = fieldCfg?.label || key;
+                if (isLinkValue(value, fieldCfg)) {
+                  const full = getFullUrl(String(value));
                   return (
-                    <span key={key} className="text-slate-600">
-                      <span className="text-slate-400">{label}:</span>{' '}
-                      {isLinkValue(val, fieldCfg) ? (
-                        <a
-                          onClick={() => openDocumentUrl(String(val))}
-                          className="text-blue-600 hover:underline inline-flex items-center gap-1"
-                        >
-                          <LinkOutlined /> Xem tệp
-                        </a>
-                      ) : fieldCfg?.type === 'date' ? (
-                        <strong className="text-slate-700">{formatDateDisplay(val)}</strong>
-                      ) : (
-                        <strong className="text-slate-700">{String(val)}</strong>
-                      )}
-                    </span>
+                    <Button
+                      key={key}
+                      type="link"
+                      size="small"
+                      className="!p-0 !h-auto text-xs"
+                      icon={<LinkOutlined />}
+                      onClick={() => handleViewFile(full, `${doc.id}-${key}`)}
+                    >
+                      {label}
+                    </Button>
                   );
-                })}
-              </div>
-            )}
-
-            {record.ghi_chu && (
-              <span className="text-xs text-gray-400 italic">{record.ghi_chu}</span>
-            )}
-          </Space>
-        );
-      },
-    },
-    {
-      title: 'Loại tài liệu',
-      dataIndex: 'nhom_tai_lieu',
-      key: 'nhom_tai_lieu',
-      width: 190,
-      render: (text: string, record: TaiLieuRow) => {
-        if (record.is_dynamic && record.loai_tai_lieu) {
-          return (
-            <Tag
-              color={getLoaiHoSoAntdColor(
-                record.loai_tai_lieu.ma_loai_tai_lieu,
-                record.loai_tai_lieu.mau_sac,
-              )}
-              className="m-0"
-            >
-              {record.loai_tai_lieu.ten_loai_tai_lieu}
-            </Tag>
-          );
-        }
-        let color = 'purple';
-        if (text === 'Tài liệu chung') color = 'blue';
-        else if (text === 'Tài liệu đặc thù') color = 'green';
-        return <Tag color={color} className="m-0">{text}</Tag>;
-      },
-    },
-    {
-      title: 'Hành động',
-      key: 'action',
-      width: 310,
-      render: (_: unknown, record: TaiLieuRow) => {
-        const isExpired = record.is_dynamic && record.tai_lieu_hien_hanh === false;
-        const maLoai = record.loai_tai_lieu?.ma_loai_tai_lieu;
-        const canViewDoc = record.is_dynamic
-          ? hasTaiLieuGroupPermission(maLoai, 'VIEW')
-          : canTaiLieuView;
-        const canEditDoc =
-          record.is_dynamic &&
-          !isExpired &&
-          (hasTaiLieuGroupPermission(maLoai, 'UPLOAD') ||
-            hasTaiLieuGroupPermission(maLoai, 'REPLACE'));
-        const canReplaceDynamic =
-          record.is_dynamic && !isExpired && hasTaiLieuGroupPermission(maLoai, 'REPLACE');
-        const canReplaceBuiltIn = !record.is_dynamic && !isExpired && canUpdate && canTaiLieuReplace;
-        const canDeleteDoc = record.is_dynamic && hasTaiLieuGroupPermission(maLoai, 'DELETE');
-
-        return (
-          <Space size="small" wrap>
-            {canViewDoc && (
-              <Button
-                type="primary"
-                ghost
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={() => handleViewFile(record)}
-                loading={viewingRecordId === record.id}
-              >
-                Mở xem
-              </Button>
-            )}
-            {canEditDoc && (
-              <Button
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => handleOpenEditModal(record)}
-              >
-                Sửa
-              </Button>
-            )}
-            {canReplaceDynamic && (
-              <Button
-                size="small"
-                icon={<UploadOutlined />}
-                onClick={() => handleOpenReplaceModal(record)}
-              >
-                Thay thế
-              </Button>
-            )}
-            {canReplaceBuiltIn && (
-              <Upload
-                showUploadList={false}
-                beforeUpload={(file) => handleUploadReplaceBuiltIn(file, record)}
-              >
-                <Button
-                  size="small"
-                  icon={<UploadOutlined />}
-                  loading={uploadingId === record.id}
-                >
-                  Upload thay thế
-                </Button>
-              </Upload>
-            )}
-            {canDeleteDoc && (
-              <Popconfirm
-                title={isExpired ? 'Xóa bản lưu lịch sử này?' : 'Bạn có chắc chắn muốn xóa tài liệu này?'}
-                onConfirm={() => handleDeleteDocument(record)}
-              >
-                <Button size="small" danger icon={<DeleteOutlined />}>
-                  Xóa
-                </Button>
-              </Popconfirm>
-            )}
-          </Space>
-        );
-      },
-    },
-  ];
-
-  const modalTitle =
-    docModalMode === 'create'
-      ? 'Thêm tài liệu đính kèm'
-      : docModalMode === 'edit'
-        ? `Chỉnh sửa tài liệu: ${activeDocRecord?.ten_tai_lieu}`
-        : `Upload thay thế phiên bản v${activeDocRecord?.so_phien_ban || 1} → v${(activeDocRecord?.so_phien_ban || 1) + 1}`;
-
-  return (
-    <div>
-      <div className="mb-4 flex flex-wrap justify-between items-center gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h3 className="m-0 font-semibold text-gray-800">Danh sách tài liệu đính kèm</h3>
-          {filterOptions.length > 0 && (
-            <Select
-              allowClear
-              placeholder="Lọc theo loại tài liệu"
-              className="w-full sm:w-[220px]"
-              size="small"
-              value={filterLoaiId}
-              onChange={(val) => setFilterLoaiId(val)}
-              options={filterOptions}
-            />
+                }
+                const display = fieldCfg?.type === 'date' ? formatDateDisplay(value) : String(value);
+                return (
+                  <Tag key={key} color="default" className="text-[11px] m-0">
+                    {label}: {display}
+                  </Tag>
+                );
+              })}
+            </div>
           )}
         </div>
-        {uploadableLoaiTaiLieuList.length > 0 && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreateModal}>
-            Thêm tài liệu
+
+        <Space size="small" wrap className="shrink-0">
+          {canViewDoc && (
+            <Button
+              type="primary"
+              ghost
+              size="small"
+              icon={<EyeOutlined />}
+              loading={viewingId === doc.id}
+              onClick={() => handleViewFile(doc.url, doc.id)}
+            >
+              Mở xem
+            </Button>
+          )}
+          {canEditDoc && doc.tai_lieu_hien_hanh && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEditModal(doc)}>
+              Sửa
+            </Button>
+          )}
+          {canReplaceDoc && doc.tai_lieu_hien_hanh && (
+            <Button size="small" icon={<UploadOutlined />} onClick={() => handleOpenReplaceModal(doc)}>
+              Thay thế
+            </Button>
+          )}
+          {canDeleteDoc && (
+            <Popconfirm
+              title="Xóa tài liệu này?"
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => handleDeleteDocument(doc)}
+            >
+              <Button size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Thanh công cụ phía trên */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 flex-wrap flex-1">
+          {visibleGroups.length > 0 && (
+            <Select
+              allowClear
+              placeholder="Lọc theo nhóm tài liệu..."
+              className="w-full sm:w-64"
+              value={filterNhomCode}
+              onChange={(val) => setFilterNhomCode(val)}
+              options={visibleGroups.map((g) => ({
+                value: g.ma_nhom,
+                label: g.ten_nhom,
+              }))}
+            />
+          )}
+          <span className="text-xs text-gray-500">
+            Hiển thị {displayedGroups.length} nhóm tài liệu • {dynamicDocs.length} tệp đính kèm động
+          </span>
+        </div>
+        {uploadableTypes.length > 0 && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => handleOpenCreateModal()}
+            className="w-full sm:w-auto"
+          >
+            Tải thêm tài liệu
           </Button>
         )}
       </div>
 
-      {filteredDataSource.length === 0 ? (
-        <Empty description="Hồ sơ chưa có tài liệu đính kèm phù hợp" />
-      ) : (
-        <Table
-          columns={columns}
-          dataSource={filteredDataSource}
-          rowKey="id"
-          pagination={false}
-          scroll={{ x: 'max-content' }}
+      {displayedGroups.length === 0 && orphanDocs.length === 0 ? (
+        <Empty
+          description={
+            visibleGroups.length === 0
+              ? 'Bạn chưa được cấp quyền xem nhóm tài liệu nào trên hồ sơ này'
+              : 'Chưa có nhóm tài liệu phù hợp'
+          }
+          className="my-10"
         />
+      ) : (
+        <div className="space-y-4">
+          {displayedGroups.map((group) => {
+            const typesInGroup = group.loai_tai_lieu || [];
+            const canUploadGroup = hasTaiLieuGroupPermission(group.ma_nhom, 'UPLOAD');
+            const canReplaceGroup = hasTaiLieuGroupPermission(group.ma_nhom, 'REPLACE');
+            const canViewGroup = hasTaiLieuGroupPermission(group.ma_nhom, 'VIEW');
+            const builtInForGroup =
+              group.ma_nhom === 'TAI_LIEU_CHUNG'
+                ? builtInChungItems
+                : group.ma_nhom === 'TAI_LIEU_DAC_THU'
+                  ? builtInDacThuItems
+                  : [];
+
+            return (
+              <Card
+                key={group.id}
+                size="small"
+                className="shadow-sm border-slate-200 rounded-xl overflow-hidden"
+                styles={{
+                  header: {
+                    backgroundColor: '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0',
+                    padding: '10px 16px',
+                  },
+                  body: { padding: '12px 16px' },
+                }}
+                title={
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <FolderOpenOutlined className="text-blue-600" />
+                      <Tag
+                        color={getLoaiHoSoAntdColor(group.ma_nhom, group.mau_sac)}
+                        className="font-semibold m-0 text-sm px-2.5 py-0.5"
+                      >
+                        {group.ten_nhom}
+                      </Tag>
+                      {group.mo_ta && (
+                        <Text type="secondary" className="text-xs hidden md:inline">
+                          {group.mo_ta}
+                        </Text>
+                      )}
+                    </div>
+                    {canUploadGroup && typesInGroup.length > 0 && (
+                      <Button
+                        size="small"
+                        type="primary"
+                        ghost
+                        icon={<PlusOutlined />}
+                        onClick={() => handleOpenCreateModal(typesInGroup[0])}
+                      >
+                        Tải lên vào nhóm
+                      </Button>
+                    )}
+                  </div>
+                }
+              >
+                <div className="space-y-3">
+                  {/* Các tài liệu built-in gắn trên hồ sơ (nếu thuộc Tài liệu chung / Tài liệu đặc thù) */}
+                  {builtInForGroup.map((bItem) => (
+                    <div
+                      key={bItem.id}
+                      className="border border-slate-200 rounded-lg p-3 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Tag color="blue" className="m-0 text-xs font-medium">
+                            {bItem.ten_tai_lieu}
+                          </Tag>
+                          <Tag color="default" className="m-0 text-[11px]">
+                            Trường hệ thống
+                          </Tag>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 truncate max-w-xl">
+                          {bItem.raw_url}
+                        </div>
+                      </div>
+                      <Space size="small" wrap className="shrink-0">
+                        {canViewGroup && (
+                          <Button
+                            type="primary"
+                            ghost
+                            size="small"
+                            icon={<EyeOutlined />}
+                            loading={viewingId === bItem.id}
+                            onClick={() => handleViewFile(bItem.url, bItem.id)}
+                          >
+                            Mở xem
+                          </Button>
+                        )}
+                        {canUpdate && canReplaceGroup && (
+                          <Upload
+                            beforeUpload={(file) => handleUploadReplaceBuiltIn(file, bItem)}
+                            showUploadList={false}
+                            maxCount={1}
+                          >
+                            <Button
+                              size="small"
+                              icon={<UploadOutlined />}
+                              loading={uploadingId === bItem.id}
+                            >
+                              Thay thế file
+                            </Button>
+                          </Upload>
+                        )}
+                      </Space>
+                    </div>
+                  ))}
+
+                  {/* Danh sách các Loại tài liệu cấu hình bên trong Nhóm */}
+                  {typesInGroup.length === 0 && builtInForGroup.length === 0 ? (
+                    <div className="py-3 text-center text-xs text-gray-400">
+                      Nhóm này chưa cấu hình loại tài liệu áp dụng cho loại hồ sơ hiện tại.
+                    </div>
+                  ) : (
+                    typesInGroup.map((loai) => {
+                      const docs = docsByLoaiId.get(loai.id) || [];
+                      const activeDocs = docs.filter((d) => d.tai_lieu_hien_hanh);
+                      const oldDocs = docs.filter((d) => !d.tai_lieu_hien_hanh);
+                      const historyExpanded = Boolean(showHistoryMap[loai.id]);
+
+                      return (
+                        <div
+                          key={loai.id}
+                          className="border border-slate-200 rounded-lg p-3 bg-white hover:border-blue-200 transition-colors"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <FileTextOutlined className="text-slate-400" />
+                                <Tag
+                                  color={getLoaiHoSoAntdColor(loai.ma_loai_tai_lieu, loai.mau_sac)}
+                                  className="font-semibold m-0 text-xs px-2 py-0.5"
+                                >
+                                  {loai.ten_loai_tai_lieu}
+                                </Tag>
+                                {activeDocs.length === 0 ? (
+                                  <Tag color="default" className="text-[11px] m-0">
+                                    Chưa tải lên
+                                  </Tag>
+                                ) : (
+                                  <Tag color="blue" className="text-[11px] m-0">
+                                    {activeDocs.length} tệp hiện hành
+                                  </Tag>
+                                )}
+                                {oldDocs.length > 0 && (
+                                  <Button
+                                    type="link"
+                                    size="small"
+                                    icon={<HistoryOutlined />}
+                                    className="!p-0 !h-auto text-xs text-gray-500"
+                                    onClick={() =>
+                                      setShowHistoryMap((prev) => ({
+                                        ...prev,
+                                        [loai.id]: !prev[loai.id],
+                                      }))
+                                    }
+                                  >
+                                    {historyExpanded
+                                      ? 'Ẩn bản cũ'
+                                      : `${oldDocs.length} phiên bản cũ`}
+                                  </Button>
+                                )}
+                              </div>
+                              {loai.mo_ta && (
+                                <div className="text-xs text-gray-400 mt-1">{loai.mo_ta}</div>
+                              )}
+                            </div>
+
+                            {canUploadGroup && (
+                              <Button
+                                size="small"
+                                type={activeDocs.length === 0 ? 'primary' : 'default'}
+                                icon={<PlusOutlined />}
+                                onClick={() => handleOpenCreateModal(loai)}
+                                className="self-start sm:self-center shrink-0"
+                              >
+                                {activeDocs.length === 0 ? 'Tải lên' : 'Thêm tệp'}
+                              </Button>
+                            )}
+                          </div>
+
+                          {activeDocs.length > 0 ? (
+                            <div className="space-y-2 mt-2.5">
+                              {activeDocs.map((doc) => renderDynamicDocDetails(doc, group.ma_nhom))}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-gray-400 italic pt-2">
+                              Chưa có tài liệu nào được tải lên cho mục &quot;{loai.ten_loai_tai_lieu}&quot;.
+                            </div>
+                          )}
+
+                          {historyExpanded && oldDocs.length > 0 && (
+                            <div className="space-y-2 mt-2.5 pt-2.5 border-t border-dashed border-slate-200">
+                              <div className="text-[11px] font-medium text-gray-500">
+                                Lịch sử phiên bản trước:
+                              </div>
+                              {oldDocs.map((doc) => renderDynamicDocDetails(doc, group.ma_nhom))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+
+          {/* Tài liệu thuộc loại đã ngưng sử dụng hoặc ngoài danh mục nhóm hiện tại */}
+          {orphanDocs.length > 0 && (
+            <Card
+              size="small"
+              className="shadow-sm border-slate-200 rounded-xl"
+              title="Tài liệu khác / Loại đã ngưng sử dụng"
+            >
+              <div className="space-y-2">
+                {orphanDocs.map((doc) => renderDynamicDocDetails(doc, doc.ma_nhom))}
+              </div>
+            </Card>
+          )}
+        </div>
       )}
 
+      {/* MODAL THÊM / SỬA / THAY THẾ TÀI LIỆU ĐÍNH KÈM */}
       <Modal
-        title={modalTitle}
+        title={
+          docModalMode === 'create'
+            ? 'Tải lên tài liệu đính kèm'
+            : docModalMode === 'edit'
+              ? `Chỉnh sửa thông tin tài liệu (v${activeDocRecord?.so_phien_ban || 1})`
+              : `Thay thế tài liệu (Sẽ tạo phiên bản v${(activeDocRecord?.so_phien_ban || 1) + 1})`
+        }
         open={docModalMode !== null}
         onCancel={handleCloseModal}
         onOk={() => form.submit()}
@@ -765,19 +958,26 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
                   placeholder="Chọn loại tài liệu..."
                   optionFilterProp="label"
                   showSearch
-                  onChange={() => {
+                  onChange={(val) => {
                     form.setFieldValue('du_lieu_dac_thu', undefined);
+                    if (docModalMode === 'create') {
+                      const picked = modalLoaiTaiLieuOptions.find((t) => t.id === val);
+                      if (picked && !form.getFieldValue('ten_tai_lieu')) {
+                        form.setFieldValue('ten_tai_lieu', picked.ten_loai_tai_lieu);
+                      }
+                    }
                   }}
                 >
                   {modalLoaiTaiLieuOptions.map((item) => (
                     <Select.Option
                       key={item.id}
                       value={item.id}
-                      label={item.ten_loai_tai_lieu}
+                      label={`${item.parentNhomName} - ${item.ten_loai_tai_lieu}`}
                     >
+                      <span className="text-xs text-gray-400 mr-1.5">[{item.parentNhomName}]</span>
                       <Tag
                         color={getLoaiHoSoAntdColor(item.ma_loai_tai_lieu, item.mau_sac)}
-                        className="m-0 mr-2"
+                        className="m-0"
                       >
                         {item.ten_loai_tai_lieu}
                       </Tag>
@@ -790,10 +990,10 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
             <Col xs={24} sm={12}>
               <Form.Item
                 name="ten_tai_lieu"
-                label="Tên tài liệu"
+                label="Tên tài liệu / Tiêu đề tệp"
                 rules={[{ required: true, message: 'Vui lòng nhập tên tài liệu' }]}
               >
-                <Input placeholder="VD: Công văn số 123/BYT..." />
+                <Input placeholder="VD: TCCS số 01/2026..." />
               </Form.Item>
             </Col>
 
@@ -829,7 +1029,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
           {selectedCustomFields.length > 0 && (
             <>
               <Divider plain style={{ margin: '8px 0 16px' }}>
-                Thông tin riêng nhóm &quot;{selectedLoaiTaiLieu?.ten_loai_tai_lieu}&quot;
+                Thông tin riêng mục &quot;{selectedLoaiTaiLieu?.ten_loai_tai_lieu}&quot;
               </Divider>
               <DynamicFieldsForm
                 fields={selectedCustomFields}

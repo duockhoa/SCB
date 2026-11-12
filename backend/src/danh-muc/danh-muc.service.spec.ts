@@ -13,6 +13,20 @@ describe('DanhMucService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      dm_nhom_tai_lieu: {
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        aggregate: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        upsert: jest.fn(),
+      },
+      dm_loai_ho_so_nhom_tai_lieu: {
+        deleteMany: jest.fn(),
+        createMany: jest.fn(),
+      },
       dm_loai_tai_lieu: {
         findMany: jest.fn(),
         findUnique: jest.fn(),
@@ -345,6 +359,55 @@ describe('DanhMucService', () => {
       prisma.dm_loai_tai_lieu.delete.mockResolvedValue({ id: 12 });
       const res = await service.deleteLoaiTaiLieu(12);
       expect(res.message).toContain('Xóa loại tài liệu thành công');
+    });
+  });
+
+  describe('nhom_tai_lieu CRUD & scoping', () => {
+    it('creates a custom nhom_tai_lieu and validates deletion guards', async () => {
+      const prisma = createMockPrisma();
+      prisma.dm_nhom_tai_lieu.findUnique.mockResolvedValueOnce(null);
+      prisma.dm_nhom_tai_lieu.aggregate.mockResolvedValue({ _max: { thu_tu: 2 } });
+      prisma.dm_nhom_tai_lieu.create.mockImplementation(async ({ data }: any) => ({
+        id: 3,
+        ...data,
+        _count: { loai_tai_lieu: 0 },
+        loai_ho_so_links: [],
+        loai_tai_lieu: [],
+      }));
+
+      const service = new DanhMucService(prisma as any);
+      const created = await service.createNhomTaiLieu({
+        ma_nhom: 'tai_lieu_san_xuat',
+        ten_nhom: 'Tài liệu sản xuất',
+        mau_sac: 'teal',
+      });
+
+      expect(created.ma_nhom).toBe('TAI_LIEU_SAN_XUAT');
+      expect(created.thu_tu).toBe(3);
+      expect(created.is_system).toBe(false);
+
+      prisma.dm_nhom_tai_lieu.findUnique.mockResolvedValueOnce({
+        id: 1,
+        ma_nhom: 'TAI_LIEU_CHUNG',
+        _count: { loai_tai_lieu: 0 },
+      });
+      await expect(service.deleteNhomTaiLieu(1)).rejects.toThrow(BadRequestException);
+
+      prisma.dm_nhom_tai_lieu.findUnique.mockResolvedValueOnce({
+        id: 3,
+        ma_nhom: 'TAI_LIEU_SAN_XUAT',
+        _count: { loai_tai_lieu: 2 },
+      });
+      await expect(service.deleteNhomTaiLieu(3)).rejects.toThrow(ConflictException);
+
+      prisma.dm_nhom_tai_lieu.findUnique.mockResolvedValueOnce({
+        id: 3,
+        ma_nhom: 'TAI_LIEU_SAN_XUAT',
+        _count: { loai_tai_lieu: 0 },
+      });
+      prisma.dm_nhom_tai_lieu.delete.mockResolvedValue({ id: 3 });
+      const deleted = await service.deleteNhomTaiLieu(3);
+      expect(deleted.message).toContain('Xóa nhóm tài liệu thành công');
     });
   });
 });

@@ -24,6 +24,7 @@ model dm_loai_ho_so {
   
   ho_so_chung          ho_so_chung[]
   loai_tai_lieu_links  dm_loai_ho_so_tai_lieu[]
+  nhom_tai_lieu_links  dm_loai_ho_so_nhom_tai_lieu[]
 }
 
 model dm_tinh_trang {
@@ -53,19 +54,49 @@ model dm_cong_ty {
   ho_so_phan_phoi ho_so_chung[] @relation("CongTyPhanPhoi")
 }
 
+model dm_nhom_tai_lieu {
+  id                Int      @id @default(autoincrement())
+  ma_nhom           String   @unique @db.VarChar(50)
+  ten_nhom          String   @db.VarChar(200)
+  mo_ta             String?  @db.VarChar(500)
+  mau_sac           String?  @db.VarChar(30)
+  thu_tu            Int      @default(0)
+  trang_thai        Boolean  @default(true)
+  ap_dung_tat_ca    Boolean  @default(true)
+
+  loai_tai_lieu     dm_loai_tai_lieu[]
+  loai_ho_so_links  dm_loai_ho_so_nhom_tai_lieu[]
+}
+
+model dm_loai_ho_so_nhom_tai_lieu {
+  loai_ho_so_id     Int
+  nhom_tai_lieu_id  Int
+  thu_tu            Int     @default(0)
+
+  loai_ho_so        dm_loai_ho_so    @relation(fields: [loai_ho_so_id], references: [id], onDelete: Cascade)
+  nhom_tai_lieu     dm_nhom_tai_lieu @relation(fields: [nhom_tai_lieu_id], references: [id], onDelete: Cascade)
+
+  @@id([loai_ho_so_id, nhom_tai_lieu_id])
+  @@index([nhom_tai_lieu_id])
+}
+
 model dm_loai_tai_lieu {
-  id                Int           @id @default(autoincrement())
-  ma_loai_tai_lieu  String        @unique @db.VarChar(50)
-  ten_loai_tai_lieu String        @db.VarChar(200)
-  mo_ta             String?       @db.VarChar(500)
-  mau_sac           String?       @db.VarChar(30)
-  thu_tu            Int           @default(0)
-  trang_thai        Boolean       @default(true)
-  ap_dung_tat_ca    Boolean       @default(true)
+  id                Int               @id @default(autoincrement())
+  nhom_tai_lieu_id  Int?
+  ma_loai_tai_lieu  String            @unique @db.VarChar(50)
+  ten_loai_tai_lieu String            @db.VarChar(200)
+  mo_ta             String?           @db.VarChar(500)
+  mau_sac           String?           @db.VarChar(30)
+  thu_tu            Int               @default(0)
+  trang_thai        Boolean           @default(true)
+  ap_dung_tat_ca    Boolean           @default(true)
   cau_hinh_truong   Json?
 
+  nhom_tai_lieu     dm_nhom_tai_lieu? @relation(fields: [nhom_tai_lieu_id], references: [id], onDelete: SetNull)
   tai_lieu_ho_so    tai_lieu_ho_so[]
   loai_ho_so_links  dm_loai_ho_so_tai_lieu[]
+
+  @@index([nhom_tai_lieu_id])
 }
 
 model dm_loai_ho_so_tai_lieu {

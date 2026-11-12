@@ -32,8 +32,33 @@ export interface LoaiHoSoRef {
   mau_sac?: string | null;
 }
 
+export interface NhomTaiLieuRef {
+  id: number;
+  ma_nhom: string;
+  ten_nhom: string;
+  mau_sac?: string | null;
+}
+
+export interface NhomTaiLieu {
+  id: number;
+  ma_nhom: string;
+  ten_nhom: string;
+  mo_ta?: string | null;
+  mau_sac?: string | null;
+  thu_tu?: number;
+  trang_thai?: boolean;
+  ap_dung_tat_ca?: boolean;
+  is_system?: boolean;
+  so_luong_loai_tai_lieu?: number;
+  loai_ho_so_ids?: number[];
+  loai_ho_so_list?: LoaiHoSoRef[];
+  loai_tai_lieu?: LoaiTaiLieu[];
+}
+
 export interface LoaiTaiLieu {
   id: number;
+  nhom_tai_lieu_id?: number | null;
+  nhom_tai_lieu?: NhomTaiLieuRef | null;
   ma_loai_tai_lieu: string;
   ten_loai_tai_lieu: string;
   mo_ta?: string | null;

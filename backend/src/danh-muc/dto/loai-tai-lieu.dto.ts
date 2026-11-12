@@ -14,6 +14,13 @@ import {
 import { CustomFieldConfigDto } from './loai-ho-so.dto';
 
 export class CreateLoaiTaiLieuDto {
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  nhom_tai_lieu_id?: number;
+
   @ApiProperty({ example: 'GIAY_PHEP_QUANG_CAO' })
   @IsString()
   @IsNotEmpty({ message: 'Mã loại tài liệu không được để trống' })
@@ -71,6 +78,13 @@ export class CreateLoaiTaiLieuDto {
 }
 
 export class UpdateLoaiTaiLieuDto {
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  nhom_tai_lieu_id?: number | null;
+
   @ApiPropertyOptional({ example: 'GIAY_PHEP_QUANG_CAO' })
   @IsOptional()
   @IsString()

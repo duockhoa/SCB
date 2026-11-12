@@ -113,19 +113,27 @@ export type TaiLieuAction = 'VIEW' | 'UPLOAD' | 'REPLACE' | 'DELETE';
 
 export const TAI_LIEU_GROUP_PREFIX = 'HOSO_TAI_LIEU_GROUP:';
 
-export function buildTaiLieuGroupPermissionCode(maLoaiTaiLieu: string, action: TaiLieuAction): string {
-  return `${TAI_LIEU_GROUP_PREFIX}${maLoaiTaiLieu.trim().toUpperCase()}:${action}`;
+export function buildTaiLieuGroupPermissionCode(maNhom: string, action: TaiLieuAction): string {
+  return `${TAI_LIEU_GROUP_PREFIX}${maNhom.trim().toUpperCase()}:${action}`;
 }
 
 export function buildTaiLieuGroupPermissions(
-  groups: Array<{ ma_loai_tai_lieu: string; ten_loai_tai_lieu: string }>,
+  groups: Array<{
+    ma_nhom?: string;
+    ten_nhom?: string;
+    ma_loai_tai_lieu?: string;
+    ten_loai_tai_lieu?: string;
+  }>,
 ): PermissionModule[] {
   if (!groups || groups.length === 0) return [];
 
   const permissions: PermissionItem[] = [];
   for (const group of groups) {
-    const code = group.ma_loai_tai_lieu.trim().toUpperCase();
-    const label = group.ten_loai_tai_lieu.trim();
+    const rawCode = group.ma_nhom || group.ma_loai_tai_lieu || '';
+    const rawLabel = group.ten_nhom || group.ten_loai_tai_lieu || rawCode;
+    if (!rawCode.trim()) continue;
+    const code = rawCode.trim().toUpperCase();
+    const label = rawLabel.trim();
     permissions.push(
       {
         code: buildTaiLieuGroupPermissionCode(code, 'VIEW'),
@@ -135,7 +143,7 @@ export function buildTaiLieuGroupPermissions(
       {
         code: buildTaiLieuGroupPermissionCode(code, 'UPLOAD'),
         name: `[${label}] Tải lên & sửa tài liệu`,
-        description: `Thêm mới và chỉnh sửa tài liệu thuộc nhóm "${label}" (${code})`,
+        description: `Thêm mới và chỉnh sửa các loại tài liệu thuộc nhóm "${label}" (${code})`,
       },
       {
         code: buildTaiLieuGroupPermissionCode(code, 'REPLACE'),
@@ -155,7 +163,7 @@ export function buildTaiLieuGroupPermissions(
     {
       module: 'Phân quyền theo Nhóm Tài liệu Tải lên',
       description:
-        'Phân quyền chi tiết theo từng nhóm loại tài liệu (nếu không bật quyền Tài liệu tổng quát ở trên, vai trò/nhân sự chỉ thao tác được các nhóm được chọn dưới đây)',
+        'Phân quyền chi tiết theo từng Nhóm tài liệu (Tài liệu chung, Tài liệu đặc thù, Tài liệu sản xuất... tự động cập nhật khi thêm nhóm mới). Nếu không bật quyền Tài liệu tổng quát ở trên, vai trò/nhân sự chỉ thao tác được các nhóm được cấp bên dưới.',
       permissions,
     },
   ];

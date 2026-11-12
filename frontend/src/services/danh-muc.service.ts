@@ -13,7 +13,19 @@ export interface LoaiHoSoPayload {
   cau_hinh_truong?: CustomFieldConfig[] | null;
 }
 
+export interface NhomTaiLieuPayload {
+  ma_nhom?: string;
+  ten_nhom?: string;
+  mo_ta?: string | null;
+  mau_sac?: string | null;
+  thu_tu?: number;
+  trang_thai?: boolean;
+  ap_dung_tat_ca?: boolean;
+  loai_ho_so_ids?: number[];
+}
+
 export interface LoaiTaiLieuPayload {
+  nhom_tai_lieu_id?: number | null;
   ma_loai_tai_lieu?: string;
   ten_loai_tai_lieu?: string;
   mo_ta?: string | null;
@@ -41,6 +53,19 @@ export const danhMucService = {
     data: { thoi_gian_canh_bao: number; don_vi_canh_bao?: string; dong_bo_tat_ca?: boolean },
   ) => axiosInstance.patch(`/danh-muc/loai-ho-so/${id}/canh-bao-han`, data),
   getTinhTrang: async () => axiosInstance.get('/danh-muc/tinh-trang'),
+  getNhomTaiLieu: async (params?: { includeInactive?: boolean; loaiHoSoId?: number }) =>
+    axiosInstance.get('/danh-muc/nhom-tai-lieu', {
+      params: {
+        ...(params?.includeInactive ? { includeInactive: 'true' } : {}),
+        ...(params?.loaiHoSoId ? { loaiHoSoId: params.loaiHoSoId } : {}),
+      },
+    }),
+  createNhomTaiLieu: async (data: NhomTaiLieuPayload) =>
+    axiosInstance.post('/danh-muc/nhom-tai-lieu', data),
+  updateNhomTaiLieu: async (id: number, data: NhomTaiLieuPayload) =>
+    axiosInstance.put(`/danh-muc/nhom-tai-lieu/${id}`, data),
+  deleteNhomTaiLieu: async (id: number) =>
+    axiosInstance.delete(`/danh-muc/nhom-tai-lieu/${id}`),
   getLoaiTaiLieu: async (params?: { includeInactive?: boolean; loaiHoSoId?: number }) =>
     axiosInstance.get('/danh-muc/loai-tai-lieu', {
       params: {

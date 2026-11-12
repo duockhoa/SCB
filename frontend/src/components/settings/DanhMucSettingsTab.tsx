@@ -750,7 +750,7 @@ export default function DanhMucSettingsTab() {
           label: (
             <span className="flex items-center gap-1.5 font-medium">
               <FileTextOutlined />
-              Loại tài liệu
+              Nhóm &amp; Loại tài liệu
             </span>
           ),
           children: <LoaiTaiLieuSettingsPanel />,
