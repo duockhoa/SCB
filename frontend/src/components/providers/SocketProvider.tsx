@@ -29,10 +29,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const token = Cookies.get('accessToken');
     if (!token) return;
 
-    // Connect to WebSocket server. 
-    // Assuming API_URL is something like http://localhost:3000/api 
-    // We need the root host for Socket.IO. We can just use the base API_URL origin if valid.
-    const socketUrl = new URL(API_URL).origin;
+    let socketUrl = window.location.origin;
+    try {
+      socketUrl = new URL(API_URL, window.location.origin).origin;
+    } catch {
+      socketUrl = window.location.origin;
+    }
 
     const socketInstance = io(socketUrl, {
       auth: { token },

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
-import { ConfigProvider } from 'antd';
+import { App, ConfigProvider } from 'antd';
 import QueryProvider from '@/components/providers/QueryProvider';
 import { SocketProvider } from '@/components/providers/SocketProvider';
 
@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 }
               }}
             >
-              {children}
+              <App>{children}</App>
             </ConfigProvider>
           </AntdRegistry>
           </SocketProvider>

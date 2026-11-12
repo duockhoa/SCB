@@ -58,10 +58,31 @@ import {
   getFieldLabel,
   getLoaiHoSoAntdColor,
   isFileFieldKey,
+  stripVietnameseAccents,
+  toMaLoaiCode,
 } from '@/utils/loai-ho-so';
 import DynamicFieldsForm from './forms/DynamicFieldsForm';
 
 const { Text } = Typography;
+
+const BUILTIN_FIELD_TO_DOC_TYPE_ALIASES: Record<string, string[]> = {
+  tieu_chuan_co_so_url: ['TCCS', 'TIEU_CHUAN_CO_SO'],
+  cong_van_cap_url: ['CONG_VAN', 'CONG_VAN_CAP'],
+  phieu_cong_bo_url: ['PHIEU_CONG_BO'],
+  nhan_url: ['NHAN', 'NHAN_SAN_PHAM', 'MAU_NHAN'],
+  nhan_san_pham_url: ['NHAN', 'NHAN_SAN_PHAM', 'MAU_NHAN'],
+  hdsd_url: ['HDSD', 'HUONG_DAN_SU_DUNG'],
+  huong_dan_su_dung_url: ['HDSD', 'HUONG_DAN_SU_DUNG'],
+  quang_cao_url: ['QUANG_CAO', 'XN_QUANG_CAO', 'XAC_NHAN_QUANG_CAO'],
+  xn_quang_cao_url: ['QUANG_CAO', 'XN_QUANG_CAO', 'XAC_NHAN_QUANG_CAO'],
+  phieu_tiep_nhan_url: ['PHIEU_TIEP_NHAN'],
+  tai_lieu_mo_ta_kt_url: ['TAI_LIEU_MO_TA_KT', 'TAI_LIEU_MO_TA_KY_THUAT'],
+  quyet_dinh_cap_sdk_url: ['QUYET_DINH_CAP_SDK', 'QD_CAP_SDK'],
+  ke_khai_gia_url: ['KE_KHAI_GIA'],
+  ban_tu_cong_bo_url: ['BAN_TU_CONG_BO'],
+  ho_so_luu_url: ['HO_SO_LUU', 'THU_MUC_HO_SO_LUU_TRU'],
+  tai_lieu_quy_dinh_url: ['TAI_LIEU_QUY_DINH', 'VAN_BAN_QUY_DINH_TAM_THOI'],
+};
 
 interface Props {
   hoSo: HoSoChung;
@@ -107,21 +128,63 @@ interface DocModalFormValues {
 
 function getFullUrl(url: string): string {
   if (!url) return '';
-  if (url.startsWith('http')) return url;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
   const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+  const cleanUrl = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  if (cleanBase.endsWith('/api') && cleanUrl.startsWith('/api/')) {
+    return `${cleanBase.slice(0, -4)}${cleanUrl}`;
+  }
   return `${cleanBase}${cleanUrl}`;
 }
 
 function isLinkValue(val: unknown, field?: CustomFieldConfig): boolean {
-  if (typeof val !== 'string' || !val) return false;
+  if (typeof val !== 'string') return false;
+  const trimmed = val.trim();
+  if (!trimmed) return false;
   return (
     field?.type === 'file' ||
-    val.startsWith('http://') ||
-    val.startsWith('https://') ||
-    val.startsWith('/uploads/')
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('/uploads/') ||
+    trimmed.startsWith('/upload/') ||
+    trimmed.startsWith('/api/upload')
   );
+}
+
+function normalizeMatchText(value: string): string {
+  return stripVietnameseAccents(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function normalizeComparableUrl(url: string): string {
+  return getFullUrl(url).trim().replace(/\/+$/, '').toLowerCase();
+}
+
+function matchBuiltInFieldToDocType<T extends LoaiTaiLieu>(
+  fieldKey: string,
+  label: string,
+  types: T[],
+): T | undefined {
+  if (types.length === 0) return undefined;
+
+  const aliases = BUILTIN_FIELD_TO_DOC_TYPE_ALIASES[fieldKey] || [];
+  const derivedCode = toMaLoaiCode(fieldKey.replace(/_url$/i, ''));
+  const candidateCodes = [...aliases, ...(derivedCode ? [derivedCode] : [])];
+
+  for (const code of candidateCodes) {
+    const matched = types.find((lt) => lt.ma_loai_tai_lieu === code);
+    if (matched) return matched;
+  }
+
+  const normalizedLabel = normalizeMatchText(label);
+  if (normalizedLabel) {
+    return types.find((lt) => normalizeMatchText(lt.ten_loai_tai_lieu) === normalizedLabel);
+  }
+  return undefined;
 }
 
 function formatDateDisplay(val: unknown): string {
@@ -177,7 +240,10 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
   const { canUpdate, hasTaiLieuGroupPermission } = usePermissions();
 
   const { data: nhomRes } = useNhomTaiLieuList({ loaiHoSoId: hoSo.loai_ho_so_id });
-  const nhomList: NhomTaiLieu[] = useMemo(() => nhomRes?.data || [], [nhomRes?.data]);
+  const nhomList: NhomTaiLieu[] = useMemo(
+    () => (Array.isArray(nhomRes?.data) ? nhomRes.data : []),
+    [nhomRes?.data],
+  );
 
   const queryClient = useQueryClient();
   const [uploadingId, setUploadingId] = useState<string | number | null>(null);
@@ -256,20 +322,31 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     [selectedLoaiTaiLieu],
   );
 
-  // Tài liệu built-in theo 2 nhóm mặc định
+  // Tài liệu built-in gắn trên hồ sơ (hồ sơ chung & thông tin chi tiết/đặc thù)
   const builtInChungItems: BuiltInDocItem[] = useMemo(() => {
-    if (!hoSo.ho_so_luu_url) return [];
-    return [
-      {
+    const items: BuiltInDocItem[] = [];
+    if (hoSo.ho_so_luu_url) {
+      items.push({
         id: 'builtin-chung-ho_so_luu_url',
         ten_tai_lieu: 'Thư mục Hồ sơ lưu trữ',
         field_key: 'ho_so_luu_url',
         is_chung: true,
         url: getFullUrl(hoSo.ho_so_luu_url),
         raw_url: hoSo.ho_so_luu_url,
-      },
-    ];
-  }, [hoSo.ho_so_luu_url]);
+      });
+    }
+    if (hoSo.tai_lieu_quy_dinh_url) {
+      items.push({
+        id: 'builtin-chung-tai_lieu_quy_dinh_url',
+        ten_tai_lieu: 'Văn bản quy định tạm thời',
+        field_key: 'tai_lieu_quy_dinh_url',
+        is_chung: true,
+        url: getFullUrl(hoSo.tai_lieu_quy_dinh_url),
+        raw_url: hoSo.tai_lieu_quy_dinh_url,
+      });
+    }
+    return items;
+  }, [hoSo.ho_so_luu_url, hoSo.tai_lieu_quy_dinh_url]);
 
   const builtInDacThuItems: BuiltInDocItem[] = useMemo(() => {
     if (!thongTinRieng) return [];
@@ -279,9 +356,9 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
       if (
         key !== 'id' &&
         key !== 'ho_so_chung_id' &&
-        isFileFieldKey(key, hoSo.loai_ho_so) &&
         typeof val === 'string' &&
-        val
+        val.trim() !== '' &&
+        (isFileFieldKey(key, hoSo.loai_ho_so) || isLinkValue(val))
       ) {
         items.push({
           id: `builtin-dacthu-${key}`,
@@ -289,12 +366,38 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
           field_key: key,
           is_chung: false,
           url: getFullUrl(val),
-          raw_url: val,
+          raw_url: val.trim(),
         });
       }
     });
     return items;
   }, [thongTinRieng, hoSo.loai_ho_so]);
+
+  // Đồng bộ các trường link trên hồ sơ & thông tin chi tiết vào đúng loại tài liệu (kể cả Tài liệu chung, Tài liệu đặc thù, nhóm mới)
+  const { syncedBuiltInsByLoaiId, unmatchedBuiltInChung, unmatchedBuiltInDacThu } = useMemo(() => {
+    const byLoaiId = new Map<number, BuiltInDocItem[]>();
+    const unmatchedChung: BuiltInDocItem[] = [];
+    const unmatchedDacThu: BuiltInDocItem[] = [];
+
+    for (const item of [...builtInChungItems, ...builtInDacThuItems]) {
+      const matchedLoai = matchBuiltInFieldToDocType(item.field_key, item.ten_tai_lieu, allActiveTypes);
+      if (matchedLoai) {
+        const list = byLoaiId.get(matchedLoai.id) || [];
+        list.push(item);
+        byLoaiId.set(matchedLoai.id, list);
+      } else if (item.is_chung) {
+        unmatchedChung.push(item);
+      } else {
+        unmatchedDacThu.push(item);
+      }
+    }
+
+    return {
+      syncedBuiltInsByLoaiId: byLoaiId,
+      unmatchedBuiltInChung: unmatchedChung,
+      unmatchedBuiltInDacThu: unmatchedDacThu,
+    };
+  }, [builtInChungItems, builtInDacThuItems, allActiveTypes]);
 
   // Chuẩn hóa tài liệu động đã upload
   const dynamicDocs: DynamicDocItem[] = useMemo(() => {
@@ -345,250 +448,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     return dynamicDocs.filter((doc) => !knownTypeIds.has(doc.loai_tai_lieu_id));
   }, [dynamicDocs, visibleGroups]);
 
-  const groupTabItems = useMemo(() => {
-    const items = visibleGroups.map((group) => {
-      const typesInGroup = group.loai_tai_lieu || [];
-      const canUploadGroup = hasTaiLieuGroupPermission(group.ma_nhom, 'UPLOAD');
-      const canReplaceGroup = hasTaiLieuGroupPermission(group.ma_nhom, 'REPLACE');
-      const canViewGroup = hasTaiLieuGroupPermission(group.ma_nhom, 'VIEW');
-      const builtInForGroup =
-        group.ma_nhom === 'TAI_LIEU_CHUNG'
-          ? builtInChungItems
-          : group.ma_nhom === 'TAI_LIEU_DAC_THU'
-            ? builtInDacThuItems
-            : [];
-
-      const activeDynamicCount = typesInGroup.reduce((sum, loai) => {
-        const docs = docsByLoaiId.get(loai.id) || [];
-        return sum + docs.filter((d) => d.tai_lieu_hien_hanh).length;
-      }, 0);
-      const uploadedCount = builtInForGroup.length + activeDynamicCount;
-
-      return {
-        key: group.ma_nhom,
-        label: (
-          <span className="inline-flex items-center gap-1.5 font-medium">
-            <FolderOpenOutlined />
-            <span>{group.ten_nhom}</span>
-            <Badge
-              count={uploadedCount}
-              showZero
-              color={uploadedCount > 0 ? '#1677ff' : '#cbd5e1'}
-              style={{ boxShadow: 'none' }}
-            />
-          </span>
-        ),
-        children: (
-          <div className="space-y-3 pt-1">
-            {(group.mo_ta || (canUploadGroup && typesInGroup.length > 0)) && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                <Text type="secondary" className="text-xs">
-                  {group.mo_ta || `Danh sách các loại tài liệu thuộc nhóm "${group.ten_nhom}"`}
-                </Text>
-                {canUploadGroup && typesInGroup.length > 0 && (
-                  <Button
-                    size="small"
-                    type="primary"
-                    ghost
-                    icon={<PlusOutlined />}
-                    onClick={() => handleOpenCreateModal(typesInGroup[0])}
-                    className="self-start sm:self-center shrink-0"
-                  >
-                    Tải lên vào nhóm
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* Các tài liệu built-in gắn trên hồ sơ (nếu thuộc Tài liệu chung / Tài liệu đặc thù) */}
-            {builtInForGroup.map((bItem) => (
-              <div
-                key={bItem.id}
-                className="border border-slate-200 rounded-lg p-3 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Tag color="blue" className="m-0 text-xs font-medium">
-                      {bItem.ten_tai_lieu}
-                    </Tag>
-                    <Tag color="default" className="m-0 text-[11px]">
-                      Trường hệ thống
-                    </Tag>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1 truncate max-w-xl">
-                    {bItem.raw_url}
-                  </div>
-                </div>
-                <Space size="small" wrap className="shrink-0">
-                  {canViewGroup && (
-                    <Button
-                      type="primary"
-                      ghost
-                      size="small"
-                      icon={<EyeOutlined />}
-                      loading={viewingId === bItem.id}
-                      onClick={() => handleViewFile(bItem.url, bItem.id)}
-                    >
-                      Mở xem
-                    </Button>
-                  )}
-                  {canUpdate && canReplaceGroup && (
-                    <Upload
-                      beforeUpload={(file) => handleUploadReplaceBuiltIn(file, bItem)}
-                      showUploadList={false}
-                      maxCount={1}
-                    >
-                      <Button
-                        size="small"
-                        icon={<UploadOutlined />}
-                        loading={uploadingId === bItem.id}
-                      >
-                        Thay thế file
-                      </Button>
-                    </Upload>
-                  )}
-                </Space>
-              </div>
-            ))}
-
-            {/* Danh sách các Loại tài liệu cấu hình bên trong Nhóm */}
-            {typesInGroup.length === 0 && builtInForGroup.length === 0 ? (
-              <div className="py-6 text-center text-xs text-gray-400 border border-dashed border-slate-200 rounded-lg">
-                Nhóm này chưa cấu hình loại tài liệu áp dụng cho loại hồ sơ hiện tại.
-              </div>
-            ) : (
-              typesInGroup.map((loai) => {
-                const docs = docsByLoaiId.get(loai.id) || [];
-                const activeDocs = docs.filter((d) => d.tai_lieu_hien_hanh);
-                const oldDocs = docs.filter((d) => !d.tai_lieu_hien_hanh);
-                const historyExpanded = Boolean(showHistoryMap[loai.id]);
-
-                return (
-                  <div
-                    key={loai.id}
-                    className="border border-slate-200 rounded-lg p-3 bg-white hover:border-blue-200 transition-colors"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <FileTextOutlined className="text-slate-400" />
-                          <Tag
-                            color={getLoaiHoSoAntdColor(loai.ma_loai_tai_lieu, loai.mau_sac)}
-                            className="font-semibold m-0 text-xs px-2 py-0.5"
-                          >
-                            {loai.ten_loai_tai_lieu}
-                          </Tag>
-                          {activeDocs.length === 0 ? (
-                            <Tag color="default" className="text-[11px] m-0">
-                              Chưa tải lên
-                            </Tag>
-                          ) : (
-                            <Tag color="blue" className="text-[11px] m-0">
-                              {activeDocs.length} tệp hiện hành
-                            </Tag>
-                          )}
-                          {oldDocs.length > 0 && (
-                            <Button
-                              type="link"
-                              size="small"
-                              icon={<HistoryOutlined />}
-                              className="!p-0 !h-auto text-xs text-gray-500"
-                              onClick={() =>
-                                setShowHistoryMap((prev) => ({
-                                  ...prev,
-                                  [loai.id]: !prev[loai.id],
-                                }))
-                              }
-                            >
-                              {historyExpanded ? 'Ẩn bản cũ' : `${oldDocs.length} phiên bản cũ`}
-                            </Button>
-                          )}
-                        </div>
-                        {loai.mo_ta && (
-                          <div className="text-xs text-gray-400 mt-1">{loai.mo_ta}</div>
-                        )}
-                      </div>
-
-                      {canUploadGroup && (
-                        <Button
-                          size="small"
-                          type={activeDocs.length === 0 ? 'primary' : 'default'}
-                          icon={<PlusOutlined />}
-                          onClick={() => handleOpenCreateModal(loai)}
-                          className="self-start sm:self-center shrink-0"
-                        >
-                          {activeDocs.length === 0 ? 'Tải lên' : 'Thêm tệp'}
-                        </Button>
-                      )}
-                    </div>
-
-                    {activeDocs.length > 0 ? (
-                      <div className="space-y-2 mt-2.5">
-                        {activeDocs.map((doc) => renderDynamicDocDetails(doc, group.ma_nhom))}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-gray-400 italic pt-2">
-                        Chưa có tài liệu nào được tải lên cho mục &quot;{loai.ten_loai_tai_lieu}&quot;.
-                      </div>
-                    )}
-
-                    {historyExpanded && oldDocs.length > 0 && (
-                      <div className="space-y-2 mt-2.5 pt-2.5 border-t border-dashed border-slate-200">
-                        <div className="text-[11px] font-medium text-gray-500">
-                          Lịch sử phiên bản trước:
-                        </div>
-                        {oldDocs.map((doc) => renderDynamicDocDetails(doc, group.ma_nhom))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        ),
-      };
-    });
-
-    if (orphanDocs.length > 0) {
-      items.push({
-        key: '__ORPHAN__',
-        label: (
-          <span className="inline-flex items-center gap-1.5 font-medium">
-            <FileTextOutlined />
-            <span>Tài liệu khác</span>
-            <Badge count={orphanDocs.length} showZero color="#64748b" style={{ boxShadow: 'none' }} />
-          </span>
-        ),
-        children: (
-          <div className="space-y-2 pt-1">
-            {orphanDocs.map((doc) => renderDynamicDocDetails(doc, doc.ma_nhom))}
-          </div>
-        ),
-      });
-    }
-
-    return items;
-  }, [
-    visibleGroups,
-    orphanDocs,
-    builtInChungItems,
-    builtInDacThuItems,
-    docsByLoaiId,
-    showHistoryMap,
-    hasTaiLieuGroupPermission,
-    viewingId,
-    uploadingId,
-    canUpdate,
-  ]);
-
-  const resolvedActiveTab = useMemo(() => {
-    if (activeGroupTab && groupTabItems.some((item) => item.key === activeGroupTab)) {
-      return activeGroupTab;
-    }
-    return groupTabItems[0]?.key;
-  }, [activeGroupTab, groupTabItems]);
-
-  // --- Modal Handlers ---
+  // --- Modal & File Handlers (khai báo trước groupTabItems để tránh TDZ trong useMemo) ---
   const handleOpenCreateModal = (presetLoai?: LoaiTaiLieu) => {
     setActiveDocRecord(null);
     setDocModalMode('create');
@@ -749,15 +609,29 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
   };
 
   const handleViewFile = async (url: string, rowId: string | number) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    if (url && url.startsWith('http') && !url.startsWith(apiUrl)) {
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const resolvedApiBase =
+      typeof window !== 'undefined'
+        ? new URL(apiUrl, window.location.origin).href.replace(/\/+$/, '')
+        : apiUrl;
+
+    if (
+      url &&
+      (url.startsWith('http://') || url.startsWith('https://')) &&
+      !url.startsWith(resolvedApiBase)
+    ) {
       window.open(url, '_blank');
       return;
     }
 
+    const requestUrl =
+      apiUrl.startsWith('/') && url.startsWith(`${apiUrl}/`)
+        ? url.slice(apiUrl.length)
+        : url;
+
     setViewingId(rowId);
     try {
-      const response = await axiosInstance.get(url, {
+      const response = await axiosInstance.get(requestUrl, {
         responseType: 'blob',
       });
       const fileUrl = window.URL.createObjectURL(response as unknown as Blob);
@@ -767,6 +641,82 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
     } finally {
       setViewingId(null);
     }
+  };
+
+  const renderBuiltInDocRow = (
+    bItem: BuiltInDocItem,
+    maNhom: string,
+    isSyncedToType = false,
+  ) => {
+    const canViewBuiltIn = hasTaiLieuGroupPermission(maNhom, 'VIEW');
+    const canReplaceBuiltIn = hasTaiLieuGroupPermission(maNhom, 'REPLACE');
+
+    return (
+      <div
+        key={bItem.id}
+        className={`border rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+          isSyncedToType
+            ? 'border-blue-100 bg-blue-50/30'
+            : 'border-slate-200 bg-slate-50/50 p-3'
+        }`}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            {isSyncedToType ? (
+              <>
+                <Tag color="cyan" className="m-0 text-[11px]">
+                  Đồng bộ từ hồ sơ
+                </Tag>
+                <span className="font-medium text-sm text-gray-800 break-words">
+                  {bItem.ten_tai_lieu}
+                </span>
+              </>
+            ) : (
+              <>
+                <Tag color="blue" className="m-0 text-xs font-medium">
+                  {bItem.ten_tai_lieu}
+                </Tag>
+                <Tag color="default" className="m-0 text-[11px]">
+                  Trường hệ thống
+                </Tag>
+              </>
+            )}
+          </div>
+          <div className="text-xs text-gray-500 mt-1 truncate max-w-xl" title={bItem.raw_url}>
+            {bItem.raw_url}
+          </div>
+        </div>
+        <Space size="small" wrap className="shrink-0">
+          {canViewBuiltIn && (
+            <Button
+              type="primary"
+              ghost
+              size="small"
+              icon={<EyeOutlined />}
+              loading={viewingId === bItem.id}
+              onClick={() => handleViewFile(bItem.url, bItem.id)}
+            >
+              Mở xem
+            </Button>
+          )}
+          {canUpdate && canReplaceBuiltIn && (
+            <Upload
+              beforeUpload={(file) => handleUploadReplaceBuiltIn(file, bItem)}
+              showUploadList={false}
+              maxCount={1}
+            >
+              <Button
+                size="small"
+                icon={<UploadOutlined />}
+                loading={uploadingId === bItem.id}
+              >
+                Thay thế file
+              </Button>
+            </Upload>
+          )}
+        </Space>
+      </div>
+    );
   };
 
   const renderDynamicDocDetails = (doc: DynamicDocItem, maNhom: string) => {
@@ -891,6 +841,228 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
       </div>
     );
   };
+
+  const groupTabItems = useMemo(() => {
+    const getDeduplicatedSyncedBuiltIns = (loaiId: number, activeDocs: DynamicDocItem[]) => {
+      const candidates = syncedBuiltInsByLoaiId.get(loaiId) || [];
+      if (candidates.length === 0) return [];
+      const existingUrls = new Set(activeDocs.map((d) => normalizeComparableUrl(d.raw_url)));
+      return candidates.filter((item) => !existingUrls.has(normalizeComparableUrl(item.raw_url)));
+    };
+
+    const items = visibleGroups.map((group) => {
+      const typesInGroup = group.loai_tai_lieu || [];
+      const canUploadGroup = hasTaiLieuGroupPermission(group.ma_nhom, 'UPLOAD');
+      const builtInForGroup =
+        group.ma_nhom === 'TAI_LIEU_CHUNG'
+          ? unmatchedBuiltInChung
+          : group.ma_nhom === 'TAI_LIEU_DAC_THU'
+            ? unmatchedBuiltInDacThu
+            : [];
+
+      const activeCountInTypes = typesInGroup.reduce((sum, loai) => {
+        const docs = docsByLoaiId.get(loai.id) || [];
+        const activeDocs = docs.filter((d) => d.tai_lieu_hien_hanh);
+        const syncedBuiltIns = getDeduplicatedSyncedBuiltIns(loai.id, activeDocs);
+        return sum + activeDocs.length + syncedBuiltIns.length;
+      }, 0);
+      const uploadedCount = builtInForGroup.length + activeCountInTypes;
+
+      return {
+        key: group.ma_nhom,
+        label: (
+          <span className="inline-flex items-center gap-1.5 font-medium">
+            <FolderOpenOutlined />
+            <span>{group.ten_nhom}</span>
+            <Badge
+              count={uploadedCount}
+              showZero
+              color={uploadedCount > 0 ? '#1677ff' : '#cbd5e1'}
+              style={{ boxShadow: 'none' }}
+            />
+          </span>
+        ),
+        children: (
+          <div className="space-y-3 pt-1">
+            {(group.mo_ta || (canUploadGroup && typesInGroup.length > 0)) && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                <Text type="secondary" className="text-xs">
+                  {group.mo_ta || `Danh sách các loại tài liệu thuộc nhóm "${group.ten_nhom}"`}
+                </Text>
+                {canUploadGroup && typesInGroup.length > 0 && (
+                  <Button
+                    size="small"
+                    type="primary"
+                    ghost
+                    icon={<PlusOutlined />}
+                    onClick={() => handleOpenCreateModal(typesInGroup[0])}
+                    className="self-start sm:self-center shrink-0"
+                  >
+                    Tải lên vào nhóm
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Các trường file hệ thống chưa gán vào loại tài liệu riêng */}
+            {builtInForGroup.map((bItem) => renderBuiltInDocRow(bItem, group.ma_nhom, false))}
+
+            {/* Danh sách các Loại tài liệu cấu hình bên trong Nhóm */}
+            {typesInGroup.length === 0 && builtInForGroup.length === 0 ? (
+              <div className="py-6 text-center text-xs text-gray-400 border border-dashed border-slate-200 rounded-lg">
+                Nhóm này chưa cấu hình loại tài liệu áp dụng cho loại hồ sơ hiện tại.
+              </div>
+            ) : (
+              typesInGroup.map((loai) => {
+                const docs = docsByLoaiId.get(loai.id) || [];
+                const activeDocs = docs.filter((d) => d.tai_lieu_hien_hanh);
+                const oldDocs = docs.filter((d) => !d.tai_lieu_hien_hanh);
+                const syncedBuiltIns = getDeduplicatedSyncedBuiltIns(loai.id, activeDocs);
+                const totalActive = activeDocs.length + syncedBuiltIns.length;
+                const historyExpanded = Boolean(showHistoryMap[loai.id]);
+
+                return (
+                  <div
+                    key={loai.id}
+                    className="border border-slate-200 rounded-lg p-3 bg-white hover:border-blue-200 transition-colors"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <FileTextOutlined className="text-slate-400" />
+                          <Tag
+                            color={getLoaiHoSoAntdColor(loai.ma_loai_tai_lieu, loai.mau_sac)}
+                            className="font-semibold m-0 text-xs px-2 py-0.5"
+                          >
+                            {loai.ten_loai_tai_lieu}
+                          </Tag>
+                          {totalActive === 0 ? (
+                            <Tag color="default" className="text-[11px] m-0">
+                              Chưa tải lên
+                            </Tag>
+                          ) : (
+                            <Tag color="blue" className="text-[11px] m-0">
+                              {totalActive} tệp hiện hành
+                            </Tag>
+                          )}
+                          {oldDocs.length > 0 && (
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<HistoryOutlined />}
+                              className="!p-0 !h-auto text-xs text-gray-500"
+                              onClick={() =>
+                                setShowHistoryMap((prev) => ({
+                                  ...prev,
+                                  [loai.id]: !prev[loai.id],
+                                }))
+                              }
+                            >
+                              {historyExpanded ? 'Ẩn bản cũ' : `${oldDocs.length} phiên bản cũ`}
+                            </Button>
+                          )}
+                        </div>
+                        {loai.mo_ta && (
+                          <div className="text-xs text-gray-400 mt-1">{loai.mo_ta}</div>
+                        )}
+                      </div>
+
+                      {canUploadGroup && (
+                        <Button
+                          size="small"
+                          type={totalActive === 0 ? 'primary' : 'default'}
+                          icon={<PlusOutlined />}
+                          onClick={() => handleOpenCreateModal(loai)}
+                          className="self-start sm:self-center shrink-0"
+                        >
+                          {totalActive === 0 ? 'Tải lên' : 'Thêm tệp'}
+                        </Button>
+                      )}
+                    </div>
+
+                    {totalActive > 0 ? (
+                      <div className="space-y-2 mt-2.5">
+                        {activeDocs.map((doc) => renderDynamicDocDetails(doc, group.ma_nhom))}
+                        {syncedBuiltIns.map((bItem) =>
+                          renderBuiltInDocRow(bItem, group.ma_nhom, true),
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400 italic pt-2">
+                        Chưa có tài liệu nào được tải lên cho mục &quot;{loai.ten_loai_tai_lieu}&quot;.
+                      </div>
+                    )}
+
+                    {historyExpanded && oldDocs.length > 0 && (
+                      <div className="space-y-2 mt-2.5 pt-2.5 border-t border-dashed border-slate-200">
+                        <div className="text-[11px] font-medium text-gray-500">
+                          Lịch sử phiên bản trước:
+                        </div>
+                        {oldDocs.map((doc) => renderDynamicDocDetails(doc, group.ma_nhom))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ),
+      };
+    });
+
+    const hiddenChungBuiltIns =
+      !visibleGroups.some((g) => g.ma_nhom === 'TAI_LIEU_CHUNG') &&
+      hasTaiLieuGroupPermission('TAI_LIEU_CHUNG', 'VIEW')
+        ? unmatchedBuiltInChung.map((item) => ({ item, maNhom: 'TAI_LIEU_CHUNG' }))
+        : [];
+    const hiddenDacThuBuiltIns =
+      !visibleGroups.some((g) => g.ma_nhom === 'TAI_LIEU_DAC_THU') &&
+      hasTaiLieuGroupPermission('TAI_LIEU_DAC_THU', 'VIEW')
+        ? unmatchedBuiltInDacThu.map((item) => ({ item, maNhom: 'TAI_LIEU_DAC_THU' }))
+        : [];
+    const fallbackBuiltIns = [...hiddenChungBuiltIns, ...hiddenDacThuBuiltIns];
+
+    if (orphanDocs.length > 0 || fallbackBuiltIns.length > 0) {
+      const otherCount = orphanDocs.length + fallbackBuiltIns.length;
+      items.push({
+        key: '__ORPHAN__',
+        label: (
+          <span className="inline-flex items-center gap-1.5 font-medium">
+            <FileTextOutlined />
+            <span>Tài liệu khác</span>
+            <Badge count={otherCount} showZero color="#64748b" style={{ boxShadow: 'none' }} />
+          </span>
+        ),
+        children: (
+          <div className="space-y-2 pt-1">
+            {fallbackBuiltIns.map(({ item, maNhom }) => renderBuiltInDocRow(item, maNhom, false))}
+            {orphanDocs.map((doc) => renderDynamicDocDetails(doc, doc.ma_nhom))}
+          </div>
+        ),
+      });
+    }
+
+    return items;
+  }, [
+    visibleGroups,
+    orphanDocs,
+    unmatchedBuiltInChung,
+    unmatchedBuiltInDacThu,
+    syncedBuiltInsByLoaiId,
+    docsByLoaiId,
+    showHistoryMap,
+    hasTaiLieuGroupPermission,
+    viewingId,
+    uploadingId,
+    canUpdate,
+  ]);
+
+  const resolvedActiveTab = useMemo(() => {
+    if (activeGroupTab && groupTabItems.some((item) => item.key === activeGroupTab)) {
+      return activeGroupTab;
+    }
+    return groupTabItems[0]?.key;
+  }, [activeGroupTab, groupTabItems]);
 
   return (
     <div className="space-y-3">
