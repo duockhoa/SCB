@@ -38,6 +38,7 @@ import {
   FormOutlined,
   LockOutlined,
   FileTextOutlined,
+  SlidersOutlined,
 } from '@ant-design/icons';
 import type { CustomFieldConfig, LoaiHoSo } from '@/types/ho-so.type';
 import {
@@ -56,6 +57,7 @@ import {
 } from '@/utils/loai-ho-so';
 import CustomFieldsBuilder, { cleanCustomFieldsPayload } from './CustomFieldsBuilder';
 import LoaiTaiLieuSettingsPanel from './LoaiTaiLieuSettingsPanel';
+import LoaiHoSoTaiLieuMatrixPanel from './LoaiHoSoTaiLieuMatrixPanel';
 
 const { Title, Text } = Typography;
 
@@ -754,6 +756,16 @@ export default function DanhMucSettingsTab() {
             </span>
           ),
           children: <LoaiTaiLieuSettingsPanel />,
+        },
+        {
+          key: 'cau-hinh-tai-lieu-loai-ho-so',
+          label: (
+            <span className="flex items-center gap-1.5 font-medium">
+              <SlidersOutlined />
+              Cấu hình theo Loại hồ sơ
+            </span>
+          ),
+          children: <LoaiHoSoTaiLieuMatrixPanel />,
         },
       ]}
     />

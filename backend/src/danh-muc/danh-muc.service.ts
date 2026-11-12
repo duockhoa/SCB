@@ -7,6 +7,7 @@ import {
   CustomFieldConfigDto,
   UpdateLoaiHoSoDto,
   UpdateLoaiHoSoExpiryDto,
+  UpdateLoaiHoSoTaiLieuConfigDto,
 } from './dto/loai-ho-so.dto';
 import {
   CreateLoaiTaiLieuDto,
@@ -917,5 +918,123 @@ export class DanhMucService implements OnModuleInit {
     }
 
     return { ...updated, syncCount };
+  }
+
+  private async syncScopeItemForLoaiHoSo(params: {
+    loaiHoSoId: number;
+    allLoaiHoSoIds: number[];
+    item: { id: number; ap_dung_tat_ca: boolean; loai_ho_so_links: Array<{ loai_ho_so_id: number }> };
+    shouldEnable: boolean;
+    onUpdateScope: (apDungTatCa: boolean) => Promise<unknown>;
+    onCreateLinks: (loaiHoSoIds: number[]) => Promise<unknown>;
+    onDeleteLink: () => Promise<unknown>;
+  }) {
+    const {
+      loaiHoSoId,
+      allLoaiHoSoIds,
+      item,
+      shouldEnable,
+      onUpdateScope,
+      onCreateLinks,
+      onDeleteLink,
+    } = params;
+    const wasEnabled =
+      item.ap_dung_tat_ca || item.loai_ho_so_links.some((l) => l.loai_ho_so_id === loaiHoSoId);
+
+    if (wasEnabled === shouldEnable) return;
+
+    if (shouldEnable) {
+      if (!item.ap_dung_tat_ca) {
+        await onCreateLinks([loaiHoSoId]);
+      }
+      return;
+    }
+
+    if (item.ap_dung_tat_ca) {
+      await onUpdateScope(false);
+      const otherIds = allLoaiHoSoIds.filter((id) => id !== loaiHoSoId);
+      if (otherIds.length > 0) {
+        await onCreateLinks(otherIds);
+      }
+    } else {
+      await onDeleteLink();
+    }
+  }
+
+  async updateLoaiHoSoTaiLieuConfig(loaiHoSoId: number, dto: UpdateLoaiHoSoTaiLieuConfigDto) {
+    const loaiHoSo = await this.prisma.dm_loai_ho_so.findUnique({ where: { id: loaiHoSoId } });
+    if (!loaiHoSo) throw new NotFoundException('Không tìm thấy loại hồ sơ');
+
+    const selectedNhomIds = new Set(dto.nhom_tai_lieu_ids || []);
+    const selectedLoaiTaiLieuIds = new Set(dto.loai_tai_lieu_ids || []);
+
+    const [allLoaiHoSo, allGroups, allTypes] = await Promise.all([
+      this.prisma.dm_loai_ho_so.findMany({ select: { id: true } }),
+      this.prisma.dm_nhom_tai_lieu.findMany({
+        include: { loai_ho_so_links: { select: { loai_ho_so_id: true } } },
+      }),
+      this.prisma.dm_loai_tai_lieu.findMany({
+        include: { loai_ho_so_links: { select: { loai_ho_so_id: true } } },
+      }),
+    ]);
+
+    const allLoaiHoSoIds = allLoaiHoSo.map((item) => item.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const group of allGroups) {
+        await this.syncScopeItemForLoaiHoSo({
+          loaiHoSoId,
+          allLoaiHoSoIds,
+          item: group,
+          shouldEnable: selectedNhomIds.has(group.id),
+          onUpdateScope: (ap_dung_tat_ca) =>
+            tx.dm_nhom_tai_lieu.update({ where: { id: group.id }, data: { ap_dung_tat_ca } }),
+          onCreateLinks: (loaiHoSoIds) =>
+            tx.dm_loai_ho_so_nhom_tai_lieu.createMany({
+              data: loaiHoSoIds.map((id, idx) => ({
+                loai_ho_so_id: id,
+                nhom_tai_lieu_id: group.id,
+                thu_tu: idx,
+              })),
+              skipDuplicates: true,
+            }),
+          onDeleteLink: () =>
+            tx.dm_loai_ho_so_nhom_tai_lieu.deleteMany({
+              where: { loai_ho_so_id: loaiHoSoId, nhom_tai_lieu_id: group.id },
+            }),
+        });
+      }
+
+      for (const loai of allTypes) {
+        await this.syncScopeItemForLoaiHoSo({
+          loaiHoSoId,
+          allLoaiHoSoIds,
+          item: loai,
+          shouldEnable: selectedLoaiTaiLieuIds.has(loai.id),
+          onUpdateScope: (ap_dung_tat_ca) =>
+            tx.dm_loai_tai_lieu.update({ where: { id: loai.id }, data: { ap_dung_tat_ca } }),
+          onCreateLinks: (loaiHoSoIds) =>
+            tx.dm_loai_ho_so_tai_lieu.createMany({
+              data: loaiHoSoIds.map((id, idx) => ({
+                loai_ho_so_id: id,
+                loai_tai_lieu_id: loai.id,
+                thu_tu: idx,
+              })),
+              skipDuplicates: true,
+            }),
+          onDeleteLink: () =>
+            tx.dm_loai_ho_so_tai_lieu.deleteMany({
+              where: { loai_ho_so_id: loaiHoSoId, loai_tai_lieu_id: loai.id },
+            }),
+        });
+      }
+    });
+
+    return {
+      message: `Đã lưu cấu hình nhóm & loại tài liệu cho "${loaiHoSo.ten_loai}"`,
+      loai_ho_so_id: loaiHoSoId,
+      nhom_tai_lieu_ids: [...selectedNhomIds],
+      loai_tai_lieu_ids: [...selectedLoaiTaiLieuIds],
+    };
   }
 }

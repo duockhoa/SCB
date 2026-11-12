@@ -66,6 +66,24 @@ export const useUpdateLoaiHoSoExpiry = () => {
   });
 };
 
+export const useUpdateLoaiHoSoTaiLieuConfig = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: { nhom_tai_lieu_ids: number[]; loai_tai_lieu_ids: number[] };
+    }) => danhMucService.updateLoaiHoSoTaiLieuConfig(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'NHOM_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['DANH_MUC', 'LOAI_TAI_LIEU'] });
+      queryClient.invalidateQueries({ queryKey: ['HOSO_DETAIL'] });
+    },
+  });
+};
+
 export const useTinhTrangList = () => {
   return useQuery({
     queryKey: ['DANH_MUC', 'TINH_TRANG'],

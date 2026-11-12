@@ -4,7 +4,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { RequirePermissions } from '../auth/decorators/roles.decorator';
-import { CreateLoaiHoSoDto, UpdateLoaiHoSoDto, UpdateLoaiHoSoExpiryDto } from './dto/loai-ho-so.dto';
+import { CreateLoaiHoSoDto, UpdateLoaiHoSoDto, UpdateLoaiHoSoExpiryDto, UpdateLoaiHoSoTaiLieuConfigDto } from './dto/loai-ho-so.dto';
 import { CreateLoaiTaiLieuDto, UpdateLoaiTaiLieuDto } from './dto/loai-tai-lieu.dto';
 import { CreateNhomTaiLieuDto, UpdateNhomTaiLieuDto } from './dto/nhom-tai-lieu.dto';
 
@@ -54,6 +54,16 @@ export class DanhMucController {
     @Body() body: UpdateLoaiHoSoExpiryDto,
   ) {
     return this.danhMucService.updateLoaiHoSoExpiry(id, body);
+  }
+
+  @Put('loai-ho-so/:id/tai-lieu-config')
+  @ApiOperation({ summary: 'Cấu hình nhóm tài liệu và loại tài liệu áp dụng cho từng loại hồ sơ' })
+  @RequirePermissions('DANH_MUC_UPDATE', 'DANH_MUC_MANAGE')
+  updateLoaiHoSoTaiLieuConfig(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateLoaiHoSoTaiLieuConfigDto,
+  ) {
+    return this.danhMucService.updateLoaiHoSoTaiLieuConfig(id, body);
   }
 
   @Get('tinh-trang')

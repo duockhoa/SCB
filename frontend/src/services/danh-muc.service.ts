@@ -52,6 +52,10 @@ export const danhMucService = {
     id: number,
     data: { thoi_gian_canh_bao: number; don_vi_canh_bao?: string; dong_bo_tat_ca?: boolean },
   ) => axiosInstance.patch(`/danh-muc/loai-ho-so/${id}/canh-bao-han`, data),
+  updateLoaiHoSoTaiLieuConfig: async (
+    id: number,
+    data: { nhom_tai_lieu_ids: number[]; loai_tai_lieu_ids: number[] },
+  ) => axiosInstance.put(`/danh-muc/loai-ho-so/${id}/tai-lieu-config`, data),
   getTinhTrang: async () => axiosInstance.get('/danh-muc/tinh-trang'),
   getNhomTaiLieu: async (params?: { includeInactive?: boolean; loaiHoSoId?: number }) =>
     axiosInstance.get('/danh-muc/nhom-tai-lieu', {

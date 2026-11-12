@@ -193,3 +193,15 @@ export class UpdateLoaiHoSoExpiryDto {
   dong_bo_tat_ca?: boolean;
 }
 
+export class UpdateLoaiHoSoTaiLieuConfigDto {
+  @ApiProperty({ type: [Number], description: 'Danh sách ID nhóm tài liệu áp dụng cho loại hồ sơ' })
+  @IsArray()
+  @IsInt({ each: true })
+  nhom_tai_lieu_ids: number[];
+
+  @ApiProperty({ type: [Number], description: 'Danh sách ID loại tài liệu áp dụng cho loại hồ sơ' })
+  @IsArray()
+  @IsInt({ each: true })
+  loai_tai_lieu_ids: number[];
+}
+
