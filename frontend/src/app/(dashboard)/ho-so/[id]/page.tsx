@@ -55,22 +55,19 @@ export default function HoSoDetailPage() {
     if (!thong_tin_rieng) return <Empty description="Không có thông tin đặc thù" />;
 
     const items = Object.entries(thong_tin_rieng)
-      .filter(([k, v]) => k !== 'id' && k !== 'ho_so_chung_id' && v !== null && v !== undefined && v !== '')
+      .filter(
+        ([k, v]) =>
+          k !== 'id' &&
+          k !== 'ho_so_chung_id' &&
+          !isFileFieldKey(k, hoSoData.loai_ho_so) &&
+          v !== null &&
+          v !== undefined &&
+          v !== '',
+      )
       .map(([k, v], idx) => {
         const fieldCfg = findFieldConfig(k, hoSoData.loai_ho_so);
-        const isFile = isFileFieldKey(k, hoSoData.loai_ho_so);
         let children: React.ReactNode = String(v);
-        if (isFile) {
-          children = (
-            <button
-              type="button"
-              onClick={() => openDocumentUrl(String(v))}
-              style={{ color: '#1890ff', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-            >
-              [Xem tài liệu]
-            </button>
-          );
-        } else if (fieldCfg?.type === 'date' && dayjs(String(v)).isValid()) {
+        if (fieldCfg?.type === 'date' && dayjs(String(v)).isValid()) {
           children = dayjs(String(v)).format('DD/MM/YYYY');
         }
         return {

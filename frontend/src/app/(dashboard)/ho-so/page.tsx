@@ -137,22 +137,19 @@ function HoSoMasterDetailContent() {
     }
 
     const items = Object.entries(thong_tin_rieng)
-      .filter(([k, v]) => k !== 'id' && k !== 'ho_so_chung_id' && v !== null && v !== undefined && v !== '')
+      .filter(
+        ([k, v]) =>
+          k !== 'id' &&
+          k !== 'ho_so_chung_id' &&
+          !isFileFieldKey(k, currentData?.loai_ho_so) &&
+          v !== null &&
+          v !== undefined &&
+          v !== '',
+      )
       .map(([k, v], idx) => {
         const fieldCfg = findFieldConfig(k, currentData?.loai_ho_so);
-        const isFile = isFileFieldKey(k, currentData?.loai_ho_so);
         let displayNode: React.ReactNode = String(v);
-        if (isFile) {
-          displayNode = (
-            <button
-              type="button"
-              onClick={() => openDocumentUrl(String(v))}
-              className="text-blue-600 hover:underline cursor-pointer bg-transparent border-0 p-0 text-left break-all"
-            >
-              [Xem tài liệu]
-            </button>
-          );
-        } else if (fieldCfg?.type === 'date' && dayjs(String(v)).isValid()) {
+        if (fieldCfg?.type === 'date' && dayjs(String(v)).isValid()) {
           displayNode = dayjs(String(v)).format('DD/MM/YYYY');
         }
         return {
@@ -517,11 +514,17 @@ function HoSoMasterDetailContent() {
               </Card>
             </div>
 
-            <div style={{ marginBottom: 24 }}>
-              <Card style={{ border: '1px solid #e5e7eb', borderRadius: 8 }} title="Thông tin chi tiết">
-                {renderThongTinDacThu()}
-              </Card>
-            </div>
+            {(() => {
+              const dacThuNode = renderThongTinDacThu();
+              if (!dacThuNode) return null;
+              return (
+                <div style={{ marginBottom: 24 }}>
+                  <Card style={{ border: '1px solid #e5e7eb', borderRadius: 8 }} title="Thông tin đặc thù hồ sơ">
+                    {dacThuNode}
+                  </Card>
+                </div>
+              );
+            })()}
 
             <div style={{ marginBottom: 24 }}>
               <Card style={{ border: '1px solid #e5e7eb', borderRadius: 8 }} title="Tài liệu đính kèm">
