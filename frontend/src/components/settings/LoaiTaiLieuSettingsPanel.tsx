@@ -350,7 +350,7 @@ export default function LoaiTaiLieuSettingsPanel() {
     Boolean(editingItem?.is_system || (editingItem?.so_luong_tai_lieu ?? 0) > 0);
 
   return (
-    <Card className="rounded-xl border border-gray-200 shadow-sm" styles={{ body: { padding: '24px' } }}>
+    <Card className="rounded-xl border border-gray-200 shadow-sm" styles={{ body: { padding: '16px 20px' } }}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <Title level={4} className="!m-0 text-gray-800 flex items-center gap-2">
@@ -361,7 +361,7 @@ export default function LoaiTaiLieuSettingsPanel() {
             Phân loại tài liệu đính kèm theo từng nhóm hồ sơ và định nghĩa các trường dữ liệu riêng (Số công văn, Ngày ban hành, Cơ quan cấp...) cho từng nhóm.
           </Text>
         </div>
-        <Space>
+        <Space wrap>
           <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isLoading}>
             Làm mới
           </Button>
@@ -423,6 +423,8 @@ export default function LoaiTaiLieuSettingsPanel() {
         okText={crudMode === 'create' ? 'Tạo loại tài liệu' : 'Lưu thay đổi'}
         cancelText="Hủy"
         width={860}
+        style={{ maxWidth: 'calc(100vw - 24px)' }}
+        styles={{ body: { maxHeight: '72dvh', overflowY: 'auto', overflowX: 'hidden' } }}
         destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSave} className="mt-4">

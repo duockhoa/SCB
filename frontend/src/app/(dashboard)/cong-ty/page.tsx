@@ -97,16 +97,17 @@ export default function CongTyPage() {
   ];
 
   return (
-    <div className="p-6 h-full flex flex-col bg-gray-50">
+    <div className="p-3 sm:p-4 lg:p-6 h-full flex flex-col bg-gray-50">
       <Card 
-        title={<span className="text-xl font-bold text-gray-800">Danh mục Công ty (Tổng: {dsCongTy.length})</span>} 
+        title={<span className="text-base sm:text-xl font-bold text-gray-800 whitespace-normal">Danh mục Công ty (Tổng: {dsCongTy.length})</span>} 
         variant="borderless"
         className="flex-1 min-h-0 shadow-sm rounded-xl overflow-hidden flex flex-col"
         styles={{ body: { flex: 1, minHeight: 0, padding: 0, display: 'flex', flexDirection: 'column' } }}
         extra={
           canCongTyCreate && (
             <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()} className="bg-emerald-600 hover:bg-emerald-500">
-              Thêm mới
+              <span className="hidden sm:inline">Thêm mới</span>
+              <span className="sm:hidden">Thêm</span>
             </Button>
           )
         }
@@ -118,6 +119,8 @@ export default function CongTyPage() {
             rowKey="id"
             loading={isLoading}
             pagination={false}
+            scroll={{ x: 750 }}
+            size="middle"
             className="w-full"
           />
         </div>
@@ -131,6 +134,7 @@ export default function CongTyPage() {
         confirmLoading={creating || updating}
         okText="Lưu"
         cancelText="Hủy"
+        style={{ maxWidth: 'calc(100vw - 24px)' }}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item name="ten_cong_ty" label="Tên công ty" rules={[{ required: true, message: 'Vui lòng nhập tên công ty' }]}>

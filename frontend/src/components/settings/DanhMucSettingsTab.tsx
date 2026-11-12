@@ -422,7 +422,7 @@ export default function DanhMucSettingsTab() {
 
   const loaiHoSoSection = (
     <div className="space-y-6">
-      <Card className="rounded-xl border border-gray-200 shadow-sm" styles={{ body: { padding: '24px' } }}>
+      <Card className="rounded-xl border border-gray-200 shadow-sm" styles={{ body: { padding: '16px 20px' } }}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
             <Title level={4} className="!m-0 text-gray-800 flex items-center gap-2">
@@ -433,7 +433,7 @@ export default function DanhMucSettingsTab() {
               Thêm mới, đổi tên, thiết lập trường thông tin đặc thù động và mốc cảnh báo &quot;Sắp hết hạn&quot; cho từng loại hồ sơ.
             </Text>
           </div>
-          <Space>
+          <Space wrap>
             <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isLoading}>
               Làm mới
             </Button>
@@ -494,6 +494,8 @@ export default function DanhMucSettingsTab() {
         footer={null}
         destroyOnHidden
         width={820}
+        style={{ maxWidth: 'calc(100vw - 24px)' }}
+        styles={{ body: { maxHeight: '72dvh', overflowY: 'auto', overflowX: 'hidden' } }}
       >
         <Form form={crudForm} layout="vertical" onFinish={handleSaveCrud} className="mt-4">
           <Row gutter={16}>
@@ -644,6 +646,7 @@ export default function DanhMucSettingsTab() {
         footer={null}
         destroyOnHidden
         width={560}
+        style={{ maxWidth: 'calc(100vw - 24px)' }}
       >
         <Form form={expiryForm} layout="vertical" onFinish={handleSaveExpiry} className="mt-4">
           <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200 flex justify-between items-center">

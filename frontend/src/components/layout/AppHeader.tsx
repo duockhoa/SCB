@@ -1,21 +1,24 @@
 'use client';
 
-import { Layout, Avatar, Dropdown } from 'antd';
-import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
+import { Layout, Avatar, Dropdown, Grid, Input } from 'antd';
+import { MenuFoldOutlined, MenuUnfoldOutlined, MenuOutlined, SearchOutlined, CloseOutlined } from '@ant-design/icons';
 import { LogOut, User as UserIcon, Settings, LayoutGrid } from 'lucide-react';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
 
 import Cookies from 'js-cookie';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import HeaderSearch from '@/components/common/HeaderSearch';
 import HeaderNotification from '@/components/common/HeaderNotification';
 
 const { Header } = Layout;
 
 export default function AppHeader() {
-  const { sidebarCollapsed, toggleSidebar } = useUiStore();
+  const { sidebarCollapsed, toggleSidebar, toggleMobileMenu, globalSearch, setGlobalSearch } = useUiStore();
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const screens = Grid.useBreakpoint();
+  const isMobile = screens.md === false;
   const { user, logout, fetchUser } = useAuthStore();
   const router = useRouter();
 
@@ -36,7 +39,7 @@ export default function AppHeader() {
 
   // Đồng bộ cấu trúc Menu với UserCard của HRM
   const userMenu: any = [
-    { key: 'setting', label: <span className="flex items-center"><Settings className="mr-2 h-4 w-4" /> Cài đặt</span>, onClick: () => router.push('/setting') },
+    { key: 'setting', label: <span className="flex items-center"><Settings className="mr-2 h-4 w-4" /> Cài đặt</span>, onClick: () => router.push('/settings') },
     { key: 'profile', label: <span className="flex items-center"><UserIcon className="mr-2 h-4 w-4" /> Hồ sơ cá nhân</span>, onClick: () => router.push('/profile') },
     { key: 'apps', label: <span className="flex items-center"><LayoutGrid className="mr-2 h-4 w-4" /> Tất cả ứng dụng</span>, onClick: () => { window.location.href = process.env.NEXT_PUBLIC_FRONTEND_ROOT_URL || 'https://hrm.dkpharma.io.vn'; } },
     { type: 'divider' },
@@ -44,36 +47,51 @@ export default function AppHeader() {
   ];
 
   return (
-    <Header 
-      className="flex items-center justify-between p-2 px-4 border-b border-gray-200 h-[60px] sticky top-0 z-10"
-      style={{ backgroundColor: '#ffffff', padding: '0 16px' }}
-    >
-      {/* KHỐI BÊN TRÁI: Toggle + Logo + Tiêu đề (Đồng bộ HRM) */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-        >
-          {sidebarCollapsed ? <MenuUnfoldOutlined className="text-xl text-gray-700" /> : <MenuFoldOutlined className="text-xl text-gray-700" />}
-        </button>
-        
-        {/* Logo đồng bộ HRM: dùng img HTML thông thường để tránh lỗi Sharp/404 trên server */}
-        <img 
-          src="/dkpharmalogo.png" 
-          alt="DKPharma Logo" 
-          width={140}
-          height={60}
-          className="p-4 hidden sm:block object-contain" 
-        />
-        
-        {/* Tiêu đề: giống HRM text-xl hidden md:block */}
-        <h1 className="text-xl hidden md:block m-0">Hồ Sơ Công Bố</h1>
-      </div>
+    <>
+      <Header 
+        className="flex items-center justify-between border-b border-gray-200 h-[60px] sticky top-0 z-20"
+        style={{ backgroundColor: '#ffffff', padding: '0 12px', lineHeight: 'normal' }}
+      >
+        {/* KHỐI BÊN TRÁI: Toggle + Logo + Tiêu đề */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            aria-label="Toggle menu"
+            onClick={() => (isMobile ? toggleMobileMenu() : toggleSidebar())}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center shrink-0"
+          >
+            {isMobile ? (
+              <MenuOutlined className="text-lg text-gray-700" />
+            ) : sidebarCollapsed ? (
+              <MenuUnfoldOutlined className="text-xl text-gray-700" />
+            ) : (
+              <MenuFoldOutlined className="text-xl text-gray-700" />
+            )}
+          </button>
+          
+          {/* Logo đồng bộ HRM: dùng img HTML thông thường để tránh lỗi Sharp/404 trên server */}
+          <img 
+            src="/dkpharmalogo.png" 
+            alt="DKPharma Logo" 
+            className="h-7 sm:h-9 w-auto max-w-[110px] sm:max-w-[140px] object-contain shrink-0" 
+          />
+          
+          {/* Tiêu đề */}
+          <h1 className="text-lg lg:text-xl font-semibold hidden md:block m-0 whitespace-nowrap">Hồ Sơ Công Bố</h1>
+        </div>
 
-      {/* KHỐI BÊN PHẢI: Search, Notification, UserCard (Đồng bộ HRM) */}
-      <div className="flex items-center gap-4">
-        <HeaderSearch />
-        <HeaderNotification />
+        {/* KHỐI BÊN PHẢI: Search, Notification, UserCard */}
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <button
+            type="button"
+            aria-label="Tìm kiếm"
+            onClick={() => setMobileSearchOpen((prev) => !prev)}
+            className="md:hidden p-2 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center"
+          >
+            {mobileSearchOpen ? <CloseOutlined /> : <SearchOutlined className="text-base" />}
+          </button>
+          <HeaderSearch />
+          <HeaderNotification />
 
         {/* UserCard Component Đồng bộ HRM */}
         <Dropdown menu={{ items: userMenu }} placement="bottomRight" trigger={['click']}>
@@ -100,5 +118,18 @@ export default function AppHeader() {
         </Dropdown>
       </div>
     </Header>
+    {mobileSearchOpen && (
+      <div className="md:hidden bg-white border-b border-gray-200 px-3 py-2 sticky top-[60px] z-10 shadow-xs">
+        <Input.Search
+          placeholder="Tìm kiếm mã, tên sản phẩm, công ty..."
+          allowClear
+          value={globalSearch}
+          onChange={(e) => setGlobalSearch(e.target.value)}
+          onSearch={(val) => setGlobalSearch(val)}
+          autoFocus
+        />
+      </div>
+    )}
+    </>
   );
 }

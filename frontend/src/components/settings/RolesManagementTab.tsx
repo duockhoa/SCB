@@ -334,7 +334,7 @@ export default function RolesManagementTab() {
   }
 
   return (
-    <Card className="rounded-xl border border-gray-200 shadow-sm" styles={{ body: { padding: '24px' } }}>
+    <Card className="rounded-xl border border-gray-200 shadow-sm" styles={{ body: { padding: '16px 20px' } }}>
       {/* Header thanh công cụ */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 pb-4 border-b border-gray-100">
         <div>
@@ -424,7 +424,7 @@ export default function RolesManagementTab() {
             <table className="w-full border-collapse text-left text-sm">
               <thead className="sticky top-0 z-20 bg-gray-50 shadow-xs">
                 <tr className="bg-gray-50 border-b border-gray-200 text-gray-700">
-                  <th className="py-3.5 px-4 font-semibold min-w-[320px] sticky left-0 top-0 bg-gray-50 z-30 border-r border-gray-200">
+                  <th className="py-3.5 px-3 sm:px-4 font-semibold min-w-[200px] sm:min-w-[280px] lg:min-w-[320px] sticky left-0 top-0 bg-gray-50 z-30 border-r border-gray-200">
                     Danh mục Quyền hạn theo Module
                   </th>
                   {roles.map((r) => {
@@ -433,7 +433,7 @@ export default function RolesManagementTab() {
                     const isAll = currentPerms.length === allPermsCount;
 
                     return (
-                      <th key={r.id} className="py-3 px-3 font-semibold min-w-[170px] text-center border-r border-gray-100 last:border-r-0 bg-gray-50">
+                      <th key={r.id} className="py-3 px-2 sm:px-3 font-semibold min-w-[140px] sm:min-w-[170px] text-center border-r border-gray-100 last:border-r-0 bg-gray-50">
                         <div className="flex flex-col items-center gap-1">
                           <Tag color={getRoleBadgeColor(r.ma_vai_tro)} className="m-0 font-semibold px-2 py-0.5">
                             {r.ma_vai_tro}
@@ -746,6 +746,7 @@ export default function RolesManagementTab() {
         open={isRoleModalOpen}
         onCancel={() => setIsRoleModalOpen(false)}
         footer={null}
+        style={{ maxWidth: 'calc(100vw - 24px)' }}
         destroyOnClose
       >
         <Form

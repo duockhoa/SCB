@@ -198,6 +198,8 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
       okText="Lưu"
       cancelText="Hủy"
       width={720}
+      style={{ maxWidth: 'calc(100vw - 24px)' }}
+      styles={{ body: { maxHeight: '72dvh', overflowY: 'auto', overflowX: 'hidden' } }}
     >
       <Form
         form={form}
@@ -205,7 +207,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
         onFinish={handleFinish}
         onValuesChange={handleValuesChange}
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
           <Form.Item name="ma_ho_so" label="Mã hồ sơ" rules={[{ required: true, message: 'Vui lòng nhập mã hồ sơ' }]}>
             <Input placeholder="Nhập mã hồ sơ" />
           </Form.Item>
@@ -269,7 +271,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
           </Form.Item>
 
           {isApDungQuyDinhWatch && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px', marginTop: 12 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mt-3">
               <Form.Item
                 name="can_cu_quy_dinh"
                 label="Căn cứ pháp lý quy định"
@@ -285,7 +287,7 @@ export default function HoSoFormModal({ mode, open, onCancel, initialData }: Pro
                 <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày (nếu có)" allowClear />
               </Form.Item>
 
-              <div style={{ gridColumn: 'span 2' }}>
+              <div className="sm:col-span-2">
                 <Form.Item
                   name="tai_lieu_quy_dinh_url"
                   label="Tài liệu / Công văn quy định đính kèm (Link hoặc tải file lên)"

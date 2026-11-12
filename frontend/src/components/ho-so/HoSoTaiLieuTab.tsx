@@ -664,7 +664,7 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
             <Select
               allowClear
               placeholder="Lọc theo loại tài liệu"
-              className="min-w-[200px]"
+              className="w-full sm:w-[220px]"
               size="small"
               value={filterLoaiId}
               onChange={(val) => setFilterLoaiId(val)}
@@ -706,6 +706,8 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
         }
         cancelText="Hủy"
         width={680}
+        style={{ maxWidth: 'calc(100vw - 24px)' }}
+        styles={{ body: { maxHeight: '72dvh', overflowY: 'auto', overflowX: 'hidden' } }}
         destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSubmitDocModal} className="mt-3">

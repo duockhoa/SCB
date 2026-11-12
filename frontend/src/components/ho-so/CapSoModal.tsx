@@ -44,6 +44,7 @@ export default function CapSoModal({ open, onCancel, hoSo }: Props) {
       confirmLoading={isPending}
       okText="Xác nhận"
       cancelText="Hủy"
+      style={{ maxWidth: 'calc(100vw - 24px)' }}
     >
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         <Form.Item name="so_chinh" label="Số công bố" rules={[{ required: true, message: 'Vui lòng nhập số công bố' }]}>

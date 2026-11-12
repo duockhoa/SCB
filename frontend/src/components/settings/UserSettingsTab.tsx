@@ -296,6 +296,8 @@ export default function UserSettingsTab() {
         open={!!selectedUserForPerms}
         onCancel={() => setSelectedUserForPerms(null)}
         width={750}
+        style={{ maxWidth: 'calc(100vw - 24px)' }}
+        styles={{ body: { maxHeight: '72dvh', overflowY: 'auto' } }}
         footer={[
           <Button key="cancel" onClick={() => setSelectedUserForPerms(null)}>
             Hủy

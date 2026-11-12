@@ -77,6 +77,8 @@ export default function QuyDinhTamThoiModal({ open, onCancel, hoSo }: Props) {
       okText="Lưu thiết lập"
       cancelText="Đóng"
       width={580}
+      style={{ maxWidth: 'calc(100vw - 24px)' }}
+      styles={{ body: { maxHeight: '72dvh', overflowY: 'auto' } }}
     >
       <Alert
         type="info"

@@ -135,7 +135,7 @@ export default function EmailSettingsTab() {
               onFinish={handleSmtpSubmit}
               initialValues={{ secure: false, is_active: true }}
             >
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                 <Form.Item name="host" label="Máy chủ SMTP (Host)" rules={[{ required: true, message: 'Vui lòng nhập Host' }]}>
                   <Input placeholder="VD: smtp.gmail.com" />
                 </Form.Item>
@@ -148,7 +148,7 @@ export default function EmailSettingsTab() {
                 <Switch />
               </Form.Item>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
                 <Form.Item name="user" label="Tài khoản đăng nhập" rules={[{ required: true, message: 'Vui lòng nhập tài khoản' }]}>
                   <Input placeholder="VD: email@example.com" />
                 </Form.Item>
@@ -169,7 +169,7 @@ export default function EmailSettingsTab() {
                 <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
               </Form.Item>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-wrap gap-3 pt-2">
                 <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={isUpdatingSmtp}>
                   Lưu cấu hình SMTP
                 </Button>
@@ -207,12 +207,16 @@ export default function EmailSettingsTab() {
                   Các email này sẽ nhận được thông báo khi các sự kiện đánh dấu bên cạnh diễn ra.
                 </Text>
 
-                <Form form={emailForm} onFinish={handleAddEmail} layout="inline" className="mb-4">
-                  <Form.Item name="email" rules={[{ required: true, type: 'email', message: 'Email không hợp lệ' }]}>
-                    <Input placeholder="Nhập địa chỉ email nhận..." style={{ width: '280px' }} />
+                <Form form={emailForm} onFinish={handleAddEmail} className="mb-4 flex flex-col sm:flex-row gap-2 sm:items-start">
+                  <Form.Item
+                    name="email"
+                    className="flex-1 !mb-0"
+                    rules={[{ required: true, type: 'email', message: 'Email không hợp lệ' }]}
+                  >
+                    <Input placeholder="Nhập địa chỉ email nhận..." className="w-full" />
                   </Form.Item>
-                  <Form.Item>
-                    <Button type="primary" htmlType="submit" icon={<PlusOutlined />} loading={isAddingRecipient}>
+                  <Form.Item className="!mb-0 shrink-0">
+                    <Button type="primary" htmlType="submit" icon={<PlusOutlined />} loading={isAddingRecipient} className="w-full sm:w-auto">
                       Thêm
                     </Button>
                   </Form.Item>
@@ -223,6 +227,7 @@ export default function EmailSettingsTab() {
                   columns={recipientColumns} 
                   rowKey="id" 
                   loading={isRecipientsLoading}
+                  scroll={{ x: 'max-content' }}
                   pagination={{ pageSize: 5 }}
                   size="small"
                 />
@@ -238,6 +243,7 @@ export default function EmailSettingsTab() {
         open={isTestModalOpen}
         onCancel={() => setIsTestModalOpen(false)}
         footer={null}
+        style={{ maxWidth: 'calc(100vw - 24px)' }}
       >
         <Form form={testForm} layout="vertical" onFinish={handleTestSubmit}>
           <Form.Item name="test_email" label="Email nhận thư test" rules={[{ required: true, type: 'email', message: 'Vui lòng nhập email hợp lệ' }]}>

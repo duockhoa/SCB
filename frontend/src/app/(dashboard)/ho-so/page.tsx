@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Breadcrumb, Button, Skeleton, Dropdown, MenuProps, Popconfirm, message, Input, Descriptions, Empty, Timeline, Card, Tag } from 'antd';
-import { CloseOutlined, PlusCircleOutlined, SyncOutlined, SwapOutlined, StopOutlined, EditOutlined, DeleteOutlined, MoreOutlined, PlusOutlined, SearchOutlined, ClockCircleOutlined, FileAddOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { CloseOutlined, ArrowLeftOutlined, PlusCircleOutlined, SyncOutlined, SwapOutlined, StopOutlined, EditOutlined, DeleteOutlined, MoreOutlined, PlusOutlined, SearchOutlined, ClockCircleOutlined, FileAddOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useHoSoList, useHoSoDetail, useDeleteHoSo } from '@/hooks/queries/useHoSo';
 import type { HoSoChung, LoaiHoSo } from '@/types/ho-so.type';
 import dayjs from 'dayjs';
@@ -165,11 +165,11 @@ function HoSoMasterDetailContent() {
     if (items.length === 0) return null;
 
     return (
-      <div className="flex flex-col gap-y-4 text-sm px-2">
+      <div className="flex flex-col gap-y-3 sm:gap-y-4 text-sm px-0 sm:px-2">
         {items.map((item) => (
-          <div key={item.key} className="grid grid-cols-12 gap-4">
-            <div className="col-span-4 text-gray-500">{item.label}</div>
-            <div className="col-span-8 font-medium text-gray-800 break-words min-w-0">{item.value}</div>
+          <div key={item.key} className="grid grid-cols-12 gap-1 sm:gap-4 border-b border-gray-100 pb-2 sm:border-0 sm:pb-0">
+            <div className="col-span-12 sm:col-span-4 text-gray-500 text-xs sm:text-sm">{item.label}</div>
+            <div className="col-span-12 sm:col-span-8 font-medium text-gray-800 break-words min-w-0">{item.value}</div>
           </div>
         ))}
       </div>
@@ -256,7 +256,13 @@ function HoSoMasterDetailContent() {
       )}
 
       {/* Master Pane (Left) */}
-      <div className="flex flex-col border-r border-gray-200" style={{ width: selectedId ? `${masterWidth}%` : '100%', transition: isDragging.current ? 'none' : 'width 0.3s' }}>
+      <div
+        className={`${selectedId ? 'hidden lg:flex' : 'flex'} flex-col border-r border-gray-200 w-full ${selectedId ? 'lg:w-[var(--master-width)]' : 'lg:w-full'} min-w-0`}
+        style={{
+          '--master-width': `${masterWidth}%`,
+          transition: isDragging.current ? 'none' : 'width 0.3s',
+        } as CSSProperties}
+      >
         <div className="p-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
           <span className="font-semibold text-gray-700">{selectedId ? '> Danh sách Hồ sơ' : 'Danh sách Hồ sơ'}</span>
           {canCreate && (
@@ -344,7 +350,7 @@ function HoSoMasterDetailContent() {
       {selectedId && (
         <div
           onMouseDown={handleMouseDown}
-          className="w-1.5 hover:w-2 bg-transparent hover:bg-blue-400/30 cursor-col-resize transition-all flex-shrink-0 relative group"
+          className="hidden lg:block w-1.5 hover:w-2 bg-transparent hover:bg-blue-400/30 cursor-col-resize transition-all flex-shrink-0 relative group"
         >
           <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 bg-gray-200 group-hover:bg-blue-400 transition-colors" />
         </div>
@@ -353,24 +359,43 @@ function HoSoMasterDetailContent() {
       {/* Detail Pane (Right) */}
       {selectedId && selectedItem ? (
         <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-y-auto overflow-x-hidden min-w-0">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
-            <Breadcrumb items={[{ title: 'Hồ sơ công bố' }, { title: `${selectedItem.ma_ho_so}` }]} />
-            <Button type="text" icon={<CloseOutlined />} onClick={() => {
-              setSelectedId(null);
-              window.history.pushState(null, '', '/ho-so');
-            }} />
+          <div className="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center gap-2 bg-white sticky top-0 z-10">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button
+                type="text"
+                size="small"
+                icon={<ArrowLeftOutlined />}
+                className="lg:hidden shrink-0"
+                onClick={() => {
+                  setSelectedId(null);
+                  window.history.pushState(null, '', '/ho-so');
+                }}
+              >
+                Danh sách
+              </Button>
+              <Breadcrumb className="truncate" items={[{ title: 'Hồ sơ công bố' }, { title: `${selectedItem.ma_ho_so}` }]} />
+            </div>
+            <Button
+              type="text"
+              icon={<CloseOutlined />}
+              className="hidden lg:inline-flex shrink-0"
+              onClick={() => {
+                setSelectedId(null);
+                window.history.pushState(null, '', '/ho-so');
+              }}
+            />
           </div>
           
-          <div className="p-6">
+          <div className="p-3 sm:p-6">
             {/* Card 1: Tiêu đề + Nút thao tác */}
             <div style={{ marginBottom: 24 }}>
               <Card style={{ border: '1px solid #e5e7eb', borderRadius: 8 }}>
                 <div className="text-center pt-2">
-                  <h1 className="text-2xl font-bold text-blue-600 mb-6 break-words">
+                  <h1 className="text-lg sm:text-2xl font-bold text-blue-600 mb-4 sm:mb-6 break-words">
                     {selectedItem.ten_san_pham} - {selectedItem.ma_ho_so}
                   </h1>
                   
-                  <div className="flex flex-wrap justify-center gap-8 mb-4">
+                  <div className="flex flex-wrap justify-center gap-3 sm:gap-6 md:gap-8 mb-4">
                     {canCapSo && isDangXuLy && (
                       <div className="flex flex-col items-center gap-2 cursor-pointer group" onClick={() => setCapSoOpen(true)}>
                         <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center text-xl shadow-md group-hover:-translate-y-1 transition-transform">
@@ -432,34 +457,34 @@ function HoSoMasterDetailContent() {
             {/* Card 2: Thông tin tổng quan */}
             <div style={{ marginBottom: 24 }}>
               <Card style={{ border: '1px solid #e5e7eb', borderRadius: 8 }} title="Thông tin tổng quan">
-                <div className="flex flex-col gap-y-5 text-sm px-4">
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-3 text-gray-500">Mã hồ sơ</div>
-                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.ma_ho_so}</div>
+                <div className="flex flex-col gap-y-3 sm:gap-y-5 text-sm px-0 sm:px-4">
+                  <div className="grid grid-cols-12 gap-1 sm:gap-4 border-b border-gray-100 pb-2 sm:border-0 sm:pb-0">
+                    <div className="col-span-12 sm:col-span-3 text-gray-500 text-xs sm:text-sm">Mã hồ sơ</div>
+                    <div className="col-span-12 sm:col-span-9 text-gray-800 break-words min-w-0">{currentData?.ma_ho_so}</div>
                   </div>
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-3 text-gray-500">Số công bố</div>
-                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.so_chinh || 'Chưa cấp'}</div>
+                  <div className="grid grid-cols-12 gap-1 sm:gap-4 border-b border-gray-100 pb-2 sm:border-0 sm:pb-0">
+                    <div className="col-span-12 sm:col-span-3 text-gray-500 text-xs sm:text-sm">Số công bố</div>
+                    <div className="col-span-12 sm:col-span-9 text-gray-800 break-words min-w-0">{currentData?.so_chinh || 'Chưa cấp'}</div>
                   </div>
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-3 text-gray-500">Tên sản phẩm</div>
-                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.ten_san_pham}</div>
+                  <div className="grid grid-cols-12 gap-1 sm:gap-4 border-b border-gray-100 pb-2 sm:border-0 sm:pb-0">
+                    <div className="col-span-12 sm:col-span-3 text-gray-500 text-xs sm:text-sm">Tên sản phẩm</div>
+                    <div className="col-span-12 sm:col-span-9 text-gray-800 break-words min-w-0">{currentData?.ten_san_pham}</div>
                   </div>
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-3 text-gray-500">Loại sản phẩm</div>
-                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.loai_ho_so?.ten_loai || 'N/A'}</div>
+                  <div className="grid grid-cols-12 gap-1 sm:gap-4 border-b border-gray-100 pb-2 sm:border-0 sm:pb-0">
+                    <div className="col-span-12 sm:col-span-3 text-gray-500 text-xs sm:text-sm">Loại sản phẩm</div>
+                    <div className="col-span-12 sm:col-span-9 text-gray-800 break-words min-w-0">{currentData?.loai_ho_so?.ten_loai || 'N/A'}</div>
                   </div>
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-3 text-gray-500">Trạng thái</div>
-                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.tinh_trang?.ten_tinh_trang || 'Chưa rõ'}</div>
+                  <div className="grid grid-cols-12 gap-1 sm:gap-4 border-b border-gray-100 pb-2 sm:border-0 sm:pb-0">
+                    <div className="col-span-12 sm:col-span-3 text-gray-500 text-xs sm:text-sm">Trạng thái</div>
+                    <div className="col-span-12 sm:col-span-9 text-gray-800 break-words min-w-0">{currentData?.tinh_trang?.ten_tinh_trang || 'Chưa rõ'}</div>
                   </div>
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-3 text-gray-500">Ngày công bố/cấp</div>
-                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.ngay_cong_bo ? dayjs(currentData.ngay_cong_bo).format('DD/MM/YYYY') : '-'}</div>
+                  <div className="grid grid-cols-12 gap-1 sm:gap-4 border-b border-gray-100 pb-2 sm:border-0 sm:pb-0">
+                    <div className="col-span-12 sm:col-span-3 text-gray-500 text-xs sm:text-sm">Ngày công bố/cấp</div>
+                    <div className="col-span-12 sm:col-span-9 text-gray-800 break-words min-w-0">{currentData?.ngay_cong_bo ? dayjs(currentData.ngay_cong_bo).format('DD/MM/YYYY') : '-'}</div>
                   </div>
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-3 text-gray-500">Ngày hết hạn</div>
-                    <div className="col-span-9 text-gray-800 break-words min-w-0">
+                  <div className="grid grid-cols-12 gap-1 sm:gap-4 border-b border-gray-100 pb-2 sm:border-0 sm:pb-0">
+                    <div className="col-span-12 sm:col-span-3 text-gray-500 text-xs sm:text-sm">Ngày hết hạn</div>
+                    <div className="col-span-12 sm:col-span-9 text-gray-800 break-words min-w-0">
                       <div>{currentData?.ngay_het_han ? dayjs(currentData.ngay_het_han).format('DD/MM/YYYY') : '-'}</div>
                       {currentData?.ap_dung_quy_dinh_tam_thoi && (
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5 max-w-full">
@@ -484,9 +509,9 @@ function HoSoMasterDetailContent() {
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-3 text-gray-500">Ghi chú</div>
-                    <div className="col-span-9 text-gray-800 break-words min-w-0">{currentData?.ghi_chu || '-'}</div>
+                  <div className="grid grid-cols-12 gap-1 sm:gap-4">
+                    <div className="col-span-12 sm:col-span-3 text-gray-500 text-xs sm:text-sm">Ghi chú</div>
+                    <div className="col-span-12 sm:col-span-9 text-gray-800 break-words min-w-0">{currentData?.ghi_chu || '-'}</div>
                   </div>
                 </div>
               </Card>

@@ -46,6 +46,8 @@ export default function ThayTheModal({ open, onCancel, hoSo }: Props) {
       okText="Thực hiện Thay Thế"
       cancelText="Hủy"
       width={700}
+      style={{ maxWidth: 'calc(100vw - 24px)' }}
+      styles={{ body: { maxHeight: '72dvh', overflowY: 'auto' } }}
     >
       <Alert 
         message="Lưu ý" 
@@ -55,7 +57,7 @@ export default function ThayTheModal({ open, onCancel, hoSo }: Props) {
         className="mb-4" 
       />
       <Form form={form} layout="vertical" onFinish={handleFinish} initialValues={{ ten_san_pham: hoSo.ten_san_pham }}>
-        <div className="grid grid-cols-2 gap-x-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
           <Form.Item name="ma_ho_so_moi" label="Mã hồ sơ mới" rules={[{ required: true, message: 'Vui lòng nhập mã hồ sơ mới' }]}>
             <Input placeholder="Nhập mã hồ sơ mới" />
           </Form.Item>
@@ -64,7 +66,7 @@ export default function ThayTheModal({ open, onCancel, hoSo }: Props) {
           </Form.Item>
         </div>
         
-        <div className="grid grid-cols-2 gap-x-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
           <Form.Item name="ngay_cong_bo" label="Ngày công bố mới" rules={[{ required: true, message: 'Vui lòng chọn ngày công bố' }]}>
             <DatePicker className="w-full" format="DD/MM/YYYY" />
           </Form.Item>

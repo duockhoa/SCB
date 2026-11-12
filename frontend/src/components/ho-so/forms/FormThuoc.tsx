@@ -10,22 +10,22 @@ export default function FormThuoc() {
             <Input.TextArea rows={2} placeholder="Nhập hoạt chất và hàm lượng" />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'bao_che']} label="Dạng bào chế">
             <Input placeholder="Nhập dạng bào chế" />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'quy_cach_dong_goi']} label="Quy cách đóng gói">
             <Input placeholder="Nhập quy cách đóng gói" />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'dot_cap_so']} label="Đợt cấp số">
             <Input placeholder="Nhập đợt cấp số" />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'gia_han']} label="Gia hạn">
             <Input placeholder="Nhập thông tin gia hạn" />
           </Form.Item>

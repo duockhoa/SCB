@@ -139,7 +139,7 @@ export default function LogsSettingsTab() {
   }
 
   return (
-    <Card className="rounded-xl border border-gray-200 shadow-sm" styles={{ body: { padding: '24px' } }}>
+    <Card className="rounded-xl border border-gray-200 shadow-sm" styles={{ body: { padding: '16px 20px' } }}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <Title level={4} className="!m-0 text-gray-800 flex items-center gap-2">
@@ -150,7 +150,7 @@ export default function LogsSettingsTab() {
             Ghi nhận và kiểm toán mọi thao tác thêm, sửa, xóa và truy cập API trên hệ thống SCB.
           </Text>
         </div>
-        <Space>
+        <Space wrap>
           <Button icon={<SyncOutlined />} type="primary" loading={syncing} onClick={handleSyncUsers}>
             Đồng bộ User từ HRM
           </Button>
@@ -185,6 +185,8 @@ export default function LogsSettingsTab() {
           </Button>
         ]}
         width={700}
+        style={{ maxWidth: 'calc(100vw - 24px)' }}
+        styles={{ body: { maxHeight: '72dvh', overflowY: 'auto' } }}
       >
         {selectedLog?.chi_tiet ? (
           <pre className="bg-gray-50 p-4 rounded-lg border border-gray-200 overflow-auto max-h-[500px] text-xs font-mono">

@@ -24,7 +24,7 @@ export default function HeaderNotification() {
   };
 
   const dropdownRender = () => (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-200 w-[360px] max-h-[480px] overflow-hidden">
+    <div className="bg-white rounded-lg shadow-lg border border-gray-200 w-[min(360px,calc(100vw-24px))] max-h-[75dvh] sm:max-h-[480px] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <span className="font-bold text-base text-gray-800">Thông báo</span>

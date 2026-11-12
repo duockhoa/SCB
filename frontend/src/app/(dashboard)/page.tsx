@@ -53,39 +53,43 @@ export default function DashboardPage() {
   const tableProps = getTableProps();
 
   return (
-    <div style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', background: '#f0f2f5', overflow: 'hidden' }}>
-      <Title level={2} style={{ marginBottom: '24px', flexShrink: 0 }}>Tổng quan Hệ thống</Title>
+    <div className="p-3 sm:p-4 lg:p-6 h-full flex flex-col bg-[#f0f2f5] overflow-y-auto lg:overflow-hidden">
+      <Title level={2} className="!mb-3 sm:!mb-4 lg:!mb-6 !text-xl sm:!text-2xl shrink-0">Tổng quan Hệ thống</Title>
 
-      <Row gutter={[16, 16]} style={{ marginBottom: '24px', flexShrink: 0 }}>
-        <Col xs={24} sm={12} md={8} lg={6} xl={3}>
+      <Row gutter={[12, 12]} className="mb-4 lg:mb-6 shrink-0">
+        <Col xs={12} sm={8} md={6} lg={6} xl={3}>
           <StatCard title="Tổng hồ sơ" value={stats.tongSo} icon={<FolderOpenOutlined />} color="#1890ff" onClick={() => router.push('/ho-so')} />
         </Col>
-        <Col xs={24} sm={12} md={8} lg={6} xl={4}>
+        <Col xs={12} sm={8} md={6} lg={6} xl={4}>
           <StatCard title="Đang xử lý" value={stats.dangXuLy} icon={<SyncOutlined spin={stats.dangXuLy > 0} />} color="#faad14" isActive={activeCategory === 'DANG_XU_LY'} onClick={() => chooseCategory('DANG_XU_LY')} />
         </Col>
-        <Col xs={24} sm={12} md={8} lg={6} xl={4}>
+        <Col xs={12} sm={8} md={6} lg={6} xl={4}>
           <StatCard title="Còn hiệu lực" value={stats.conHieuLuc} icon={<CheckCircleOutlined />} color="#52c41a" isActive={activeCategory === 'CON_HIEU_LUC'} onClick={() => chooseCategory('CON_HIEU_LUC')} />
         </Col>
-        <Col xs={24} sm={12} md={8} lg={6} xl={4}>
+        <Col xs={12} sm={8} md={6} lg={6} xl={4}>
           <StatCard title="Sắp hết hạn" value={stats.sapHetHan} icon={<WarningOutlined />} color="#fa8c16" isActive={activeCategory === 'SAP_HET_HAN'} onClick={() => chooseCategory('SAP_HET_HAN')} />
         </Col>
-        <Col xs={24} sm={12} md={8} lg={6} xl={3}>
+        <Col xs={12} sm={8} md={6} lg={6} xl={3}>
           <StatCard title="Đã hết hạn" value={stats.daHetHan} icon={<CloseCircleOutlined />} color="#f5222d" isActive={activeCategory === 'DA_HET_HAN'} onClick={() => chooseCategory('DA_HET_HAN')} />
         </Col>
-        <Col xs={24} sm={12} md={8} lg={6} xl={3}>
+        <Col xs={12} sm={8} md={6} lg={6} xl={3}>
           <StatCard title="Thay thế" value={stats.thayThe} icon={<SwapOutlined />} color="#722ed1" isActive={activeCategory === 'DA_THAY_THE'} onClick={() => chooseCategory('DA_THAY_THE')} />
         </Col>
-        <Col xs={24} sm={12} md={8} lg={6} xl={3}>
+        <Col xs={12} sm={8} md={6} lg={6} xl={3}>
           <StatCard title="Thu hồi" value={stats.thuHoi} icon={<StopOutlined />} color="#8c8c8c" isActive={activeCategory === 'BI_THU_HOI'} onClick={() => chooseCategory('BI_THU_HOI')} />
         </Col>
       </Row>
 
-      <div style={{ flex: 1, minHeight: 0, background: '#fff', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <Title level={4} style={{ margin: 0, padding: '16px 24px', color: tableProps.color, flexShrink: 0, borderBottom: '1px solid #f0f0f0' }}>
+      <div className="flex-1 min-h-[380px] lg:min-h-0 bg-white rounded-lg shadow-sm flex flex-col overflow-hidden">
+        <Title
+          level={4}
+          className="!m-0 !px-4 sm:!px-6 !py-3 sm:!py-4 !text-base sm:!text-lg shrink-0 border-b border-gray-100"
+          style={{ color: tableProps.color }}
+        >
           {['SAP_HET_HAN', 'DA_HET_HAN'].includes(activeCategory) && <WarningOutlined style={{ marginRight: '8px' }} />}
           {tableProps.title}
         </Title>
-        <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        <div className="flex-1 min-h-0 overflow-auto">
           <ExpiryAlertTable data={currentList} total={dashboard?.total || 0} page={page} onPageChange={setPage} />
         </div>
       </div>

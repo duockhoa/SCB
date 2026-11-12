@@ -50,11 +50,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <Layout className="min-h-screen">
+    <Layout className="min-h-[100dvh]">
       <AppHeader />
-      <Layout>
+      <Layout className="min-h-0">
         <AppSidebar />
-        <Content className="bg-[#f0f2f5] flex flex-col h-[calc(100vh-64px)] overflow-hidden">
+        <Content className="bg-[#f0f2f5] flex flex-col h-[calc(100dvh-60px)] overflow-hidden min-w-0">
           {children}
         </Content>
       </Layout>

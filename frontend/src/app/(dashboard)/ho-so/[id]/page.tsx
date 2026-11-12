@@ -88,7 +88,7 @@ export default function HoSoDetailPage() {
       label: 'Tổng quan',
       children: (
         <Card variant="borderless">
-          <Descriptions bordered column={2}>
+          <Descriptions bordered column={{ xs: 1, sm: 1, md: 2 }} size="small">
             <Descriptions.Item label="Mã hồ sơ">{hoSoData.ma_ho_so}</Descriptions.Item>
             <Descriptions.Item label="Số công bố">{hoSoData.so_chinh || 'Chưa cấp'}</Descriptions.Item>
             <Descriptions.Item label="Tên sản phẩm">{hoSoData.ten_san_pham}</Descriptions.Item>
@@ -125,10 +125,10 @@ export default function HoSoDetailPage() {
                 )}
               </div>
             </Descriptions.Item>
-            <Descriptions.Item label="Ngày nhắc hạn" span={2}>
+            <Descriptions.Item label="Ngày nhắc hạn" span={{ xs: 1, md: 2 }}>
               {hoSoData.ngay_nhac_han ? dayjs(hoSoData.ngay_nhac_han).format('DD/MM/YYYY') : 'N/A'}
             </Descriptions.Item>
-            <Descriptions.Item label="Ghi chú" span={2}>{hoSoData.ghi_chu}</Descriptions.Item>
+            <Descriptions.Item label="Ghi chú" span={{ xs: 1, md: 2 }}>{hoSoData.ghi_chu}</Descriptions.Item>
           </Descriptions>
         </Card>
       ),
@@ -172,39 +172,34 @@ export default function HoSoDetailPage() {
   ];
 
   return (
-    <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
+    <div className="h-full overflow-y-auto bg-[#f0f2f5] p-3 sm:p-4 lg:p-6">
       <Breadcrumb
-        style={{ marginBottom: '16px' }}
+        className="mb-3 sm:mb-4"
         items={[
           { title: <a onClick={() => router.push('/ho-so')}>Danh sách hồ sơ</a> },
           { title: hoSoData.ma_ho_so },
         ]}
       />
 
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        background: '#fff',
-        padding: '24px',
-        borderRadius: '8px',
-        marginBottom: '24px',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-      }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 bg-white p-4 sm:p-6 rounded-lg mb-4 sm:mb-6 shadow-xs">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-2">
             <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => router.push('/ho-so')} />
-            <h1 style={{ margin: 0, fontSize: '24px' }}>{hoSoData.ten_san_pham}</h1>
-            <Tag color={hoSoData.tinh_trang?.mau_sac || 'default'} style={{ fontSize: '14px', padding: '4px 8px' }}>
+            <h1 className="m-0 text-lg sm:text-2xl font-bold break-words">{hoSoData.ten_san_pham}</h1>
+            <Tag color={hoSoData.tinh_trang?.mau_sac || 'default'} className="text-xs sm:text-sm px-2 py-0.5">
               {hoSoData.tinh_trang?.ten_tinh_trang || 'Khởi tạo'}
             </Tag>
           </div>
-          <div style={{ color: '#666', marginLeft: '48px' }}>
-            Mã HS: <strong>{hoSoData.ma_ho_so}</strong> | Số công bố: <strong>{hoSoData.so_chinh || 'Chưa có'}</strong> | Loại SP: <Tag color={getLoaiHoSoAntdColor(hoSoData.loai_ho_so?.ma_loai, hoSoData.loai_ho_so?.mau_sac)} style={{ marginLeft: '4px' }}>{hoSoData.loai_ho_so?.ten_loai || 'N/A'}</Tag>
+          <div className="text-gray-600 ml-0 sm:ml-11 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm">
+            <span>Mã HS: <strong>{hoSoData.ma_ho_so}</strong></span>
+            <span className="hidden sm:inline">|</span>
+            <span>Số công bố: <strong>{hoSoData.so_chinh || 'Chưa có'}</strong></span>
+            <span className="hidden sm:inline">|</span>
+            <span>Loại SP: <Tag color={getLoaiHoSoAntdColor(hoSoData.loai_ho_so?.ma_loai, hoSoData.loai_ho_so?.mau_sac)} className="ml-1">{hoSoData.loai_ho_so?.ten_loai || 'N/A'}</Tag></span>
           </div>
         </div>
 
-        <Space>
+        <Space wrap size="small">
           <Button icon={<EditOutlined />} onClick={() => setOpenEditModal(true)}>Sửa hồ sơ</Button>
           
           {(ttMa === 'DANG_XU_LY' || !ttMa) && (
@@ -233,7 +228,7 @@ export default function HoSoDetailPage() {
       <Tabs 
         defaultActiveKey="1" 
         items={tabItems} 
-        style={{ background: '#fff', padding: '0 24px 24px', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }} 
+        className="bg-white px-3 sm:px-6 pb-4 sm:pb-6 rounded-lg shadow-xs"
       />
 
       {/* Modals tái sử dụng */}

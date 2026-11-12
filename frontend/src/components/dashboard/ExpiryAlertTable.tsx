@@ -107,7 +107,9 @@ export default function ExpiryAlertTable({ data, total, page, onPageChange }: Pr
         columns={columns}
         dataSource={data}
         rowKey="id"
-        pagination={total === undefined ? false : { current: page, pageSize: 20, total, showSizeChanger: false, onChange: onPageChange }}
+        scroll={{ x: 'max-content' }}
+        size="middle"
+        pagination={total === undefined ? false : { current: page, pageSize: 20, total, showSizeChanger: false, size: 'small', onChange: onPageChange }}
         locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<span><SmileOutlined style={{ marginRight: 8 }} />Không có hồ sơ trong mục này.</span>} /> }}
       />
       {selectedHoSo && (

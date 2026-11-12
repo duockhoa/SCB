@@ -5,12 +5,12 @@ export default function FormTpbvskTuCongBo() {
   return (
     <>
       <Row gutter={16}>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'co_so_dung_ten']} label="Cơ sở đứng tên">
             <Input placeholder="Nhập tên cơ sở đứng tên" />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'dang_san_pham']} label="Dạng sản phẩm">
             <Input placeholder="Nhập dạng sản phẩm" />
           </Form.Item>

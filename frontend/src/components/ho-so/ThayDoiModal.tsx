@@ -43,6 +43,8 @@ export default function ThayDoiModal({ open, onCancel, hoSo }: Props) {
       okText="Lưu thay đổi"
       cancelText="Hủy"
       width={700}
+      style={{ maxWidth: 'calc(100vw - 24px)' }}
+      styles={{ body: { maxHeight: '72dvh', overflowY: 'auto' } }}
     >
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         <LichSuThayDoiFields title="Thông tin chi tiết thay đổi" />

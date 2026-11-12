@@ -71,7 +71,7 @@ const UploadOrLinkInput: React.FC<UploadOrLinkInputProps> = ({ value, onChange, 
             loading={uploading}
             type={value ? 'default' : 'primary'}
           >
-            Upload
+            <span className="hidden sm:inline">Upload</span>
           </Button>
         </Upload>
       </Tooltip>

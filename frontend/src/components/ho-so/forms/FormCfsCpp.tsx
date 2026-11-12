@@ -5,7 +5,7 @@ export default function FormCfsCpp() {
   return (
     <>
       <Row gutter={16}>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'loai_hinh']} label="Loại hình">
             <Select placeholder="Chọn loại hình">
               <Select.Option value="CPP">CPP</Select.Option>
@@ -13,7 +13,7 @@ export default function FormCfsCpp() {
             </Select>
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'nuoc_xuat_khau']} label="Nước xuất khẩu">
             <Input placeholder="Nhập nước xuất khẩu" />
           </Form.Item>

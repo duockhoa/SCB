@@ -11,7 +11,7 @@ export default function LichSuThayDoiFields({ title = "Thông tin Lịch sử / 
     <>
       <Divider >{title}</Divider>
       
-      <div className="grid grid-cols-2 gap-x-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
         <Form.Item name="lan_thu" label="Lần thay đổi thứ">
           <InputNumber min={1} style={{ width: '100%' }} placeholder="Tự động nếu để trống" />
         </Form.Item>
@@ -25,7 +25,7 @@ export default function LichSuThayDoiFields({ title = "Thông tin Lịch sử / 
         <Input.TextArea rows={2} placeholder="Nhập chi tiết nội dung thay đổi/bổ sung" />
       </Form.Item>
 
-      <div className="grid grid-cols-2 gap-x-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
         <Form.Item name="ma_so_tham_chieu" label="Mã số (Quyết định/Công văn)">
           <Input placeholder="Ví dụ: 1099/TĐTN" />
         </Form.Item>

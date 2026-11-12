@@ -5,12 +5,12 @@ export default function FormTbyt() {
   return (
     <>
       <Row gutter={16}>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'ten_tbyt_chung_loai']} label="Tên TBYT / Chủng loại">
             <Input placeholder="Nhập tên TBYT hoặc chủng loại" />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'phan_loai']} label="Phân loại">
             <Select placeholder="Chọn phân loại">
               <Select.Option value="A">Loại A</Select.Option>

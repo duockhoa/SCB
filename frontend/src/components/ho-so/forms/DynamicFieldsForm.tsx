@@ -51,17 +51,20 @@ export default function DynamicFieldsForm({
 
   const renderFieldList = (list: CustomFieldConfig[]) => (
     <Row gutter={16}>
-      {list.map((field) => (
-        <Col span={field.colSpan || (field.type === 'textarea' || field.type === 'file' ? 24 : 12)} key={field.key}>
-          <Form.Item
-            name={[fieldPrefix, field.key]}
-            label={field.label}
-            rules={field.required ? [{ required: true, message: `Vui lòng nhập ${field.label}` }] : undefined}
-          >
-            {renderControl(field)}
-          </Form.Item>
-        </Col>
-      ))}
+      {list.map((field) => {
+        const desktopSpan = field.colSpan || (field.type === 'textarea' || field.type === 'file' ? 24 : 12);
+        return (
+          <Col xs={24} sm={desktopSpan} key={field.key}>
+            <Form.Item
+              name={[fieldPrefix, field.key]}
+              label={field.label}
+              rules={field.required ? [{ required: true, message: `Vui lòng nhập ${field.label}` }] : undefined}
+            >
+              {renderControl(field)}
+            </Form.Item>
+          </Col>
+        );
+      })}
     </Row>
   );
 

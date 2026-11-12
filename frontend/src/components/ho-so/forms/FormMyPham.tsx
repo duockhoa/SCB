@@ -5,12 +5,12 @@ export default function FormMyPham() {
   return (
     <>
       <Row gutter={16}>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'nhan_hang']} label="Nhãn hàng">
             <Input placeholder="Nhập nhãn hàng" />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col xs={24} sm={12}>
           <Form.Item name={['thong_tin_rieng', 'dang_my_pham']} label="Dạng mỹ phẩm">
             <Input placeholder="Nhập dạng mỹ phẩm" />
           </Form.Item>

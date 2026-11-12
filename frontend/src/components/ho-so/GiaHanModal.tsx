@@ -42,6 +42,7 @@ export default function GiaHanModal({ open, onCancel, hoSo }: Props) {
       confirmLoading={isPending}
       okText="Xác nhận Gia Hạn"
       cancelText="Hủy"
+      style={{ maxWidth: 'calc(100vw - 24px)' }}
     >
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         <Form.Item name="ngay_het_han_moi" label="Ngày hết hạn mới" rules={[{ required: true, message: 'Vui lòng chọn ngày hết hạn mới' }]}>
