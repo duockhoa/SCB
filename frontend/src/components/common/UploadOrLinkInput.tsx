@@ -45,10 +45,10 @@ const UploadOrLinkInput: React.FC<UploadOrLinkInputProps> = ({ value, onChange, 
     showUploadList: false,
     maxCount: 1,
     beforeUpload: (file) => {
-      // Giới hạn 10MB
-      const isLt10M = file.size / 1024 / 1024 < 10;
-      if (!isLt10M) {
-        message.error('File phải nhỏ hơn 10MB!');
+      // Giới hạn 50MB
+      const isLt50M = file.size / 1024 / 1024 < 50;
+      if (!isLt50M) {
+        message.error('File phải nhỏ hơn 50MB!');
         return Upload.LIST_IGNORE;
       }
       return true;

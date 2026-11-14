@@ -564,6 +564,10 @@ export default function HoSoTaiLieuTab({ hoSo, thongTinRieng }: Props) {
   };
 
   const handleUploadReplaceBuiltIn = async (file: File, item: BuiltInDocItem) => {
+    if (file.size / 1024 / 1024 >= 50) {
+      message.error('File phải nhỏ hơn 50MB!');
+      return false;
+    }
     setUploadingId(item.id);
     try {
       const response = await uploadFile(file);
